@@ -1,10 +1,11 @@
-// Builds js/text.js, which the page loads, from the Markdown in text/ (the format is described in text/README.md).
+// Builds js/text.js, which the page loads, and REFERENCES.md from the Markdown in text/ (the format is described in text/README.md).
 //   npm run text               build once
 //   npm run text -- --watch    rebuild on every save
-//   npm run text -- --check    fail if js/text.js is out of date (npm test runs this)
+//   npm run text -- --check    fail if js/text.js or REFERENCES.md is out of date (npm test runs this)
 import { readFileSync, writeFileSync, readdirSync, statSync, watch } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { references, REFS_OUT } from './build-references.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIR = join(ROOT, 'text'), OUT = join(ROOT, 'js', 'text.js');
@@ -20,6 +21,7 @@ const SECTIONS = {
   'Background': ['bg', 'blocks'],
   'Method': ['method', 'blocks'],
   'Caveat': ['caveat', 'blocks'],
+  'At scale': ['scale', 'blocks'],
   'References': ['refs', 'refs'],
 };
 const REQUIRED = ['Subtitle', 'Lead', 'Try', 'Method', 'References'];
@@ -170,13 +172,16 @@ function build() {
 
 function run(mode) {
   try {
-    const js = build();
-    let old = null; try { old = readFileSync(OUT, 'utf8'); } catch { /* first build */ }
-    if (mode === 'check') {
-      if (js !== old) { console.error('js/text.js is out of date with text/: run `npm run text`'); return false; }
-      console.log('js/text.js is up to date');
-    } else if (js !== old) { writeFileSync(OUT, js); console.log(`built js/text.js (${new Date().toLocaleTimeString()})`); }
-    return true;
+    const js = build(), md = references();      // build() validates the plate files before references() reads them
+    let ok = true;
+    for (const [out, src] of [[OUT, js], [REFS_OUT, md]]) {
+      const name = relative(ROOT, out);
+      let old = null; try { old = readFileSync(out, 'utf8'); } catch { /* first build */ }
+      if (mode === 'check') {
+        if (src !== old) { console.error(`${name} is out of date with text/: run \`npm run text\``); ok = false; } else console.log(`${name} is up to date`);
+      } else if (src !== old) { writeFileSync(out, src); console.log(`built ${name} (${new Date().toLocaleTimeString()})`); }
+    }
+    return ok;
   } catch (e) {
     if (!(e instanceof TextError)) throw e;
     console.error('text error: ' + e.message);

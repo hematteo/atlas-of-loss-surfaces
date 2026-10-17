@@ -1,7 +1,7 @@
 {
   "name": "atlas-of-loss-surfaces",
   "private": true,
-  "description": "An interactive WebGL2 atlas of loss surfaces. The site needs no build step; this file builds js/text.js from text/ and runs the smoke test.",
+  "description": "An interactive WebGL2 atlas of loss surfaces. The site needs no build step; this file builds js/text.js and REFERENCES.md from text/ and runs the smoke test.",
   "type": "module",
   "scripts": {
     "text": "node tools/build-text.mjs",
