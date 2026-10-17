@@ -60,15 +60,23 @@ the minimum is for their step size.
 It runs in any browser with WebGL2. It is plain HTML, JavaScript and WebGL2, with no libraries and no build step. To
 run it locally, open `index.html`, or serve the folder with `python3 -m http.server`.
 
+## Editing the text
+
+All the prose is Markdown in [`text/`](text/): one file per plate, plus the glossary and the about panel. You can edit
+it without reading any code. [`text/README.md`](text/README.md) describes the format. After editing, run
+`npm run text` (it needs only Node) to rebuild `js/text.js`, which the page loads, and commit both.
+
 ## How the code is laid out
 
-- `index.html`: the page, its metadata and three scripts.
+- `index.html`: the page, its metadata and four scripts.
+- `text/`: all the prose, in Markdown (see above). `tools/build-text.mjs` builds it into `js/text.js`, which defines
+  one global, `TEXT`.
 - `js/atlas.js`: the atlas, one script. Sections open with a `// ----` banner, in this order:
   - the surfaces: seeded noise, the loss `L(θ₁, θ₂)`, the height grid, critical points (grid scan, Newton
     refinement, Hessian classification), cross-sections and the disconnectivity scaffold;
-  - the optimizers and the forty plates. Each plate is one object, `PLATES.push({ … })`, holding its sheet builder,
-    names, experiments, card text and figure. Plates sit in blocks marked `// <<chN … // chN>>`; a plate's chapter
-    is its `ch` field, and the reading order is the `ORDER` list;
+  - the optimizers and the forty plates. Each plate is one object, `plate({ … })`, holding its sheet builder, names,
+    experiments and figure; `plate()` adds its text from `TEXT.plates[id]`. Plates sit in blocks marked
+    `// <<chN … // chN>>`; a plate's chapter is its `ch` field, and the reading order is the `ORDER` list;
   - the WebGL renderer (relief, ink, baked shadows, and the stick men, drawn as signed-distance figures in a
     fragment shader) and the printed layer (names, contours, margin);
   - the particles: a struct-of-arrays simulation that steps every optimizer on the same stochastic gradient;
@@ -83,10 +91,11 @@ stick men, and the project was first called Pilgrims.
 
 ## Testing
 
-`npm test` serves the folder, opens the atlas in headless Chromium with software WebGL2, and visits all forty plates.
-It fails on any page or console error, any non-finite particle, or the error screen, and checks the phone layout. It
-runs on every push ([workflow](.github/workflows/test.yml)). The site itself needs no install; `package.json` exists
-only for the test.
+`npm test` checks that `js/text.js` is up to date with `text/`, then serves the folder, opens the atlas in headless
+Chromium with software WebGL2, and visits all forty plates. It fails on any page or console error, any non-finite
+particle, the error screen, or text that belongs to no plate, and checks the phone layout. It runs on every push
+([workflow](.github/workflows/test.yml)). The site itself needs no install; `package.json` exists only for the text
+build and the test.
 
 ```sh
 npm ci && npx playwright install chromium && npm test
