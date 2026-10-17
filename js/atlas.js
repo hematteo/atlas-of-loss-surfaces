@@ -510,8 +510,8 @@ function nameSurvey() {
   NAMED = {};
   for (const m of mins) if (m.prom > 0.08 && (!NAMED.sharp || m.l1 > NAMED.sharp.l1)) NAMED.sharp = m;
   for (const m of mins) if (m !== NAMED.sharp && m.prom > 0.08 && (!NAMED.flat || m.l2 < NAMED.flat.l2)) NAMED.flat = m;
-  for (const m of mins) if (m !== NAMED.sharp && m !== NAMED.flat && ins(m, 0.1) && (!NAMED.spur || m.L > NAMED.spur.L)) NAMED.spur = m;
   for (const m of mins) if (!NAMED.global || m.L < NAMED.global.L) NAMED.global = m;
+  for (const m of mins) if (m !== NAMED.sharp && m !== NAMED.flat && m !== NAMED.global && ins(m, 0.1) && (!NAMED.spur || m.L > NAMED.spur.L)) NAMED.spur = m;
   for (const s of sads) if (s.l2 > 2 && (!NAMED.hes || Math.abs(s.l1) < Math.abs(NAMED.hes.l1))) NAMED.hes = s;
   for (const s of sads) if (NAMED.hes && s !== NAMED.hes && Math.hypot(s.x - NAMED.hes.x, s.y - NAMED.hes.y) > 0.5 &&
       (!NAMED.col || Math.abs(s.l1) > Math.abs(NAMED.col.l1))) NAMED.col = s;
@@ -923,11 +923,11 @@ const TB = {
   adam:   { kind: K_ADAM, name: 'Adam', color: '#cf6d0c', rule: 'θ ← θ − η m̂ ⁄ (√v̂ + ε)' },
   rms:    { kind: K_RMS, name: 'RMSprop', color: '#a8781c', rule: 's ← βs + (1−β)g̃²,  θ ← θ − η g̃ ⁄ (√ŝ + ε),  ŝ = s ⁄ (1−βᵗ)' },
   sign:   { kind: K_SIGN, name: 'signSGD', color: '#5e7316', rule: 'θ ← θ − η sign(g̃)' },
-  lion:   { kind: K_LION, name: 'Lion', color: '#8c4f1c', rule: 'θ ← θ − η sign(β₁m + (1−β₁)g̃)' },
+  lion:   { kind: K_LION, name: 'Lion', color: '#8c4f1c', rule: 'θ ← θ − η sign(β₁m + (1−β₁)g̃),  m ← β₂m + (1−β₂)g̃' },
   sam:    { kind: K_SAM, name: 'SAM', color: '#167a5b', rule: 'θ ← θ − η g̃(θ + ρ g̃ ⁄ ‖g̃‖)' },
   newton: { kind: K_NEWTON, name: 'Newton', color: '#2b2c31', rule: 'θ ← θ − α H⁻¹∇L, step ≤ 0.02', sigMul: 0, rest: 'crit' },
-  sfn:    { kind: K_SFN, name: 'Saddle-free Newton', color: '#a3306b', rule: 'θ ← θ − α |H|⁻¹∇L, |λ| ≥ 0.5, step ≤ 0.02', sigMul: 0 },
-  sf:     { kind: K_SF, name: 'Schedule-free SGD', color: '#167a5b', rule: 'z ← z − γ∇L(y),  x ← (1−c)x + cz,  y = (1−β)z + βx', avg: 1e9 },
+  sfn:    { kind: K_SFN, name: 'Saddle-free Newton', color: '#a3306b', rule: 'θ ← θ − α |H|⁻¹∇L, |λ| floored at 0.5, step ≤ 0.02', sigMul: 0 },
+  sf:     { kind: K_SF, name: 'Schedule-free SGD', color: '#167a5b', rule: 'z ← z − γ g̃(y),  x ← (1−c)x + cz,  y = (1−β)z + βx', avg: 1e9 },
 };
 const TRAIL_A = { '#c22a40': 0.17, '#4b3fa0': 0.115, '#cf6d0c': 0.16 };
 function makeTribe(spec) {
@@ -960,7 +960,7 @@ plate({
   features: () => { nameSurvey(); surveyLakes(); },
   names: surveyNames,
   plan: planSurvey,
-  readouts: () => [['particles', String(STAT.alive)], ['at rest', String(STAT.converged)], ['best L', STAT.best < Infinity ? STAT.best.toFixed(4) : '—'], ['survey', mmss(STAT.time)]],
+  readouts: () => [['particles', String(STAT.alive)], ['at rest', String(STAT.converged)], ['best L', STAT.best < Infinity ? STAT.best.toFixed(4) : '—'], ['time', mmss(STAT.time)]],
   fig: figRestHistogram,
 });
 
@@ -1206,7 +1206,7 @@ function pgdNoise(i, x, y, s, R, out) {
 plate({
   id: 'saddles', ch: 0, seed: 3121,
   status: 'established',
-  tribes: [{ k: 'gd' }, { k: 'gd', name: 'Perturbed GD', color: '#2b2c31', rule: 'if ‖∇L‖ < g: θ ← θ + ξ', noise: N_FN, sigMul: 1, noiseFn: pgdNoise }, { k: 'sgd', color: '#cf6d0c' }],
+  tribes: [{ k: 'gd' }, { k: 'gd', name: 'Perturbed GD', color: '#2b2c31', rule: 'if ‖∇L‖ < 0.05: θ ← θ + ξ', noise: N_FN, sigMul: 1, noiseFn: pgdNoise }, { k: 'sgd', color: '#cf6d0c' }],
   sim: { lr: 0.04, noise: 0.05 },
   ctl: ['lr', 'noise'],
   view: { yaw: -14, pitch: 44 },
@@ -1258,7 +1258,7 @@ plate({
   retire: (i) => { const st = PL.st; if (Ax[i] > 0) { st.rec.push([Tr[i], Ax[i], An[i]]); if (st.rec.length > 600) st.rec.shift(); } },
   readouts: () => {
     const st = PL.st, last = st.rec[st.rec.length - 1];
-    return [['λ₋ at saddle', st.sad ? fmt(st.sad.l1, 2) : '—'], ['η|λ₋|', st.sad ? (SIM.lr * Math.abs(st.sad.l1)).toFixed(3) : '—'], ['last δ', last ? `10^${Math.round(Math.log10(last[1]))}` : '—'], ['steps near', last ? String(last[2]) : '—']];
+    return [['λ₋ at saddle', st.sad ? fmt(st.sad.l1, 2) : '—'], ['η|λ₋|', st.sad ? (SIM.lr * Math.abs(st.sad.l1)).toFixed(3) : '—'], ['last δ', last ? `10⁻${'⁰¹²³⁴⁵⁶⁷⁸⁹'[Math.round(-Math.log10(last[1]))]}` : '—'], ['steps near', last ? `${last[2]} (${TRIBES[last[0]].name})` : '—']];
   },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 10, x1 = w - 8, y1 = h - 28;
@@ -1324,7 +1324,7 @@ plate({
   },
   names: (S) => {
     S.areas.push({ x: PLcx, y: PLcy, lines: ['Plateau of', 'Vanishing Gradients'], one: 'Plateau of Vanishing Gradients', size: 15, ls: 2.6, rot: clamp(-Math.atan2(PLs, PLc), -0.35, 0.35), w: 2 * PLa });
-    S.marks.push({ p: { x: PLcx, y: PLcy - 0.12 }, name: '', sub: `|∇L| ${PL.st.g.toFixed(3)}`, sym: 'none', pin: false });
+    S.marks.push({ p: { x: PLcx, y: PLcy - 0.12 }, name: '', sub: `‖∇L‖ ${PL.st.g.toFixed(3)}`, sym: 'none', pin: false });
   },
   release: () => {
     if (!F.params.auto || STAT.alive > maxAlive - 60) { nextRelease = STAT.steps + 45; return; }
@@ -1335,7 +1335,7 @@ plate({
   step: (i) => { if (Tag[i] === 1 && plateauMask(Wx[i], Wy[i]) < 0.5) { Tag[i] = 2; const e = PL.st.exit[Tr[i]]; e.push(Age[i]); if (e.length > 300) e.shift(); } },
   readouts: () => {
     const st = PL.st, mean = (a) => (a.length ? Math.round(a.reduce((p, q) => p + q, 0) / a.length) : null);
-    return [['|∇L| on the mesa', st.g.toFixed(3)], ['η|∇L|', (SIM.lr * st.g).toExponential(1)], ...TRIBES.map((T, t) => [`${T.name} leaves after`, mean(st.exit[t]) != null ? `${mean(st.exit[t])} steps` : '…'])].slice(0, 4);
+    return [['‖∇L‖ on the plateau', st.g.toFixed(3)], ...TRIBES.map((T, t) => [`${T.name} leaves after`, mean(st.exit[t]) != null ? `${mean(st.exit[t])} steps` : '…'])];
   },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 8, x1 = w - 40, rowH = Math.min(36, (h - 30) / TRIBES.length);
@@ -1349,7 +1349,7 @@ plate({
       else FIG.tick(c, x0, by + bh / 2, 'still crossing…', 'left', 'middle');
       for (const v of a) { c.fillStyle = rgba(T.color, 0.35); c.fillRect(lx(v) - 0.5, by - 1, 1, bh + 2); }
     });
-    FIG.tick(c, x1 + 34, h - 12, 'steps to leave the mesa', 'right', 'top');
+    FIG.tick(c, x1 + 34, h - 12, 'steps to leave the plateau', 'right', 'top');
   },
 });
 
@@ -1416,7 +1416,7 @@ plate({
   },
   readouts: () => {
     const st = PL.st, mean = (a) => (a.length ? Math.round(a.reduce((p, q) => p + q, 0) / a.length) : null);
-    return [['ηλ across', (SIM.lr * st.floor.l2).toFixed(2)], ...TRIBES.map((T, t) => [`${T.name} reaches mouth`, mean(st.arr[t]) != null ? `${mean(st.arr[t])} steps` : '…'])];
+    return [['ηλ across', (SIM.lr * st.floor.l2).toFixed(2)], ...TRIBES.map((T, t) => [`${T.name} reaches the mouth`, mean(st.arr[t]) != null ? `${mean(st.arr[t])} steps` : '…'])];
   },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28;
@@ -1457,6 +1457,7 @@ plate({
   jump: true,
   sheet: sheetCliff,
   features: () => { PL.st = { hist: TRIBES.map(() => new Float64Array(32)), max: TRIBES.map(() => 0), off: TRIBES.map(() => 0) }; },
+  onSim: (k) => { if (k === 'lr' || k === 'noise') { const st = PL.st; st.hist.forEach((H) => H.fill(0)); st.max.fill(0); st.off.fill(0); } },
   names: (S) => {
     let bx = 0, by = -1;
     for (let x = -1.2; x <= 1.2; x += 0.05) { const y = cliffY(x); if (y > by) { by = y; bx = x; } }
@@ -1488,7 +1489,7 @@ plate({
   lost: (i) => { PL.st.off[Tr[i]]++; },
   readouts: () => {
     const st = PL.st;
-    return [['longest throw', st.max[0].toFixed(3)], ['clipped, longest', st.max[1].toFixed(4)], ['ηc', (SIM.lr * 1.2).toFixed(4)], ['thrown off the sheet', String(st.off[0] + st.off[2])]];
+    return [['SGD, longest throw', st.max[0].toFixed(3)], ['clipped, longest', st.max[1].toFixed(4)], ['ηc', (SIM.lr * 1.2).toFixed(4)], ['SGD and Adam off the sheet', String(st.off[0] + st.off[2])]];
   },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 26, y0 = 8, x1 = w - 6, y1 = h - 28;
@@ -1549,7 +1550,7 @@ plate({
   retire: (i, ring) => { if (!ring) return; const st = PL.st, k = labelAt(st.C, Ex[i], Ey[i]); if (k >= 0) st.arr[Tr[i]][k]++; },
   lost: (i) => { const st = PL.st; st.arr[Tr[i]][st.C.basins.length]++; },
   readouts: () => {
-    const st = PL.st, s = (t) => st.arr[t].reduce((p, q) => p + q, 0);
+    const st = PL.st, s = (t) => st.arr[t].subarray(0, st.C.basins.length).reduce((p, q) => p + q, 0);
     return [['drops', String(st.drops)], ['2/η', (2 / SIM.lr).toFixed(0)], ['GD arrived', String(s(0))], ['SGD arrived', String(s(1))]];
   },
   fig: (c, w, h) => {
@@ -1623,7 +1624,7 @@ plate({
   readouts: () => {
     const m = PL.st.min; if (!m) return [];
     const bs = (l) => Math.pow(1 - Math.sqrt(Math.min(1, SIM.lr * l)), 2), k = m.l2 / m.l1, bo = Math.pow((Math.sqrt(k) - 1) / (Math.sqrt(k) + 1), 2);
-    return [['β', SIM.beta.toFixed(2)], ['β* for λ_min, λ_max', `${bs(m.l1).toFixed(2)}, ${bs(m.l2).toFixed(2)}`], ['κ', k.toFixed(1)], ['Polyak’s η, β for κ', `${(4 / Math.pow(Math.sqrt(m.l1) + Math.sqrt(m.l2), 2)).toFixed(3)}, ${bo.toFixed(3)}`]];
+    return [['β', SIM.beta.toFixed(2)], ['β* for λₘᵢₙ · λₘₐₓ', `${bs(m.l1).toFixed(2)} · ${bs(m.l2).toFixed(2)}`], ['κ', k.toFixed(1)], ['Polyak’s η · β for κ', `${(4 / Math.pow(Math.sqrt(m.l1) + Math.sqrt(m.l2), 2)).toFixed(3)} · ${bo.toFixed(3)}`]];
   },
   fig: (c, w, h) => { if (PL.st.min) logGapFig(c, w, h, PL.st, PL.st.min.L, -5, 0.3); },
 });
@@ -1700,7 +1701,7 @@ plate({
   readouts: () => {
     const st = PL.st, sw = st.sweep; if (!sw || !st.min) return [];
     const k = clamp(Math.round(SIM.rot / 7.5), 0, sw.angles.length - 1);
-    return [['α', `${Math.round(SIM.rot)}°`], ['GD steps', String(sw.gd[k])], ['Adam steps', String(sw.adam[k])], ['λη², scale of the sign floor', (st.min.l2 * SIM.lr * SIM.lr).toExponential(1)]];
+    return [['α', `${Math.round(SIM.rot)}°`], ['GD steps', String(sw.gd[k])], ['Adam steps', String(sw.adam[k])], ['λₘₐₓη², scale of the sign floor', (st.min.l2 * SIM.lr * SIM.lr).toFixed(3)]];
   },
   fig: (c, w, h) => {
     const st = PL.st, sw = st.sweep; if (!sw || !st.min) return;
@@ -1824,9 +1825,9 @@ plate({
   readouts: () => {
     const { s, a, g } = wdStats();
     const out =[['ηλ', SIM.il.toExponential(1)], ['λ, SGD · AdamW', `${(SIM.il / WD_ETA).toFixed(3)} · ${(SIM.il / (WD_ETA * WD_ADAM)).toFixed(4)}`]];
-    out.push(['‖θ‖ with decay, SGD', s ? `${s.r.toFixed(3)} (predicted ${SIM.noise > 0.05 ? wdRS().toFixed(3) : '—'})` : '…']);
+    out.push(['‖θ‖, SGD with decay', s ? `${s.r.toFixed(3)} (predicted ${SIM.noise > 0.05 ? wdRS().toFixed(3) : '—'})` : '…']);
     out.push(['‖θ‖, AdamW', a ? `${a.r.toFixed(3)} (predicted ${SIM.noise > 0.05 ? wdRA().toFixed(3) : '—'})` : '…']);
-    out.push(['angle per step, SGD with decay', s ? `${s.ang.toFixed(4)} (√2ηλ ${wdAngS().toFixed(4)})` : '…']);
+    out.push(['angle per step, SGD with decay', s ? `${s.ang.toFixed(4)} (predicted √(2ηλ) = ${wdAngS().toFixed(4)})` : '…']);
     if (g) out.push(['η/‖θ‖², SGD without decay', (WD_ETA / (g.r * g.r)).toFixed(4)]);
     return out;
   },
@@ -1890,6 +1891,11 @@ plate({
     if (!ring) return;
     hess(Ex[i], Ey[i]); const det = hXX * hYY - hXY * hXY, tr = hXX + hYY;
     PL.st.cnt[Tr[i]][det < 0 ? 1 : tr < 0 ? 2 : 0]++;
+  },
+  onSim: (k) => {      // the counts restart, so they describe the current α and η only
+    if (k !== 'alpha' && k !== 'lr') return;
+    for (let i = 0; i < hiW; i++) if (Alive[i]) retire(i, false);
+    PL.st.cnt = TRIBES.map(() => [0, 0, 0]); nextRelease = STAT.steps + 20;
   },
   readouts: () => { const c = PL.st.cnt[0]; return [['Newton at minima', String(c[0])], ['at saddles', String(c[1])], ['at summits', String(c[2])]]; },
   fig: (c, w, h) => {
@@ -1963,8 +1969,15 @@ plate({
     else if (st.basin && Math.hypot(st.basin.x - x, st.basin.y - y) < 0.3) st.rest[Tr[i]][1]++;
     else st.rest[Tr[i]][2]++;
   },
-  onSim: (k) => { if (k === 'rho') { clearTimeout(PL._t); PL._t = setTimeout(() => { samField(); printDirty = true; }, 180); } },
-  readouts: () => { const r = PL.st.rest, s = PL.st.stall; return [['ρ', SIM.rho.toFixed(3)], ['SGD rest', `${r[0][0]} pits · ${r[0][1]} basin`], ['SAM rest', `${r[1][0]} pits · ${r[1][1]} basin`], ['never at rest, SGD · SAM', `${s[0]} · ${s[1]}`]]; },
+  onSim: (k) => {
+    if (k === 'rho') { clearTimeout(PL._t); PL._t = setTimeout(() => { samField(); printDirty = true; }, 180); }
+    if (k === 'rho' || k === 'lr' || k === 'noise') {      // the counts restart, so they describe the current settings only
+      const st = PL.st;
+      for (let i = 0; i < hiW; i++) if (Alive[i]) retire(i, false);
+      st.rest = TRIBES.map(() => [0, 0, 0]); st.stall = TRIBES.map(() => 0); nextRelease = STAT.steps + 20;
+    }
+  },
+  readouts: () => { const r = PL.st.rest, s = PL.st.stall; return [['ρ', SIM.rho.toFixed(3)], ['SGD rest', `${r[0][0]} in pits · ${r[0][1]} in the basin`], ['SAM rest', `${r[1][0]} in pits · ${r[1][1]} in the basin`], ['never at rest, SGD · SAM', `${s[0]} · ${s[1]}`]]; },
   fig: (c, w, h) => {
     const r = PL.st.rest, x0 = 8, y0 = 8, x1 = w - 4, y1 = h - 28;
     const sh = (t) => { const n = r[t][0] + r[t][1] + r[t][2] || 1; return [r[t][0] / n, r[t][1] / n, r[t][2] / n]; };
@@ -1975,6 +1988,8 @@ plate({
 });
 
 // --- weight averaging
+// L* of the basin floor nearer to (x, y)
+function avgFloor(st, x, y) { return Math.hypot(x - st.w.x, y - st.w.y) < Math.hypot(x - st.e.x, y - st.e.y) ? st.w.L : st.e.L; }
 function sheetTwoBasins(R) {
   sheetBase(R, { bk: 0.16, bk4: 0.02, na: 0.035 });
   BX = R.range(-0.08, 0.08); BY = R.range(-0.08, 0.08);
@@ -1990,7 +2005,7 @@ function sheetTwoBasins(R) {
 plate({
   id: 'averaging', ch: 2, seed: 1301,
   status: 'established',
-  tribes: [{ k: 'sgd', avg: 120, rest: 'never', maxAge: 1600, rule: 'θ̄ ← θ̄ + (θ − θ̄)/n' }],
+  tribes: [{ k: 'sgd', avg: 120, rest: 'never', maxAge: 1600, rule: 'θ ← θ − η g̃,  θ̄ ← θ̄ + (θ − θ̄) ⁄ n' }],
   sim: { lr: 0.02, noise: 2 },
   ctl: ['lr', 'noise'],
   view: { yaw: -6, pitch: 52 },
@@ -2011,13 +2026,14 @@ plate({
     const b = st.k++ % 2 ? st.e : st.w; if (!b) { nextRelease = STAT.steps + 45; return; }
     const p = [b.x + RPLAN.range(-0.25, 0.25), b.y + RPLAN.range(0.15, 0.3) * (RPLAN() < 0.5 ? 1 : -1)];
     stamp(p[0], p[1], 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
-    for (let k = 0; k < (PHONE ? 5 : 8); k++) { const i = spawn(p[0] + RREL.normal() * 0.01, p[1] + RREL.normal() * 0.01, 0); if (i >= 0) Tag[i] = b === st.e ? 2 : 1; }
+    for (let k = 0; k < (PHONE ? 5 : 8); k++) { const i = spawn(p[0] + RREL.normal() * 0.01, p[1] + RREL.normal() * 0.01, 0); if (i >= 0) Tag[i] = st.C.cid; }
     STAT.released++;
     nextRelease = STAT.steps + Math.round(7 * 45);
   },
   step: (i) => {
     const st = PL.st;
-    const b = Tag[i] === 2 ? st.e : Tag[i] === 1 ? st.w : null; if (b) { curveAdd(st.C, 0, Age[i], Wl[i] - b.L); if (An[i] > 0) curveAdd(st.C, 1, Age[i], L(Ax[i], Ay[i]) - b.L); }
+    if (Tag[i] !== st.C.cid || !st.w || !st.e) return;
+    curveAdd(st.C, 0, Age[i], Wl[i] - avgFloor(st, Wx[i], Wy[i])); if (An[i] > 0) curveAdd(st.C, 1, Age[i], L(Ax[i], Ay[i]) - avgFloor(st, Ax[i], Ay[i]));
   },
   frame: () => {
     const st = PL.st; if (F.frame % 45 !== 0 || !st.w || !st.e) return;
@@ -2037,7 +2053,7 @@ plate({
     project(VP, mx, my, hgrid(mx, my) * ZS, P0);
     oc.fillStyle = INK; oc.beginPath(); oc.arc(P0[0], P0[1], 2.6, 0, TAU); oc.fill();
     oc.font = `400 ${PHONE ? 8 : 8.5}px ${MONO}`; oc.textAlign = 'center'; oc.textBaseline = 'bottom'; oc.lineJoin = 'round';
-    const t = `average of two basins · L ${Lm.toFixed(3)}`;
+    const t = `midpoint of two averages · L ${Lm.toFixed(3)}`;
     oc.strokeStyle = 'rgba(236,238,232,0.9)'; oc.lineWidth = 3; oc.strokeText(t, P0[0], P0[1] - 6); oc.fillStyle = INK; oc.fillText(t, P0[0], P0[1] - 6);
   },
   readouts: () => {
@@ -2237,7 +2253,7 @@ plate({
   status: 'established',
   tribes: [
     { k: 'sgd', name: 'Gradient descent', rule: 'θ ← θ − η∇L, plus σ = 0.01', color: '#c22a40', avg: 1800 },
-    { k: 'adam', name: 'Adam, full batch', etaMul: 0.15, sigMul: 0.01, rule: 'θ ← θ − 0.15η m̂ ⁄ (√v̂ + ε)' },
+    { k: 'adam', name: 'Adam, full batch', etaMul: 0.15, sigMul: 0.01, rule: 'θ ← θ − 0.15η m̂ ⁄ (√v̂ + ε), plus σ = 10⁻⁴' },
   ],
   sim: { lr: 0.01, noise: 0.01, beta2: 0.99 },
   ctl: [{ key: 'lr', label: 'Learning rate η', min: 0.004, max: 0.03, scale: 'log', f: (v) => v.toFixed(4) }, { key: 'beta2', label: 'Adam β₂', min: 0.95, max: 0.999, step: 0.001, f: (v) => v.toFixed(3) }],
@@ -2300,7 +2316,7 @@ plate({
     const last = (q) => { for (let k = q.length - 1; k >= 0; k--) if (Number.isFinite(q[k])) return q[k]; return NaN; };
     const g = []; for (let i = 0; i < hiW; i++) if (Alive[i] && Tr[i] === 0 && An[i] > 200) g.push(funLam(Ax[i]));
     const f1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : '—');
-    return [['2/η', (2 / SIM.lr).toFixed(1)], ['λ at particles', f1(last(m))], ['λ at their time average', g.length ? (g.reduce((p, q) => p + q, 0) / g.length).toFixed(1) : '…'],
+    return [['2/η', (2 / SIM.lr).toFixed(0)], ['λ at particles', f1(last(m))], ['λ at their time average', g.length ? (g.reduce((p, q) => p + q, 0) / g.length).toFixed(1) : '…'],
       ['λ at Adam particles', f1(last(ma))], ['0.15η·λ_max(P⁻¹H), Adam (edge 38)', f1(last(mp))]];
   },
   fig: (c, w, h) => {
@@ -2350,7 +2366,7 @@ plate({
   status: 'established',
   mist: () => { const T = SIM.lr * (SIM.noise ** 2) / 2; return [{ T, color: TRIBES[0].color }, { T: T / 4, color: TRIBES[1].color }]; },
   tribes: [
-    { k: 'sgd', name: 'η, B', rule: 'T = ησ²/2B', rest: 'never', maxAge: 1e9, inkA: 0.012 },
+    { k: 'sgd', name: 'η, B', rule: 'T = ησ²/2', rest: 'never', maxAge: 1e9, inkA: 0.012 },
     { k: 'sgd', name: 'η, 4B', color: '#4b3fa0', sigMul: 0.5, rule: 'T ⁄ 4', rest: 'never', maxAge: 1e9, inkA: 0.012 },
     { k: 'sgd', name: '2η, 2B', color: '#cf6d0c', etaMul: 2, sigMul: Math.SQRT1_2, rule: 'T', rest: 'never', maxAge: 1e9, inkA: 0.012 },
   ],
@@ -2461,7 +2477,7 @@ plate({
     if (e.length < 8) return [`${T.name}, median escape`, oldest > 0 ? `> ${oldest} steps` : '…'];
     const ts = []; for (let k = 0; k <= 400; k++) ts.push(Math.pow(10, 6.5 * k / 400));
     const S = kmAt(e, alive, ts), k = S.findIndex((v) => v <= 0.5);
-    return [`${T.name}, median escape`, k < 0 ? `> ${Math.max(oldest, ...e)} steps` : `${Math.round(ts[k])} steps (${e.length})`];
+    return [`${T.name}, median escape`, k < 0 ? `> ${Math.max(oldest, ...e)} steps` : `${Math.round(ts[k])} steps`];
   }),
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28;
@@ -2527,8 +2543,8 @@ plate({
   id: 'heavytail', ch: 1, seed: 1823,
   status: 'contested',
   tribes: [
-    { k: 'sgd', name: 'Gaussian noise', rule: 'ξ ~ N(0, I)', rest: 'never', maxAge: 1e9 },
-    { k: 'sgd', name: 'Heavy-tailed noise', color: '#167a5b', noise: N_LEVY, rule: 'ξ = √A · N(0, I),  A ~ (α⁄2)-stable', rest: 'never', maxAge: 1e9 },
+    { k: 'sgd', name: 'Gaussian noise', rule: 'σξ, ξ ~ N(0, I)', rest: 'never', maxAge: 1e9 },
+    { k: 'sgd', name: 'Heavy-tailed noise', color: '#167a5b', noise: N_LEVY, rule: 'σ√A · ξ, ξ ~ N(0, I),  A ~ (α⁄2)-stable', rest: 'never', maxAge: 1e9 },
   ],
   sim: { lr: 0.001, noise: 12, tail: 1.5, depth: 0.75 },
   ctl: [
@@ -2649,11 +2665,11 @@ plate({
   retire: (i, ring) => { if (!ring) return; const st = PL.st; st.rec.push([Ax[i], Ay[i], hypC(Ex[i], Ey[i])]); if (st.rec.length > 200) st.rec.shift(); },
   readouts: () => {
     const r = PL.st.rec[PL.st.rec.length - 1];
-    return r ? [['w² − a², gradient flow', r[0].toFixed(3)], ['flow of L̃', r[1].toFixed(3)], ['gradient descent', r[2].toFixed(3)]] : [['η', SIM.lr.toFixed(2)]];
+    return r ? [['w² − a², gradient flow', fmt(r[0], 3)], ['flow of L̃', fmt(r[1], 3)], ['gradient descent', fmt(r[2], 3)]] : [['η', SIM.lr.toFixed(2)]];
   },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28, lo = -2.2, hi = 5.2;
-    FIG.axes(c, x0, y0, x1, y1, 'predicted w² − a²', 'GD');
+    FIG.axes(c, x0, y0, x1, y1, 'predicted w² − a²', 'gradient descent');
     const tx = (v) => x0 + (x1 - x0) * (v - lo) / (hi - lo), ty = (v) => y1 - (y1 - y0) * (v - lo) / (hi - lo);
     c.strokeStyle = 'rgba(36,38,43,0.3)'; c.beginPath(); c.moveTo(tx(lo), ty(lo)); c.lineTo(tx(hi), ty(hi)); c.stroke();
     for (const v of [-2, 0, 2, 4]) { FIG.tick(c, tx(v), y1 + 4, String(v)); FIG.tick(c, x0 - 3, ty(v), String(v), 'right', 'middle'); }
@@ -2691,8 +2707,8 @@ plate({
   features: () => { PL.st = { C: curveInit(1, 2000), k: 0, t1: [], t2: [] }; },
   names: (S) => {
     const a = Math.sqrt(S2S.s1), b = Math.sqrt(S2S.s2);
-    S.marks.push({ p: { x: 0, y: 0 }, name: 'Origin', sub: `L ${(0.5 * (S2S.s1 ** 2 + S2S.s2 ** 2)).toFixed(2)} · nothing learned`, sym: 'peak', pri: 9 });
-    S.marks.push({ p: { x: a, y: 0 }, name: 'Saddle', sub: `L ${(0.5 * S2S.s2 ** 2).toFixed(3)} · strong mode learned`, sym: 'pass', pri: 8 });
+    S.marks.push({ p: { x: 0, y: 0 }, name: 'Origin', sub: `L − L* ${(0.5 * (S2S.s1 ** 2 + S2S.s2 ** 2)).toFixed(2)} · nothing learned`, sym: 'peak', pri: 9 });
+    S.marks.push({ p: { x: a, y: 0 }, name: 'Saddle', sub: `L − L* ${(0.5 * S2S.s2 ** 2).toFixed(3)} · strong mode learned`, sym: 'pass', pri: 8 });
     S.marks.push({ p: { x: -a, y: 0 }, name: '', sub: `${(0.5 * S2S.s2 ** 2).toFixed(3)}`, sym: 'pass', pin: false });
     S.marks.push({ p: { x: 0, y: b }, name: '', sub: `${(0.5 * S2S.s1 ** 2).toFixed(2)} · weak mode only`, sym: 'pass', pin: false });
     S.marks.push({ p: { x: 0, y: -b }, name: '', sub: `${(0.5 * S2S.s1 ** 2).toFixed(2)}`, sym: 'pass', pin: false });
@@ -2725,7 +2741,7 @@ plate({
   onSim: (k) => { if (k === 'delta') { PL.st.t1 = []; PL.st.t2 = []; nextRelease = STAT.steps + 20; } },
   readouts: () => {
     const st = PL.st, m = (a) => (a.length ? Math.round(a.reduce((p, q) => p + q, 0) / a.length) : '…');
-    return [['δ', SIM.delta.toExponential(0)], ['strong mode at', `${m(st.t1)} steps (predicted ${Math.round(s2sPred(S2S.s1, SIM.delta))})`], ['weak mode at', `${m(st.t2)} steps (predicted ${Math.round(s2sPred(S2S.s2, SIM.delta))})`]];
+    return [['δ', SIM.delta.toExponential(0)], ['strong mode at', `${st.t1.length ? m(st.t1) + ' steps' : '…'} (predicted ${Math.round(s2sPred(S2S.s1, SIM.delta))})`], ['weak mode at', `${st.t2.length ? m(st.t2) + ' steps' : '…'} (predicted ${Math.round(s2sPred(S2S.s2, SIM.delta))})`]];
   },
   debug: () => ({ t1: PL.st.t1.slice(-3), t2: PL.st.t2.slice(-3), p1: s2sPred(S2S.s1, SIM.delta), p2: s2sPred(S2S.s2, SIM.delta) }),
   fig: (c, w, h) => {
@@ -2765,8 +2781,8 @@ plate({
   status: 'contested',
   tribes: [
     { k: 'sgd', name: 'No warmup', rule: 'η(t) = η', maxAge: 1800, rest: 'never' },
-    { k: 'sgd', name: 'Warmup, 100 steps', color: '#cf6d0c', sched: { kind: 'const', warm: 100, T: 1e9 }, rule: 'η(t) = η · min(1, t/100)', maxAge: 1800, rest: 'never' },
-    { k: 'sgd', name: 'Warmup, 700 steps', color: '#23708f', sched: { kind: 'const', warm: 700, T: 1e9 }, rule: 'η(t) = η · min(1, t/700)', maxAge: 1800, rest: 'never' },
+    { k: 'sgd', name: 'Warmup, 100 steps', color: '#cf6d0c', sched: { kind: 'const', warm: 100, T: 1e9 }, rule: 'η(t) = η · min(1, (t+1)/100)', maxAge: 1800, rest: 'never' },
+    { k: 'sgd', name: 'Warmup, 700 steps', color: '#23708f', sched: { kind: 'const', warm: 700, T: 1e9 }, rule: 'η(t) = η · min(1, (t+1)/700)', maxAge: 1800, rest: 'never' },
   ],
   sim: { lr: 0.02, noise: 0.01 },
   ctl: [{ key: 'lr', label: 'Target learning rate η', min: 0.005, max: 0.04, scale: 'log', f: (v) => v.toFixed(4) }],
@@ -2849,7 +2865,7 @@ plate({
   tribes: [
     { k: 'sgd', name: 'Constant', rule: 'η(t) = η', maxAge: RIVER_T, rest: 'never', noise: N_HESS },
     { k: 'sgd', name: 'Cosine', color: '#23708f', sched: { kind: 'cos', T: RIVER_T, floor: 0.02 }, rule: 'η(t) = η(f + (1−f)·½(1 + cos πt/T)), f = 0.02', maxAge: RIVER_T, rest: 'never', noise: N_HESS },
-    { k: 'sgd', name: 'Warmup–stable–decay', color: '#cf6d0c', sched: { kind: 'wsd', T: RIVER_T, decay: 0.2, floor: 0.02, warm: 40 }, rule: 'η, then linear decay over the last 20%', maxAge: RIVER_T, rest: 'never', noise: N_HESS },
+    { k: 'sgd', name: 'Warmup–stable–decay', color: '#cf6d0c', sched: { kind: 'wsd', T: RIVER_T, decay: 0.2, floor: 0.02, warm: 40 }, rule: '40-step warmup, η, then linear decay to 0.02η over the last 20%', maxAge: RIVER_T, rest: 'never', noise: N_HESS },
     { k: 'sf', name: 'Schedule-free', etaMul: 10, sfBeta: 0.9, sched: { kind: 'const', warm: 100, T: 1e9 }, rule: 'γ = 10η after warmup, β = 0.9, no decay', maxAge: RIVER_T, rest: 'never', noise: N_HESS },
     { k: 'sgd', name: 'Batch ramp', color: '#4b3fa0', rule: 'η constant; batch ×2 at 80, 85, 90 and 95%', maxAge: RIVER_T, rest: 'never', noise: N_FN, noiseFn: riverBatchNoise },
   ],
@@ -3119,7 +3135,7 @@ plate({
   status: 'open',
   tribes: [{ k: 'sgd', name: 'SGD, batches of 4', noise: N_FN, noiseFn: minibatchNoise, rule: 'g̃ = ∇L on 4 of 16 points', color: '#4b3fa0' }],
   sim: { lr: 0.5, noise: 1 },
-  ctl: [{ key: 'lr', label: 'Learning rate η', min: 0.05, max: 1.2, scale: 'log', f: (v) => v.toFixed(3) }, { key: 'noise', label: 'Minibatch noise, scale', min: 0, max: 2, step: 0.05 }],
+  ctl: [{ key: 'lr', label: 'Learning rate η', min: 0.05, max: 1.2, scale: 'log', f: (v) => v.toFixed(3) }, { key: 'noise', label: 'Minibatch noise, ×', min: 0, max: 2, step: 0.05, f: (v) => v.toFixed(2) }],
   view: { yaw: -4, pitch: 54 },
   sheet: sheetTanh,
   features: () => {
@@ -3128,8 +3144,8 @@ plate({
   },
   names: (S) => {
     const st = PL.st; if (!st.mp) return;
-    S.marks.push({ p: st.mp, name: 'Solution', sub: `w ${(NET.sw * st.mp.x).toFixed(2)}, a ${(NET.sa * st.mp.y).toFixed(2)}`, sym: 'min', pri: 8 });
-    S.marks.push({ p: st.mm, name: 'Its twin', sub: `w ${(NET.sw * st.mm.x).toFixed(2)}, a ${(NET.sa * st.mm.y).toFixed(2)}`, sym: 'min', pri: 8 });
+    S.marks.push({ p: st.mp, name: 'Solution', sub: `w ${fmt(NET.sw * st.mp.x, 2)}, a ${fmt(NET.sa * st.mp.y, 2)}`, sym: 'min', pri: 8 });
+    S.marks.push({ p: st.mm, name: 'Its twin', sub: `w ${fmt(NET.sw * st.mm.x, 2)}, a ${fmt(NET.sa * st.mm.y, 2)}`, sym: 'min', pri: 8 });
     S.marks.push({ p: { x: 0, y: 0 }, name: '', sub: 'centre of the half-turn', sym: 'x', pin: false });
   },
   plan: () => { for (let k = 0; k < 5; k++) RELEASES.push([RPLAN.range(-1.4, 1.4), RPLAN.range(-0.85, 0.85)]); RELEASES.more = () => [RPLAN.range(-1.4, 1.4), RPLAN.range(-0.85, 0.85)]; },
@@ -3174,7 +3190,7 @@ plate({
   status: 'established',
   tribes: [
     { k: 'gd', color: '#c22a40', rest: 'never', maxAge: 5000 },
-    { k: 'sgd', name: 'SGD, label noise', color: '#167a5b', noise: N_FN, noiseFn: labelNoise, rule: 'y ← y + ε', rest: 'never', maxAge: 5000 },
+    { k: 'sgd', name: 'SGD, label noise', color: '#167a5b', noise: N_FN, noiseFn: labelNoise, rule: 'y = 1 + εξ, ξ ~ N(0, 1), fresh each step', rest: 'never', maxAge: 5000 },
   ],
   sim: { lr: 0.15, noise: 0.3 },
   ctl: [{ key: 'noise', label: 'Label noise ε', min: 0, max: 2, step: 0.05 }],
@@ -3232,7 +3248,7 @@ function pgFeatures() {
   st.mins.forEach((m, k) => { m.letter = 'ABCDEFGH'[k] || '·'; });
   st.arr = TRIBES.map(() => new Float64Array(st.mins.length + 1));
 }
-const pgNum = (v) => fmt(v, Math.abs(v) < 10 ? 3 : 1);
+const pgNum = (v) => { const d = Math.abs(v) < 10 ? 3 : 1; return fmt(Math.abs(v) < 0.5 * 10 ** -d ? 0 : v, d); };
 function pgNames(S) {
   const st = PL.st, g = PL.pg, glob = (m) => m.L < st.Lstar + 1e-4;
   for (const c of st.crit) {
@@ -3282,7 +3298,7 @@ function pgRetire(i, ring) {   // where each optimizer came to rest, by minimum
 }
 function pgFigRace(c, w, h) {
   const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28, xm = st.C.len;
-  FIG.axes(c, x0, y0, x1, y1, 'steps', 'log₁₀ (L − L*)');
+  FIG.axes(c, x0, y0, x1, y1, 'steps', 'log₁₀(L − L*)');
   const r = figSeries(c, x0, y0, x1, y1, TRIBES.map((T, t) => ({ ys: curveMean(st.C, t), color: T.color, w: 1.4 })), { xmax: xm, ymin: -5, ymax: 0.5 });
   for (const v of [-4, -2, 0]) FIG.tick(c, x0 - 3, r.ty(v), String(v), 'right', 'middle');
   FIG.tick(c, x1, y1 + 4, String(xm), 'right');
@@ -3308,7 +3324,6 @@ function provingPlate(p) {
     cap: p.arrivals ? TEXT.pgCap.arrivals : TEXT.pgCap.race,
   }, p, p.lead ? { method: (p.method || '') + TEXT.pgHow } : { how: (p.how || '') + TEXT.pgHow }));
 }
-const REF_LIB = 'Surjanovic, S. and Bingham, D. (2013). Virtual library of simulation experiments: test functions and datasets. Simon Fraser University.';
 const PG_TRIBES = [{ k: 'gd', maxAge: 3000 }, { k: 'hb', name: 'Heavy ball', sigMul: 0, maxAge: 3000 }, { k: 'adam', name: 'Adam', sigMul: 0, maxAge: 3000 }];
 
 provingPlate({
@@ -3351,7 +3366,7 @@ provingPlate({
 });
 provingPlate({
   id: 'camel', seed: 3105, arrivals: true,
-  pg: { f: (u, v) => (4 - 2.1 * u * u + u ** 4 / 3) * u * u + u * v + (-4 + 4 * v * v) * v * v, fmin: -1.031628453, s: 1.25, u0: 0, v0: 0, H: 6, letters: true, labels: true, gap: 900 },
+  pg: { f: (u, v) => (4 - 2.1 * u * u + u ** 4 / 3) * u * u + u * v + (-4 + 4 * v * v) * v * v, fmin: -1.031628453, s: 1.25, u0: 0, v0: 0, H: 6, letters: true, labels: 'all', gap: 900 },
   tribes: PG_TRIBES.map((t) => Object.assign({}, t, { maxAge: 1600 })),
   sim: { lr: 0.03, noise: 0, beta: 0.9 },
   ctl: ['lr', 'beta'],
@@ -3452,7 +3467,7 @@ plate({
     if (Tag[i] === st.C.cid) { curveAdd(st.C, Tr[i], Age[i], Math.log10(Math.max(1e-4, r))); st.rad[Tr[i]] = r; }
     if (r < 0.006) { Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); return false; }
   },
-  readouts: () => TRIBES.map((T, t) => [T.name, `distance ${PL.st.rad[t].toFixed(3)}`]),
+  readouts: () => TRIBES.map((T, t) => [T.name, PL.st.rad[t] ? `distance ${PL.st.rad[t].toFixed(3)}` : '…']),
   debug: () => {
     const st = PL.st, e = SIM.lr * GAME_A, m = TRIBES.map((T, t) => curveMean(st.C, t));
     const at = (t, k) => (Number.isFinite(m[t][k]) ? +m[t][k].toFixed(4) : null);
@@ -3647,7 +3662,7 @@ plate({
     mmW(Wx[i], Wy[i], MMW); const a = Math.atan2(MMW[1], MMW[0]) * 180 / Math.PI;
     curveAdd(st.C, Tr[i], Age[i], a); st.ang[Tr[i]] = a; st.nrm[Tr[i]] = Math.hypot(MMW[0], MMW[1]);
   },
-  readouts: () => [['roads', `ℓ₂ ${(MM.roads.l2.a * 180 / Math.PI).toFixed(1)}° · ℓ∞ ${(MM.roads.li.a * 180 / Math.PI).toFixed(1)}°`]].concat(TRIBES.map((T, t) => [T.name, PL.st.ang[t] == null ? '…' : `${PL.st.ang[t].toFixed(1)}° · ‖w‖ ${PL.st.nrm[t].toFixed(0)}`])),
+  readouts: () => [['roads', `ℓ₂ ${(MM.roads.l2.a * 180 / Math.PI).toFixed(1)}° · ℓ∞ ${(MM.roads.li.a * 180 / Math.PI).toFixed(1)}°`]].concat(TRIBES.map((T, t) => [T.name, PL.st.ang[t] == null ? '…' : `${PL.st.ang[t].toFixed(1)}° · ‖w‖ ${PL.st.nrm[t].toFixed(PL.st.nrm[t] < 100 ? 1 : 0)}`])),
   debug: () => ({ l2: +(MM.roads.l2.a * 180 / Math.PI).toFixed(2), li: +(MM.roads.li.a * 180 / Math.PI).toFixed(2), ang: PL.st.ang.map((v) => (v == null ? null : +v.toFixed(2))), nrm: PL.st.nrm.map((v) => +v.toFixed(1)) }),
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28, n = st.C.len, lx = Math.log10(n);
@@ -3757,10 +3772,10 @@ plate({
   sheet: sheetDisplace,
   features: () => { PL.st = { C: curveInit(3, DPX.T), Y: curveInit(1, DPX.T), h0: DPX.h0.slice(), k: 0, cid: 1, pNo: [null, null, null], pYes: [null, null, null], peak: [0, 0, 0], cross: null, mCross: null, mc: null, bad: 0, n: 0, badAt: [] }; },
   names: (S) => {
-    const sub = ['the chosen answer', 'the rejected answer', '', ''], mid = [-55, -125, 30, 150];     // the middle of each territory, in degrees
+    const sub = DPX.word.map((w, k) => (k === 0 ? 'the chosen answer' : k === DPX.rej ? 'the rejected answer' : '')), mid = [-55, -125, 30, 150];     // the middle of each territory, in degrees
     for (let k = 0; k < 4; k++) { const a = mid[k] * Math.PI / 180, p = bMap(11 * Math.cos(a), 11 * Math.sin(a), [0, 0]); S.areas.push({ x: p[0], y: p[1], lines: [`“${DPX.word[k]}”`].concat(sub[k] ? [sub[k]] : []), size: 13, ls: 2.4 }); }
     const h = PL.st.h0, p = bMap(h[0], h[1], [0, 0]), q = dpxPi(h[0], h[1], [0, 0, 0, 0]);
-    S.marks.push({ p: { x: p[0], y: p[1] }, name: 'Reference model', sub: `π(No) ${q[0].toFixed(2)} · π(Never) ${q[1].toFixed(2)}`, sym: 'x', pri: 9 });
+    S.marks.push({ p: { x: p[0], y: p[1] }, name: 'Reference model', sub: `π(No) ${q[0].toFixed(2)} · π(${DPX.word[DPX.rej]}) ${q[DPX.rej].toFixed(2)}`, sym: 'x', pri: 9 });
   },
   print: () => {
     const r = DPX.deg.map((a) => a * Math.PI / 180), o = [1, 0, 2, 3];      // answers in angular order: Never, No, Yes, Unsure
@@ -3852,7 +3867,7 @@ const ENT_TRIBES = [
     fn: entStep((p, o) => entGrpo(p, o)) },
   { k: 'sgd', name: 'GRPO + entropy bonus', color: '#167a5b', kind: K_FN, sigMul: 0, rest: 'never', maxAge: ENT.T, rule: 'adds τ∇H, τ = 0.2',
     fn: entStep((p, o) => { entGrpo(p, o); const h = entH(p); o[0] -= ENT.tau * p[0] * (entLog(p[0]) + h); o[1] -= ENT.tau * p[1] * (entLog(p[1]) + h); return o; }) },
-  { k: 'sgd', name: 'Pass@k objective', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: ENT.T, rule: 'θ ← θ + η∇ pass@16, exact',
+  { k: 'sgd', name: 'Pass@16 objective', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: ENT.T, rule: 'θ ← θ + η∇pass@16, exact',
     fn: entStep((p, o) => {
       entQ(p, EQ); o[0] = o[1] = 0;
       for (let j = 0; j < 2; j++) { const c = ENT.w[j] * ENT.k * (1 - EQ[j]) ** (ENT.k - 1); for (let b = 0; b < 2; b++) o[b] += c * p[b] * (ENT.P[b][j] - EQ[j]); }
@@ -3879,7 +3894,7 @@ plate({
     [[14, 2], [-3, 9], [-7, -7]].forEach((q, k) => { const p = at(q[0], q[1]); S.areas.push({ x: p[0], y: p[1], lines: [ENT.word[k], `pass@1 ${sc1[k].toFixed(2)}`], size: 13, ls: 2.4 }); });
     const b = PL.st.p0, th = entLogits(b), p = at(th[0], th[1]);
     S.marks.push({ p: { x: p[0], y: p[1] }, name: 'Base model', sub: `pass@1 ${entPass1(b).toFixed(2)} · pass@16 ${entPassK(b).toFixed(2)}`, sym: 'x', pri: 9 });
-    if (ENT.best) { const q = at(ENT.best.th[0], ENT.best.th[1]); S.marks.push({ p: { x: q[0], y: q[1] }, name: 'Best pass@16', sub: `${ENT.best.v.toFixed(3)} · pass@1 ${ENT.best.p1.toFixed(2)}`, sym: 'peak', pri: 7 }); }
+    if (ENT.best) { const q = at(ENT.best.th[0], ENT.best.th[1]); S.marks.push({ p: { x: q[0], y: q[1] }, name: 'Best pass@16', sub: `pass@16 ${ENT.best.v.toFixed(4)} · pass@1 ${ENT.best.p1.toFixed(2)}`, sym: 'peak', pri: 7 }); }
   },
   print: () => {
     rimPrint([Math.PI / 4, -Math.PI / 2, Math.PI]);
@@ -3900,7 +3915,7 @@ plate({
     curveAdd(st.H, t, Age[i], h); if (t === 0) curveAdd(st.Pd, 0, Age[i], Sy[i] + Sx[i]);
     st.cur[t] = [entPass1(p), entPassK(p), h, Sy[i] + Sx[i]];
   },
-  readouts: () => [['base', `pass@1 ${entPass1(PL.st.p0).toFixed(2)} · pass@16 ${entPassK(PL.st.p0).toFixed(2)} · H ${entH(PL.st.p0).toFixed(2)}`]].concat(TRIBES.map((T, t) => { const c = PL.st.cur[t]; return [T.name, c ? `pass@1 ${c[0].toFixed(2)} · pass@16 ${c[1].toFixed(2)} · H ${c[2].toFixed(2)}` : '…']; })),
+  readouts: () => [['base', `π₀ ${PL.st.p0.map((v) => v.toFixed(2)).join(' · ')} · pass@1 ${entPass1(PL.st.p0).toFixed(2)} · pass@16 ${entPassK(PL.st.p0).toFixed(2)} · H ${entH(PL.st.p0).toFixed(2)}`]].concat(TRIBES.map((T, t) => { const c = PL.st.cur[t]; return [T.name, c ? `pass@1 ${c[0].toFixed(2)} · pass@16 ${c[1].toFixed(2)} · H ${c[2].toFixed(2)}` : '…']; })),
   debug: () => ({ p0: PL.st.p0.map((v) => +v.toFixed(3)), cur: PL.st.cur.map((c) => (c ? c.map((v) => +v.toFixed(4)) : null)), best: ENT.best && { v: +ENT.best.v.toFixed(4), p1: +ENT.best.p1.toFixed(3) } }),
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28, xm = ENT.T, hm = Math.log(3);
@@ -3932,7 +3947,7 @@ const RZ_TRIBES = [
     fn: rzStep(() => [1, 1]) },
   { k: 'sgd', name: 'SFT on a teacher', color: '#cf6d0c', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'θ ← θ + η∇log π(the teacher’s answer)',
     fn: rzStep((p) => (RZ.teach === 1 ? [-p[0], 1 - p[1]] : [1 - p[0], -p[1]])) },
-  { k: 'sgd', name: 'SFT on π₀ given success', color: '#167a5b', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'targets drawn from π₀ restricted to right answers',
+  { k: 'sgd', name: 'SFT on π₀ given success', color: '#167a5b', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'cross-entropy towards π₀ restricted to right answers',
     fn: rzStep((p) => { const q = RZ.p0, s = q[0] + q[1]; return [q[0] / s - p[0], q[1] / s - p[1]]; }) },
 ];
 function rzRace(p) {
@@ -3956,7 +3971,7 @@ plate({
     [[[14, 2], ['Answer A', 'right']], [[-3, 9], ['Answer B', 'right']], [[-7, -7], ['Answer C', 'wrong']]].forEach(([q, l]) => { const p = at(q[0], q[1]); S.areas.push({ x: p[0], y: p[1], lines: l, size: 13, ls: 2.4 }); });
     const q = RZ.p0, th = [Math.log(q[0] / q[2]), Math.log(q[1] / q[2])], p = at(th[0], th[1]), s = q[0] + q[1], e = at(th[0] + 11, th[1] + 11);
     S.marks.push({ p: { x: p[0], y: p[1] }, name: 'Base model', sub: `π₀ = ${q.map((v) => v.toFixed(2)).join(' · ')}`, sym: 'x', pri: 9 });
-    S.marks.push({ p: { x: e[0], y: e[1] }, name: 'π₀ given success', sub: `${(q[0] / s).toFixed(2)} · ${(q[1] / s).toFixed(2)} · 0 · KL(π ‖ π₀) ${(-Math.log(s)).toFixed(2)}`, sym: 'min', pri: 8 });
+    S.marks.push({ p: { x: e[0], y: e[1] }, name: 'π₀ given success', sub: `π = ${(q[0] / s).toFixed(2)} · ${(q[1] / s).toFixed(2)} · 0 · KL(π ‖ π₀) ${(-Math.log(s)).toFixed(2)}`, sym: 'min', pri: 8 });
   },
   print: () => {
     rimPrint([Math.PI / 4, -Math.PI / 2, Math.PI]);
@@ -3985,7 +4000,7 @@ plate({
     if (st.at99[t] == null && err < 0.01) st.at99[t] = kl;
     if (err < 1e-7) { Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); return false; }
   },
-  readouts: () => [['base', `π₀ = ${RZ.p0.map((v) => v.toFixed(2)).join(' · ')} · teacher answers ${RZ.teach === 1 ? 'B' : 'A'}`]].concat(TRIBES.map((T, t) => { const c = PL.st.cur[t]; return [T.name, c ? `right ${(100 * c[0]).toFixed(1)}% · KL ${c[1].toFixed(2)} · A:B ×${c[2] > 999 ? '∞' : c[2] < 0.001 ? '0' : c[2].toFixed(2)}` : '…']; })),
+  readouts: () => [['base', `π₀ = ${RZ.p0.map((v) => v.toFixed(2)).join(' · ')} · teacher answers ${RZ.teach === 1 ? 'B' : 'A'}`]].concat(TRIBES.map((T, t) => { const c = PL.st.cur[t]; return [T.name, c ? `right ${(100 * c[0]).toFixed(1)}% · KL(π₀ ‖ π) ${c[1].toFixed(2)} · A:B ×${c[2] > 999 ? '>999' : c[2] < 0.001 ? '<0.001' : c[2].toPrecision(3)}` : '…']; })),
   debug: () => { const st = PL.st, f = (v) => (v == null ? null : +v.toFixed(3)); return { p0: RZ.p0.map(f), at90: st.at90.map(f), at99: st.at99.map(f), cur: st.cur.map((c) => (c ? c.map(f) : null)), iproj: f(-Math.log(RZ.p0[0] + RZ.p0[1])) }; },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, y0 = 8, x1 = w - 6, y1 = h - 28, xmx = 3, ymx = 4;
@@ -4037,7 +4052,7 @@ plate({
     S.areas.push({ x: 0.02, y: -0.16, lines: ['Safety Basin'], size: 15, ls: 3 });
     S.areas.push({ x: 0.95, y: 0.78, lines: ['Compromised'], size: 13, ls: 2.4 });
     S.marks.push({ p: { x: 0, y: 0 }, name: 'Aligned model', sub: `attack success ${(100 * safASR(0, 0)).toFixed(0)}%`, sym: 'x', pri: 9 });
-    S.marks.push({ p: { x: SAF.base[0], y: SAF.base[1] }, name: 'Base model', sub: `before safety training · ${(100 * safASR(...SAF.base)).toFixed(0)}%`, sym: 'x', pri: 7 });
+    S.marks.push({ p: { x: SAF.base[0], y: SAF.base[1] }, name: 'Base model', sub: `before safety training · attack success ${(100 * safASR(...SAF.base)).toFixed(0)}%`, sym: 'x', pri: 7 });
     S.marks.push({ p: { x: SAF.harm[0], y: SAF.harm[1] }, name: 'Harmful data', sub: 'its loss is lowest here', sym: 'min', pri: 6, pin: false });
     S.marks.push({ p: { x: SAF.ben[0], y: SAF.ben[1] }, name: 'Benign task', sub: 'its loss is lowest here', sym: 'min', pri: 6, pin: false });
     S.paths.push({ text: 'alignment direction', pts: [-1.25, -0.06, -0.35, -0.06], size: 11, offset: 0.04 });
@@ -4049,7 +4064,7 @@ plate({
     c.setLineDash([2, 3]); c.beginPath(); c.moveTo(ox(SAF.base[0]), oy(0)); c.lineTo(ox(1.5), oy(0)); c.moveTo(ox(0), oy(-0.95)); c.lineTo(ox(0), oy(0.95)); c.stroke();
     c.font = `italic 400 ${9.5 * FS}px ${SERIF}`; c.fillStyle = 'rgba(36,38,43,0.75)'; c.textAlign = 'left'; c.textBaseline = 'middle';
     c.fillText('safe in every direction', ox(SAF.b * 0.72) + 4, oy(-SAF.b * 0.72) + 6); c.restore();
-    const G = fieldGrid(safTask, 192); isoPrint(G, [0.02, 0.08, 0.18], 'rgba(207,109,12,0.8)', [3, 2.4], (v) => `L ${v}`, 0.6);
+    const G = fieldGrid(safTask, 192); isoPrint(G, [0.02, 0.08, 0.18], 'rgba(207,109,12,0.8)', [3, 2.4], (v) => `L_task ${v}`, 0.6);
   },
   release: () => {
     if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
@@ -4096,8 +4111,8 @@ const F = Frame.init({ standalone: true, byline: 'By hematteo, made with Claude 
   tone: 'light', accent: '#4b3fa0', seed: 1938, maxDpr: 2,
   statement: TEXT.about,
   hint: 'drag to turn · right-drag to pan · scroll to approach · click to release a cohort · <kbd>↑</kbd><kbd>↓</kbd> plates',
-  gestures: [['Drag', 'turn the relief model'], ['Right-drag, two fingers', 'pan across the sheet'], ['Scroll, pinch', 'approach the pointer'],
-    ['Click', 'release a cohort (or the plate’s own action)'], ['Double-click', 'return to the plate’s view'], ['Hover', 'read θ, L and the downhill direction'],
+  gestures: [['Drag', 'turn the relief model'], ['Right-drag, Shift-drag, two fingers', 'pan across the sheet; twist two fingers to turn'], ['Scroll, pinch', 'approach the pointer'],
+    ['Click', 'release a cohort (or the plate’s own action); click a stick man to walk with it'], ['Double-click', 'return to the plate’s view'], ['Hover', 'read θ, L, |∇L| and the downhill direction'],
     ['Option-drag, Alt-drag', 'move the lamp']],
   params: [
     { type: 'section', label: 'Atlas' },
@@ -4131,7 +4146,7 @@ const F = Frame.init({ standalone: true, byline: 'By hematteo, made with Claude 
     n: ['dusk: the lamp drops low and the stick men light their lanterns (N or Esc returns to day)', () => toggleDusk()],
     o: ['watch a few stick men up close, each in its own small view (O or Esc closes them)', () => toggleWatch()],
     x: ['cross-section: click two points on the relief (X or Esc puts it away)', () => toggleSection()],
-    Escape: ['leave the current mode: section, walk, plan view, then flood', () => {}],
+    Escape: ['close the contents or the close-up views, else leave the current mode: section, walk, dusk, plan view, then flood', () => {}],
     '[': ['slower: fewer steps per second', (F) => { F.setParam('speed', Math.max(10, Math.round(F.params.speed / 1.5 / 5) * 5)); F.toast(`${F.params.speed} steps per second`); }],
     ']': ['faster: more steps per second', (F) => { F.setParam('speed', Math.min(240, Math.round(F.params.speed * 1.5 / 5) * 5)); F.toast(`${F.params.speed} steps per second`); }],
     c: ['clear trails and rings', () => clearInk(true)],
@@ -5856,7 +5871,7 @@ function walkWith() {
     followPilgrim(i);
     return;
   }
-  F.toast(FOL.on ? 'No other optimizer has particles still moving' : 'No particles on the sheet yet: click the relief to release a cohort', 2400);
+  F.toast(FOL.on ? 'No particles still moving' : 'No particles on the move: click the relief to release a cohort', 2400);
 }
 function leaveWalk() {
   if (!FOL.on) return;
@@ -6075,7 +6090,7 @@ function click(px, py) {
 // ---------------------------------------------------------------------------------------------
 function moodOf(i, long) {
   const fly = FT[i] && NOWMS - FT[i] < FLIGHT_MS;
-  if (fly && CWF[i]) return long ? 'cartwheeling: a catapult, thrown from ground too sharp for its step to ground flat enough' : 'cartwheeling: a catapult';
+  if (fly && CWF[i]) return long ? 'cartwheeling: a catapult, thrown from where ηλ > 2 to where ηλ < 2' : 'cartwheeling: a catapult';
   if (fly) return long ? 'thrown through the air: one step was far too long' : 'thrown through the air';
   if (BULB[i] && NOWMS - BULB[i] < 2600) return long ? `found the way down after ${ESC[i]} steps at the saddle` : 'found the way down';
   if (SK[i] && NOWMS - SK[i] < 400) return long ? 'skidding: its momentum carried it past the bottom and up the far side' : 'skidding past the bottom';
@@ -6083,7 +6098,7 @@ function moodOf(i, long) {
   if (EM[i] === 2 && Age[i] - PLT0[i] >= NAP) return long ? `asleep on its feet: ${Age[i] - PLT0[i]} steps on a plateau with almost no gradient` : 'sleepwalking across a plateau';
   if (EM[i] === 1) return long ? 'puzzled at a saddle: the slope is gone and one way curves down' : 'puzzled at a saddle';
   if (EM[i] === 2) return long ? 'trudging across a plateau: no slope and no curve' : 'trudging across a plateau';
-  if (GT[i] > 0.6) return long ? 'its steps keep reversing: the step size is past 2/λ' : 'bouncing: its steps keep reversing';
+  if (GT[i] > 0.6) return long ? 'its steps keep reversing: each one overshoots the valley floor (for gradient descent, η > 1/λ)' : 'bouncing: its steps keep reversing';
   return GS[i] < 1e-5 ? 'all but standing still' : 'walking downhill';
 }
 // a campfire in front of a tent, and smoke that rises higher the more stick men sit round it (fx, fy: the fire's foot)
@@ -6354,7 +6369,7 @@ function drawOverlay(now, alpha) {
   oc.beginPath(); oc.moveTo(s0[0], s0[1]); oc.lineTo(P1[0], P1[1]);
   oc.moveTo(P1[0] - bx * 4 + by * 2.4, P1[1] - by * 4 - bx * 2.4); oc.lineTo(P1[0], P1[1]); oc.lineTo(P1[0] - bx * 4 - by * 2.4, P1[1] - by * 4 + bx * 2.4);
   oc.stroke();
-  const txt = `θ ${hp[0] >= 0 ? ' ' : '−'}${Math.abs(hp[0]).toFixed(2)}, ${hp[1] >= 0 ? '' : '−'}${Math.abs(hp[1]).toFixed(2)}   L ${Lh.toFixed(3)}   |∇L| ${g.toFixed(2)}`;
+  const txt = `θ ${fmt(hp[0], 2)}, ${fmt(hp[1], 2)} · L ${Lh.toFixed(3)} · |∇L| ${g.toFixed(2)}`;
   project(VP, hp[0], hp[1], hp[2], P0);
   oc.font = `400 ${PHONE ? 8 : 8.5}px ${MONO}`; oc.textBaseline = 'middle';
   const right = P0[0] > region()[2] - 230;
@@ -6829,8 +6844,8 @@ card.innerHTML = `<div class="pl-head"><span class="pl-chap"></span>
   <button class="pl-nav" data-a="toc" title="Contents" aria-label="Contents" aria-pressed="false">${svgI('list')}</button>
   <button class="pl-nav" data-a="hide" title="Hide the plate card (E)" aria-label="Hide the plate card">${svgI('close')}</button></div>
   <div class="pl-scroll"><div class="pl-entry"></div><div class="pl-toc"></div><div class="pl-watch" aria-label="Stick men up close"></div></div>`;
-const TOOLS = [['walk', 'Walk', 'W', 'Walk with a stick man; again to leave'], ['section', 'Section', 'X', 'Cross-section: click two points on the relief'],
-  ['flood', 'Flood', 'D', 'Flood the sheet and raise its disconnectivity scaffold'], ['map', 'Map', 'T', 'Plan view, straight down'],
+const TOOLS = [['walk', 'Walk', 'W', 'Walk with a stick man; click again to leave'], ['section', 'Section', 'X', 'Cross-section: click two points on the relief'],
+  ['flood', 'Flood', 'D', 'Flood the sheet and raise its disconnectivity scaffold'], ['map', 'Plan', 'T', 'Plan view, straight down'],
   ['dusk', 'Dusk', 'N', 'Dusk: the stick men light their lanterns'], ['watch', 'Watch', 'O', 'Watch a few stick men up close']];
 const tools = document.createElement('div');
 tools.className = 'pl-tools'; tools.setAttribute('role', 'toolbar'); tools.setAttribute('aria-label', 'Tools');
@@ -6866,7 +6881,7 @@ function toggleDusk(v) {         // the lamp drops low and warm, the room goes d
 function activeModes() {
   const m = [];
   if (SECT.on) m.push(['section', 'Cross-section', !SECT.a ? 'click the first point' : !SECT.b ? 'click the second point' : 'click to start another', 'Done', 'X']);
-  if (FOL.on) m.push(['walk', `Walking with No. ${SER[FOL.i] || ''} · ${TRIBES[FOL.tribe] ? TRIBES[FOL.tribe].name : 'a stick man'}`, 'W next optimizer · click a stick man to join it · drag to look round', 'Leave', 'W']);
+  if (FOL.on) m.push(['walk', `Walking with No. ${SER[FOL.i] || ''} · ${TRIBES[FOL.tribe] ? TRIBES[FOL.tribe].name : 'a stick man'}`, 'W next optimizer · click a stick man to join it · drag to look round', 'Leave', 'V']);
   if (DUSK) m.push(['dusk', 'Dusk', 'the stick men carry lanterns and the inks glow', 'Daylight', 'N']);
   if (planOn) m.push(['plan', 'Plan view', 'the sheet seen straight down', 'Back to relief', 'T']);
   if (SCAF.on) m.push(['flood', 'Flood scaffold', 'basins fill and join at their passes', 'Remove', 'D']);
@@ -7031,8 +7046,8 @@ function watchCaptions() {
   for (const c of CAMS) {
     const i = c.i, ok = i >= 0 && Alive[i] && SER[i] === c.ser;
     let cap;
-    if (i < 0) cap = ['', '<b>Nobody on the road</b>', 'click the relief to send out a cohort'];
-    else cap = [c.icon, c.who, ok ? moodOf(i, false) : 'at a rest point; another along soon'];
+    if (i < 0) cap = ['', '<b>Nobody on the road</b>', 'click the relief to release a cohort'];
+    else cap = [c.icon, c.who, ok ? moodOf(i, false) : 'come to rest or gone; another along soon'];
     const key = cap.join('|');
     if (key === c.cap) continue;
     c.cap = key; c.icn.innerHTML = cap[0]; c.nm.innerHTML = cap[1]; c.st.textContent = cap[2];
@@ -7179,7 +7194,7 @@ function renderCard() {
     <h2 class="pl-title">${p.title}</h2>${p.deck ? `<div class="pl-deck">${gloss(p.deck)}</div>` : ''}
     <div class="pl-body pl-lead">${gloss(p.lead)}</div>${p.take ? `<div class="pl-body pl-take"><div class="pl-h">In practice</div>${gloss(p.take)}</div>` : ''}
     ${fig}${p.try ? `<div class="pl-h">Try</div><div class="pl-body">${gloss(p.try)}</div>` : ''}
-    <div class="pl-secs">${sec('bg', 'Background', p.bg)}${sec('method', 'Method', p.method)}${sec('caveat', 'Caveat', p.caveat)}${sec('refs', 'References', refs)}</div>`
+    <div class="pl-secs">${sec('bg', 'Background', p.bg)}${sec('method', 'Method', p.method)}${sec('caveat', 'Caveat', p.caveat)}${sec('scale', 'At scale', p.scale)}${sec('refs', 'References', refs)}</div>`
     : `<div class="pl-no">Plate ${p.index + 1}</div><h2 class="pl-title">${p.title}</h2>
     <div class="pl-body">${gloss(p.text)}${p.how ? `<div class="pl-h">How it works</div>${gloss(p.how)}` : ''}${p.look ? `<div class="pl-h">Try</div><p>${gloss(p.look)}</p>` : ''}</div>
     ${fig}
@@ -7220,7 +7235,7 @@ const FIG = {
     if (xl) { c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText(xl, x1, y1 + 16); }
     if (yl) { c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillText(yl, x0 + 3, y0 + 1); }
   },
-  tick(c, x, y, txt, align = 'center', base = 'top') { c.font = `400 8.5px ${MONO}`; c.fillStyle = 'rgba(36,38,43,0.6)'; c.textAlign = align; c.textBaseline = base; c.fillText(txt, x, y); },
+  tick(c, x, y, txt, align = 'center', base = 'top') { c.font = `400 8.5px ${MONO}`; c.fillStyle = 'rgba(36,38,43,0.6)'; c.textAlign = align; c.textBaseline = base; c.fillText(String(txt).replace(/^-/, '−'), x, y); },
   note(c, x, y, txt, color = 'rgba(36,38,43,0.75)', align = 'left') { c.font = `italic 400 11px ${SERIF}`; c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.fillText(txt, x, y); },
 };
 function drawFig() {

@@ -54,7 +54,7 @@
     console.error('[Frame] ' + msg + (detail ? '\n' + detail : ''));
     const back = (F && F.opts.back) || '../index.html', alone = F && F.opts.standalone;
     document.body.appendChild(el('div', { class: 'hl-error', role: 'alert' },
-      `<div>${alone ? '' : '<div class="hl-eyebrow">Hidden Layers</div>'}<h2>This piece could not start</h2><p>${esc(msg)}</p>` +
+      `<div>${alone ? '' : '<div class="hl-eyebrow">Hidden Layers</div>'}<h2>${alone ? 'This page' : 'This piece'} could not start</h2><p>${esc(msg)}</p>` +
       (detail ? `<pre>${esc(detail)}</pre>` : '') + (alone ? '' : `<p><a href="${esc(back)}" style="color:inherit">Back to the exhibition</a></p>`) + '</div>'));
   };
 
@@ -122,7 +122,7 @@
     const label = el('header', { class: 'hl-label' },
       (opts.standalone ? '' : `<div class="hl-eyebrow"><a href="${esc(opts.back)}" title="Back to the exhibition">${svg('back')}${esc(opts.exhibition)}</a><span>No. ${num}</span></div>`) +
       `<h1 class="hl-title">${opts.title}</h1><div class="hl-medium">${opts.medium}</div>`);
-    const tools = el('nav', { class: 'hl-tools', 'aria-label': 'Piece controls' });
+    const tools = el('nav', { class: 'hl-tools', 'aria-label': opts.standalone ? 'Controls' : 'Piece controls' });
     const tool = (icon, title, fn) => {
       const b = el('button', { class: 'hl-btn', type: 'button', title, 'aria-label': title }, svg(icon));
       b.addEventListener('click', fn); tools.appendChild(b); return b;
@@ -135,13 +135,13 @@
 
     // info drawer
     const builtinKeys = [['Space', 'pause / resume'], ['R', 'new random seed'], ['← →', 'previous / next seed'],
-      ['S', 'capture PNG'], ['P', 'parameters & seed'], ['I', 'about this piece'], ['H', 'hide interface'], ['F', 'fullscreen']];
-    const KEYNAME = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
+      ['S', 'capture PNG'], ['P', 'parameters and seed'], ['I', opts.standalone ? 'about this page' : 'about this piece'], ['H', 'hide interface'], ['F', 'fullscreen']];
+    const KEYNAME = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Escape: 'Esc' };
     const pieceKeys = Object.entries(opts.keys).map(([k, v]) => [k.length === 1 ? k.toUpperCase() : (KEYNAME[k] || k), v[0]]);
     const kbd = (k) => k.split(/\s+/).map((x) => `<kbd>${esc(x)}</kbd>`).join(' ');
     const keyRows = opts.gestures.map(([g, d]) => `<dt>${esc(g)}</dt><dd>${esc(d)}</dd>`).join('') +
       pieceKeys.concat(builtinKeys).map(([k, d]) => `<dt>${kbd(k)}</dt><dd>${esc(d)}</dd>`).join('');
-    const info = el('aside', { class: 'hl-panel hl-info', 'aria-label': 'About this piece' },
+    const info = el('aside', { class: 'hl-panel hl-info', 'aria-label': opts.standalone ? 'About' : 'About this piece' },
       `<div class="hl-panel-head"><div class="hl-eyebrow">${opts.standalone ? '' : `No. ${num} · `}${esc(opts.year)}</div><button class="hl-btn" type="button" data-close title="Close (Esc)" aria-label="Close">${svg('close')}</button></div>` +
       `<h2>${opts.title}</h2><div class="hl-medium">${opts.medium}</div>${opts.byline ? `<div class="hl-medium">${opts.byline}</div>` : ''}<h3>Statement</h3><div class="hl-statement">${opts.statement}</div>` +
       `<h3>Controls</h3><dl class="hl-keys">${keyRows}</dl>`);
@@ -153,7 +153,7 @@
       `<div class="hl-seed"><input id="hl-seed" type="number" min="0" max="4294967295" step="1" aria-label="Seed"><button class="hl-pill" type="button" data-act="jump">Go</button></div>` +
       `<div class="hl-row3"><button class="hl-pill" type="button" data-act="prev">← Prev</button><button class="hl-pill" type="button" data-act="next">Next →</button><button class="hl-pill" type="button" data-act="random">Random</button></div>` +
       (opts.params.length ? `<h3>Parameters</h3><div class="hl-group" data-params></div>` : '') +
-      `<h3>Actions</h3><div class="hl-row"><button class="hl-pill" type="button" data-act="regen">Regenerate</button><button class="hl-pill" type="button" data-act="reset">Reset params</button></div>` +
+      `<h3>Actions</h3><div class="hl-row"><button class="hl-pill" type="button" data-act="regen">Regenerate</button><button class="hl-pill" type="button" data-act="reset">Reset parameters</button></div>` +
       `<div style="margin-top:6px;display:grid"><button class="hl-pill hl-primary" type="button" data-act="capture">Capture PNG</button></div>`);
     const toast = el('div', { class: 'hl-toast', role: 'status' });
     document.body.append(chrome, info, tune, toast);
@@ -170,8 +170,8 @@
     }
     for (const p of panels) p.querySelector('[data-close]').addEventListener('click', () => togglePanel(p, false));
     const bPause = tool('pause', 'Pause (Space)', () => F.togglePause());
-    const bInfo = tool('info', 'About this piece (I)', () => togglePanel(info));
-    const bTune = tool('tune', 'Parameters & seed (P)', () => togglePanel(tune));
+    const bInfo = tool('info', opts.standalone ? 'About (I)' : 'About this piece (I)', () => togglePanel(info));
+    const bTune = tool('tune', 'Parameters and seed (P)', () => togglePanel(tune));
     tool('capture', 'Capture PNG (S)', () => F.capture());
     tool('full', 'Fullscreen (F)', () => toggleFullscreen());
     F.openInfo = (v = true) => togglePanel(info, v);
