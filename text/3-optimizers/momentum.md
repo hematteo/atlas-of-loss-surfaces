@@ -7,12 +7,14 @@ Gradient descent, the heavy ball and Nesterov’s method start together near the
 ## Lead
 
 The [[heavy ball|hb]] adds a fraction β of its previous step to each gradient step.
-On a quadratic with condition number [[κ|cond]], with η and β tuned to the extreme curvatures, it needs of order √κ steps where [[gradient descent|gd]] needs of order κ (Polyak 1964).
+On a quadratic with condition number [[κ|cond]], with the [[learning rate|lr]] η and β tuned to the largest and smallest curvatures, it needs of order √κ steps where [[gradient descent|gd]] needs of order κ (Polyak 1964).
 
 ## In practice
 
-The heavy ball’s √κ speed-up needs η and β tuned and is proved only for quadratics; Nesterov’s holds on smooth strongly convex losses.
-With an untuned β or noisy gradients, momentum need not beat SGD.
+The heavy ball’s √κ speed-up needs tuned η and β, and it is proved only for quadratics.
+Goujaud, Taylor and Dieuleveut (2025) showed that no choice of η and β that accelerates it on quadratics also converges on every smooth strongly convex loss.
+[[Nesterov’s method|nag]] keeps its √κ rate on all smooth strongly convex losses (Nesterov 2004).
+With an untuned β or noisy gradients, momentum need not beat [[SGD|sgd]].
 
 ## Figure caption
 
@@ -21,7 +23,7 @@ Log₁₀ of the mean loss above the crater floor for the latest cohort, by opti
 ## Try
 
 1. Leave β at 0.9 → in the figure the heavy ball lags gradient descent: its underdamped directions shrink by √0.9 ≈ 0.95 per step, gradient descent’s slowest by 0.92.
-2. Set β to 0.5, just below β* for λ<sub>min</sub> → the heavy ball reaches the floor in under half gradient descent’s steps: both shrink by about 0.75 per step.
+2. Set β to 0.5, just below the readout β* for λ<sub>min</sub>, the β that [[critically damps|critdamp]] the floor’s shallower direction → the heavy ball reaches the floor in under half gradient descent’s steps: its slowest direction shrinks by about 0.75 per step, against gradient descent’s 0.92.
 3. Set β to 0.99 → the heavy ball keeps swinging across the [[Crater floor|@Crater floor]] after [[Nesterov’s method|nag]] has settled: its error shrinks by only √β ≈ 0.995 per step.
 
 ## Background
@@ -49,8 +51,17 @@ The [[Crater floor|@Crater floor]] is labelled with its two Hessian eigenvalues 
 There is no gradient noise, so each [[cohort|cohort]] moves almost as one.
 Cohorts start on an ellipse about 0.4 from the floor, outside the region where the well is quadratic. η = 0.01.
 The readouts give `β* = (1 − √(ηλ))²` for each eigenvalue, κ = λ<sub>max</sub>/λ<sub>min</sub>, and Polyak’s β for that κ.
-That β is optimal only together with Polyak’s η, `4/(√λ_max + √λ_min)²` ≈ 0.07 here; at the sheet’s η the fastest β is close to β* for λ<sub>min</sub>.
+That β is optimal only together with Polyak’s η, `4/(√λ_max + √λ_min)²` ≈ 0.07 here.
+At the sheet’s η the fastest β is close to β* for λ<sub>min</sub>.
 The figure plots log₁₀ of the cohort’s mean `L − L*` against steps since release.
+
+## At scale
+
+The √κ picture is for exact gradients.
+On high-dimensional random least-squares problems, a model of training with many parameters, Paquette and Paquette (2021) showed that small-batch heavy ball with a fixed β is no faster than SGD with a suitably rescaled step.
+Long momentum averages can still help language models.
+AdEMAMix (Pagliardini, Ablin and Grangier 2025) adds a second, much slower average of the gradient to [[Adam|adam]].
+A 1.3B-parameter model trained with it on 101B tokens matched one trained with AdamW on 197B.
 
 ## References
 
@@ -68,3 +79,11 @@ The figure plots log₁₀ of the cohort’s mean `L − L*` against steps since
   A one-dimensional strongly convex function with κ = 25 on which the heavy ball with Polyak’s parameters (α = 1/9, β = 4/9) settles into a period-3 cycle instead of converging.
 - Kidambi, R., Netrapalli, P., Jain, P. and Kakade, S. M. (2018). On the insufficiency of existing momentum schemes for stochastic optimization. ICLR.
   With stochastic gradients, the heavy ball and Nesterov’s method can fail to improve on SGD.
+- Nesterov, Y. (2004). Introductory lectures on convex optimization: a basic course. Kluwer.
+  Includes the accelerated method’s √κ rate on smooth strongly convex functions.
+- Paquette, C. and Paquette, E. (2021). Dynamics of stochastic momentum methods on large-scale, quadratic models. NeurIPS.
+  On high-dimensional least squares, small-batch heavy ball gives no speed-up over SGD with its step rescaled.
+- Goujaud, B., Taylor, A. and Dieuleveut, A. (2025). Provable non-accelerations of the heavy-ball method. Mathematical Programming.
+  For every η and β, the heavy ball either is not accelerated on quadratics or fails to converge on some smooth strongly convex function.
+- Pagliardini, M., Ablin, P. and Grangier, D. (2025). The AdEMAMix optimizer: better, faster, older. ICLR.
+  Adds a slow second momentum average to Adam; gradients stay useful for tens of thousands of steps in language-model training.

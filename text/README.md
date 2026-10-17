@@ -24,8 +24,8 @@ npm run text -- --watch    # rebuild on every save
 ```
 
 You need [Node](https://nodejs.org) 20 or later, and nothing else. If a file has a mistake, the build names the file
-and line. Commit `js/text.js` along with your Markdown: the site is served as is, with no build step. `npm test`, and
-CI on every push, fail if `js/text.js` is out of date.
+and line. The same build writes `REFERENCES.md`, the list of every plate's references. Commit both along with your
+Markdown: the site is served as is, with no build step. `npm test`, and CI on every push, fail if either is out of date.
 
 ## A plate file
 
@@ -54,12 +54,17 @@ The caption under the plate's figure.
 ## Method
 ## Caveat
 
+## At scale
+What is different in networks with millions or billions of parameters, or what later work has changed.
+
 ## References
 - Hochreiter, S. and Schmidhuber, J. (1997). Flat minima. Neural Computation 9(1).
   The note shown under the citation: what this paper contributes to the plate.
 ```
 
 *Subtitle*, *Lead*, *Try*, *Method* and *References* are required; the rest are optional.
+Use *At scale* when the two-parameter picture works differently in large networks, or when later results have
+superseded part of the plate; give each paper it cites an entry in *References*.
 
 ## Writing
 

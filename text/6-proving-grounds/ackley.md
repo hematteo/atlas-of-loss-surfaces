@@ -18,8 +18,10 @@ Smoothing over larger scales, by noise or a population, can recover the trend.
 
 1. Watch the five fixed races → [[gradient descent|gd]] and [[Adam|adam]] always stop in the dimple nearest their start.
 2. Follow the [[heavy ball|hb]] in races two to four, which start 1.6 to 2.3 from the origin → most of its particles reach the funnel.
-3. Click at distance 1.4 or 1.6 → the heavy ball reaches the funnel from 16 of 36 directions; at 1.8 to 2.5 from 4, at 2.8 and beyond from none.
-4. Click at 1.0 or 1.2 → the heavy ball never reaches the funnel: from inside the first ring of dimples it never gathers enough speed.
+3. Click at distance 1.4 or 1.6 from the origin → from 20 of 36 directions, some of the heavy ball’s particles reach the funnel.
+   From 1.8 to 2.5 this happens in at most 2 directions, and from 2.8 and beyond in none.
+4. Click at 1.0 or 1.2 → the heavy ball reaches the funnel from no direction at 1.0, and at 1.2 from only 3 of 36, with a few of its particles.
+   From inside the first ring of dimples it rarely gathers enough speed.
 
 ## Background
 
@@ -29,19 +31,26 @@ It is usually evaluated on [−32.768, 32.768]ⁿ, with the global minimum f = 0
 
 The two terms have different scales.
 The funnel term decays with distance from the origin, and its slope is at most 2.8.
-The ripple term has the same amplitude everywhere, and its slope reaches 5.8.
+The ripple term has the same amplitude everywhere, and its slope reaches 5.8 along the axes and 6.5 at most.
 A method that follows the local gradient therefore stops in the first dimple it meets, at every step size tried on this sheet, unless it starts inside the funnel’s own basin.
-Averaging f over one ripple period removes the ripples and leaves the funnel, so methods that sample f over larger scales, such as population-based and noisy searches, can follow the funnel.
-Momentum averages gradients over time rather than space, and on this sheet that is enough to cross a few ripples, but only for starts that give it a run-up.
+Averaging f over one ripple period removes the ripples and leaves the funnel.
+So methods that sample f over larger scales, such as population-based and noisy searches, can follow the funnel.
+Momentum averages gradients over time rather than space.
+On this sheet that is enough to cross a few ripples, but only for starts that give it a run-up.
 
 ## Method
 
 The window is a close-up of the centre, u ∈ [−3.2, 3.2], v ∈ [−2, 2], with A = 2.2, H = 10 and η = 0.012.
 The funnel’s tip is a cone, with no curvature at its point.
-Here `√(½(u² + v²) + 0.05²)` replaces the root mean square, which rounds the tip within about 0.07 of the origin and gives it λ<sub>max</sub> = 79, and the constant is lowered by 20(1 − e<sup>−0.01</sup>) ≈ 0.199 so that f(0, 0) = 0.
+Here `√(½(u² + v²) + 0.05²)` replaces the root mean square, which rounds the tip within about 0.07 of the origin and gives it λ<sub>max</sub> = 82, and the constant is lowered by 20(1 − e<sup>−0.01</sup>) ≈ 0.199 so that f(0, 0) = 0.
 The sheet has 23 minima, 58 saddles and 24 maxima.
 The first five races start from fixed points 1.6 to 2.9 from the origin, later ones at random on high ground, one every 2,500 steps; particles retire at rest or after 2,400 steps.
 The figure plots log₁₀(L − L*) against step, averaged over each optimizer’s particles still moving; the readouts give the lowest L − L* each reached in the latest race.
+
+## At scale
+
+The n-dimensional form has a dimple near almost every integer point, so the number of local minima grows exponentially with n.
+Network losses are thought to be different: in high dimensions most of their high-loss critical points are saddles rather than minima, so being trapped in the nearest dimple is rarely the problem training has to solve (see <i>Saddle points</i> and <i>Rastrigin’s egg crate</i>).
 
 ## References
 

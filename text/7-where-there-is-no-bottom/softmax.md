@@ -6,13 +6,14 @@ Three optimizers race off the terrace of the second-best arm of a three-armed ba
 
 ## Lead
 
-Exact [[policy gradient|pg]] on a [[softmax policy|softmaxpol]] converges to the optimum at rate O(1/t), with a constant set by the smallest probability the best action reaches (Mei et al. 2020a).
-A policy initially committed to a good but suboptimal action can stay there a very long time: the softmax gravity well (Mei et al. 2020b).
+Exact [[policy gradient|pg]] on a [[softmax policy|softmaxpol]] converges to the optimum at rate O(1/t), with a constant set by the smallest probability the policy gives the best action along the way (Mei et al. 2020a).
+A policy that starts out committed to a good but suboptimal action can stay there for a very long time.
+This is the softmax gravity well (Mei et al. 2020b).
 
 ## In practice
 
-Natural policy gradient escapes a confident suboptimal policy that plain policy gradient can leave only slowly.
-An entropy bonus converges linearly, but to a softened optimum, at a start-dependent rate.
+[[Natural policy gradient|npg]] escapes from a confident suboptimal policy that plain policy gradient can leave only slowly.
+With an entropy bonus, policy gradient converges linearly, at a rate that depends on the start, but to a softened optimum rather than to the best action.
 
 ## Figure caption
 
@@ -22,8 +23,8 @@ Steps until the best arm is the most likely, against the depth of the start on t
 
 1. Watch the figure → from depths 1 to 4 on the [[terrace of arm 2|@Terrace of arm 2 r = 0.8]], policy gradient escapes in about 40, 120, 530 and 1,400 steps.
 2. Wait for depths 5 and 6 → policy gradient ends the race still trapped: its push towards arm 1 is proportional to π₁.
-3. Compare depths 3 and 3.3 → policy gradient escapes in about the same time: both drive π₁ down to about 0.024.
-4. Compare the others → natural policy gradient escapes in depth/0.08 steps, on the dashed line; entropy-regularized particles take 20 to 380 and stop at the [[regularized optimum|@Regularized optimum]], π₁ = 0.68.
+3. Compare depths 3 and 3.3 → policy gradient escapes in about the same time: both drive π₁ down to about 0.025.
+4. Compare the other two optimizers → natural policy gradient escapes in depth/0.08 steps, on the dashed line, and the entropy-regularized particles take 20 to 380 steps and stop at the [[regularized optimum|@Regularized optimum]], where π₁ = 0.68.
 
 ## Background
 
@@ -37,7 +38,8 @@ In Markov decision processes, Li et al. (2021) constructed examples where softma
 
 Two changes remove the trap.
 [[Natural policy gradient|npg]] (Kakade 2001) preconditions the gradient by the inverse Fisher information.
-For a softmax policy it adds η times each action’s reward to its logit, the multiplicative-weights update, and converges at a rate independent of the number of states and actions (Agarwal et al. 2021).
+For a softmax policy it adds η times each action’s reward to that action’s logit.
+This is the multiplicative-weights update, and it converges at a rate independent of the number of states and actions (Agarwal et al. 2021).
 Adding τ times the policy’s entropy to J makes policy gradient converge linearly (Mei et al. 2020a), to the regularized optimum `π ∝ exp(r/τ)` rather than to the best arm.
 
 ## Method
@@ -53,6 +55,15 @@ A particle escapes when π₁ exceeds both other probabilities.
 The figure plots log₁₀ of the escape step against depth; a hollow ring marks an optimizer still trapped when the race ends at 3,200 steps.
 The dashed line is `depth/(η(r₁ − r₂))`.
 
+## At scale
+
+With sampled rewards instead of exact gradients, softmax policy gradient on a bandit still reaches the best arm.
+Mei et al. (2023) proved a rate of O(1/t) with a constant step, and Mei et al. (2024) proved almost sure convergence for any constant learning rate.
+A language model’s policy is a softmax over some 10⁵ tokens at every position, so a good but unlikely answer can start with far less probability than any arm here.
+During fine-tuning with RL, the policy’s entropy falls as updates raise answers that are already likely (see <i>Entropy collapse</i>).
+The same pull acts on logits inside a network.
+Wortsman et al. (2024) found that attention and output logits can grow until training diverges, and that two changes hold them back: normalizing queries and keys (qk-layernorm), and penalizing the log of the softmax’s normalizer (z-loss).
+
 ## References
 
 - Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. Machine Learning 8.
@@ -67,3 +78,9 @@ The dashed line is `depth/(η(r₁ − r₂))`.
   Global convergence of softmax policy gradient; natural policy gradient as multiplicative weights, with a dimension-free rate.
 - Li, G., Wei, Y., Chi, Y., Gu, Y. and Chen, Y. (2021). Softmax policy gradient methods can take exponential time to converge. COLT.
   Examples in Markov decision processes where softmax policy gradient needs exponentially many iterations.
+- Mei, J., Zhong, Z., Dai, B., Agarwal, A., Szepesvári, C. and Schuurmans, D. (2023). Stochastic gradient succeeds for bandits. ICML.
+  Stochastic softmax policy gradient on bandits converges to the optimal policy at rate O(1/t) with a constant step.
+- Mei, J., Dai, B., Agarwal, A., Vaswani, S., Raj, A., Szepesvári, C. and Schuurmans, D. (2024). Small steps no more: global convergence of stochastic gradient bandits for arbitrary learning rates. NeurIPS.
+  The stochastic gradient bandit converges to the optimal policy almost surely for any constant learning rate.
+- Wortsman, M. et al. (2024). Small-scale proxies for large-scale Transformer training instabilities. ICLR.
+  Attention-logit growth and output-logit divergence, and their fixes, qk-layernorm and z-loss, reproduced in small models.

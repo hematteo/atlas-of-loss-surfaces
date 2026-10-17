@@ -12,8 +12,8 @@ Ainsworth et al. (2023) found near-zero barriers after matching units in wide ne
 
 ## In practice
 
-Align hidden units before averaging independently trained networks; permutations explain much of the barrier.
-Matching removed it for widened ResNets on CIFAR-10, not at standard width or ImageNet.
+Align the hidden units before averaging independently trained networks, because permutations explain much of the barrier.
+Matching removed the barrier for widened ResNets on CIFAR-10, but not at standard width or on ImageNet.
 
 ## Figure caption
 
@@ -21,9 +21,10 @@ Mean loss barrier over the latest 60 pairs of twins: on the straight segment bet
 
 ## Try
 
-1. Watch ‘barrier between twins’ → it is the same for every pair: the twins always sit at the two minima, and the segment between them passes through the centre.
+1. Watch ‘barrier between twins’ → it is the same for every pair, because the twins always sit at the two minima and the segment between them passes through the centre.
 2. Watch ‘after the flip’ → it reads 0.000: the flipped twin lies in the same basin as the other.
-3. Lower η to 0.05 → particles creep along each valley floor, and 12% on the default seed retire before coming [[to rest|rest]]: the floor’s curvature is about 1/50 of λ<sub>max</sub>.
+3. Lower the [[learning rate|lr]] η to 0.05 → particles creep along each valley floor, and about a tenth retire before coming [[to rest|rest]].
+   The curvature along the floor is about 1/50 of the largest curvature, λ<sub>max</sub>.
 
 ## Background
 
@@ -43,8 +44,8 @@ Whether the conjecture holds for networks of ordinary width is unresolved.
 
 ## Method
 
-The sheet is the training loss of the network `f(x) = a·tanh(wx)`: mean squared error on 16 points x evenly spaced in [−2, 2].
-The targets are `a₀ tanh(w₀x)`, w₀ ≈ 1.4 and a₀ ≈ 1.1, plus Gaussian noise of standard deviation 0.06.
+The sheet is the training loss of the network `f(x) = a·tanh(wx)`: half the mean squared error on 16 points x evenly spaced in [−2, 2].
+The targets are `a₀ tanh(w₀x)`, w₀ ≈ 1.4 and a₀ ≈ 1.1, plus Gaussian noise of standard deviation 0.06; with the noise, the best fit is at w ≈ 1.50, a ≈ 1.08.
 The axes are `w = 1.65θ₁` and `a = 1.85θ₂`.
 The loss is rescaled like every sheet; no texture is added.
 Because tanh is odd, the flip `(w, a) → (−w, −a)` leaves f unchanged; on the sheet it is a half-turn about the centre.
@@ -56,8 +57,18 @@ The readouts give the barrier (largest loss on the segment minus the mean end lo
 ## Caveat
 
 One unit has a single symmetry, so the right alignment is known in advance.
-With n units per layer, re-basin methods must search n! orderings per layer.
-The sign flip exists only for odd activations such as tanh; ReLU units have a positive rescaling symmetry instead (see <i>Sharp and flat minima</i>).
+With n units per layer, re-basin methods must pick one of n! orderings per layer.
+They find it with a linear assignment solver, in time polynomial in n, rather than by search.
+The sign flip exists only for odd activations such as tanh.
+ReLU units have a positive rescaling symmetry instead (see <i>Sharp and flat minima</i>).
+
+## At scale
+
+After matching, much of the barrier left at ordinary width has a second cause: the activations of the averaged network shrink in variance.
+Jordan et al. (2023) rescaled them after averaging, which cut the barrier by 90% for ResNet-18 on CIFAR-10 and by 74% for ResNet-50 on ImageNet.
+Verma and Elbayad (2024) carried matching over to transformers.
+Attention layers also have a continuous symmetry: the query and key weights of a head can be rotated together (Zhang et al. 2025).
+So in large networks each minimum has whole continuous families of copies, not just n!·2<sup>n</sup> points.
 
 ## References
 
@@ -69,3 +80,9 @@ The sign flip exists only for odd activations such as tanh; ReLU units have a po
   Conjectures that SGD solutions are linearly connected once permutations are accounted for.
 - Ainsworth, S. K., Hayase, J. and Srinivasa, S. (2023). Git Re-Basin: merging models modulo permutation symmetries. ICLR.
   Three matching algorithms; zero-barrier connections for wide ResNets on CIFAR-10, not for narrow networks or ImageNet.
+- Jordan, K., Sedghi, H., Saukh, O., Entezari, R. and Neyshabur, B. (2023). REPAIR: REnormalizing permuted activations for interpolation repair. ICLR.
+  The variance of activations collapses in averaged networks; rescaling them removes most of the barrier left after matching.
+- Verma, N. and Elbayad, M. (2024). Merging text transformer models from different initializations. TMLR.
+  Permutation matching for transformers lowers the barrier between independently trained masked language models.
+- Zhang, B., Zheng, Z., Chen, Z. and Li, J. (2025). Beyond the permutation symmetry of transformers: the role of rotation for model fusion. ICML.
+  Self-attention has a continuous rotation symmetry that generalizes permutations, and matching it improves model fusion.

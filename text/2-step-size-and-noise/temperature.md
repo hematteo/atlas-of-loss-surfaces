@@ -13,7 +13,8 @@ Minibatch noise is anisotropic, so only the η/B scaling is well supported.
 ## In practice
 
 For SGD, η/B sets the noise scale, so scale η with the batch size.
-With warmup this worked up to batches of 8,192 for ResNet-50 on ImageNet (Goyal et al. 2017); larger batches lost accuracy.
+With warmup this worked up to batches of 8,192 for ResNet-50 on ImageNet (Goyal et al. 2017).
+Larger batches lost accuracy.
 
 ## Figure caption
 
@@ -21,23 +22,27 @@ Share of each well’s catchment under the Boltzmann distribution at each ensemb
 
 ## Try
 
-1. Wait about 20,000 steps (two minutes) → the first and third ensembles’ filled bars match their outlines within a few hundredths: both run at the same T.
+1. Wait about 20,000 steps (two minutes) → the filled bars of the first and third ensembles, which run at the same T, match their outlines to within a few hundredths.
 2. Compare the wells → in those two ensembles the wide, shallow well [[B|@B]] holds more than the narrow, deeper [[A|@A]].
-3. Watch the cold ensemble → it keeps its starting shares: at T/4 even the lowest barrier, out of B, is about 10 T, and [[crossing it|kramers]] takes millions of steps.
-4. Raise σ to 14 → the cold ensemble empties B within about 100,000 steps: the barrier is then 4 T.
+3. Watch the cold ensemble → it keeps its starting shares.
+   At T/4 even the lowest barrier, the one out of B, is about 10 times its temperature, and [[crossing it|kramers]] takes millions of steps.
+4. Raise σ to 14 → the cold ensemble empties B within about 100,000 steps, because the barrier is then only 4 times its temperature.
 
 ## Background
 
 Li, Tai and E (2017) proved that for small η, SGD is a weak first-order approximation of the [[SDE|sde]] `dθ = −∇L dt + √(ηΣ/B) dW`, where Σ is the covariance of single-example gradients.
-Mandt, Hoffman and Blei (2017) studied it near one minimum, where the loss is quadratic and the stationary distribution is Gaussian, and chose η and B so that this distribution approximates a Bayesian posterior.
-Jastrzębski et al. (2017) assumed isotropic noise, obtained the Boltzmann distribution `p(θ) ∝ exp(−L(θ)/T)` with T ∝ η/B, and found that η/B sets the width of the minima SGD reaches.
+Mandt, Hoffman and Blei (2017) studied it near one minimum, where the loss is quadratic and the stationary distribution is Gaussian.
+They chose η and B so that this distribution approximates a Bayesian posterior.
+Jastrzębski et al. (2017) assumed isotropic noise and obtained the Boltzmann distribution `p(θ) ∝ exp(−L(θ)/T)` with T ∝ η/B.
+They found that η/B sets the width of the minima SGD reaches.
 Smith and Le (2018) reached the same scaling through the noise scale `ηN/B`, for a training set of size N.
-It implies the linear scaling rule: multiply η by k when B is multiplied by k.
-Li, Malladi and Arora (2021) give a testable necessary condition for the SDE approximation and the linear scaling rule.
+This scaling implies the linear scaling rule: multiply η by k when B is multiplied by k.
+Li, Malladi and Arora (2021) gave a testable necessary condition for the SDE approximation and the linear scaling rule.
 
-Minibatch noise is neither isotropic nor constant: near a minimum its covariance is close to the Hessian (see <i>The shape of the noise</i>).
+Minibatch noise is neither isotropic nor constant: near a minimum its covariance is close to the Hessian divided by B (see <i>The shape of the noise</i>).
 Chaudhari and Soatto (2018) showed that SGD then has a Boltzmann-like stationary distribution for a different potential, which equals L only when the noise is isotropic.
-A basin’s Boltzmann weight grows with its width as well as its depth, one argument for why SGD favours flat minima.
+A basin’s Boltzmann weight grows with its width as well as its depth.
+This is one argument for why SGD favours flat minima.
 The time to cross a barrier ΔL grows as `exp(ΔL/T)` (Kramers 1940).
 
 ## Method
@@ -56,7 +61,17 @@ The haze is `exp(−(L − L*)/T)` at T (rose) and at T/4 (violet).
 
 The discrete update samples a slightly hotter distribution than the Boltzmann one it is compared with.
 On a quadratic with curvature λ its variance is larger by the factor `1/(1 − ηλ/2)`: about 1.06 for the first ensemble in A and 1.13 for the third.
-The noise here is isotropic and constant by construction: the one case in which the stationary distribution is Boltzmann in L itself.
+The noise here is isotropic and constant by construction.
+That is the one case in which the stationary distribution is Boltzmann in L itself.
+
+## At scale
+
+A large network never reaches its [[stationary distribution|stationary]].
+Language models are pretrained for about one pass over their data, far too short to equilibrate.
+In that single-epoch regime, Vyas et al. (2024) found that small-batch noise brings no measurable gain in generalization, only cheaper steps.
+The linear scaling rule holds only below a [[critical batch size|cbs]], which McCandlish et al. (2018) predicted from the ratio of the gradient’s variance to its squared norm.
+In language-model pretraining, the critical batch size grows mainly with the amount of data, not with model size (Zhang et al. 2025).
+For [[Adam|adam]], Malladi et al. (2022) derived a different rule from the SDE: scale η with √B, not with B.
 
 ## References
 
@@ -78,3 +93,11 @@ The noise here is isotropic and constant by construction: the one case in which 
   With anisotropic noise, SGD’s stationary distribution is set by a potential that differs from the loss.
 - Li, Z., Malladi, S. and Arora, S. (2021). On the validity of modeling SGD with stochastic differential equations (SDEs). NeurIPS.
   A testable necessary condition for the SDE approximation and the linear scaling rule.
+- McCandlish, S., Kaplan, J., Amodei, D. and the OpenAI Dota Team (2018). An empirical model of large-batch training. arXiv:1812.06162.
+  The gradient noise scale predicts the critical batch size, above which larger batches stop saving steps.
+- Malladi, S., Lyu, K., Panigrahi, A. and Arora, S. (2022). On the SDEs and scaling rules for adaptive gradient algorithms. NeurIPS.
+  SDEs for RMSprop and Adam, and the square-root scaling rule for their learning rate.
+- Vyas, N., Morwani, D., Zhao, R., Kaplun, G., Kakade, S. and Barak, B. (2024). Beyond implicit bias: the insignificance of SGD noise in online learning. ICML.
+  In single-epoch training, small batches give no generalization benefit, only a computational one.
+- Zhang, H., Morwani, D., Vyas, N., Wu, J., Zou, D., Ghai, U., Foster, D. and Kakade, S. (2025). How does critical batch size scale in pre-training? ICLR.
+  In language-model pretraining the critical batch size grows mainly with data size, not model size.

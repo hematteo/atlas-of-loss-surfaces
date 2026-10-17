@@ -6,13 +6,16 @@ A narrow quadratic valley that can be turned against the parameter axes.
 
 ## Lead
 
-[[Adam|adam]] divides each coordinate’s step by a running estimate of its gradient magnitude, so, unlike [[gradient descent|gd]], it depends on the axes’ orientation.
-Why Adam outperforms SGD on transformers is open: explanations include its closeness to [[sign descent|signsgd]] (Kunstner et al. 2023) and an ℓ∞ geometry that rotation destroys (Xie, Mohamadi and Li 2025).
+[[Adam|adam]] divides each coordinate’s step by a running root mean square of that coordinate’s gradient.
+Unlike [[gradient descent|gd]], it therefore depends on how the axes are oriented.
+Why Adam outperforms [[SGD|sgd]] on transformers is an open question.
+Proposed explanations include its closeness to [[sign descent|signsgd]] (Kunstner et al. 2023) and an ℓ∞ geometry of the loss that rotation destroys (Xie, Mohamadi and Li 2025).
 
 ## In practice
 
-Adam exploits the coordinate axes: after a random rotation of the loss it trained worse, while SGD, which is rotation-invariant, was unaffected (Xie, Mohamadi and Li 2025).
-Retest it after reparametrizations that mix coordinates.
+Adam exploits the coordinate axes.
+After a random rotation of the loss it trained worse, while SGD, which is rotation-invariant, was unaffected (Xie, Mohamadi and Li 2025).
+Retest Adam after any reparametrization that mixes coordinates.
 
 ## Figure caption
 
@@ -20,15 +23,16 @@ Above: steps to come within 0.005 of the floor, by the angle of the basin; gradi
 
 ## Try
 
-1. Turn the basin to 45° → ‘Adam steps’ rises from 37 to 132, ‘GD steps’ stays about 145: a diagonal [[preconditioner|precond]] rescales the curvatures only along the axes.
-2. Watch [[signSGD|signsgd]] → many particles stop partway down the valley and never come to rest: while the cross-valley gradient dominates both coordinates, each diagonal step goes straight across the floor.
+1. Turn the basin to 45° → ‘Adam steps’ rises from 37 to 132 while ‘GD steps’ stays about 145: a diagonal [[preconditioner|precond]] rescales the curvatures only along the axes.
+2. At 45°, watch [[signSGD|signsgd]] → its particles barely move down the valley and never come to rest: while the cross-valley gradient dominates both coordinates, each diagonal step goes straight across the floor.
 3. Watch [[Lion|lion]] → its particles get further down the valley than signSGD’s: its momentum averages out the alternating cross-valley gradient.
 
 ## Background
 
 Adam (Kingma and Ba 2015) keeps exponential averages of the gradient and of its elementwise square and steps by `η m̂/(√v̂ + ε)`.
-It descends from RPROP (Riedmiller and Braun 1993), which used only the sign of each partial derivative, and from AdaGrad (Duchi, Hazan and Singer 2011).
-With β₁ = β₂ = 0 and ε = 0 the step is `η sign(g)`, sign descent.
+It descends from RPROP (Riedmiller and Braun 1993), which used only the sign of each partial derivative, through [[RMSprop|rmsprop]] (Tieleman and Hinton 2012), a minibatch form of RPROP that divides each gradient by a running root mean square.
+It also descends from AdaGrad (Duchi, Hazan and Singer 2011).
+With β₁ = β₂ = 0 and ε = 0 the step is `η sign(g)`, which is sign descent (Bernstein et al. 2018).
 Balles and Hennig (2018) split Adam into the sign of the gradient and a magnitude set by its relative variance, so Adam approaches sign descent when the noise is small.
 Sign descent is steepest descent in the ℓ∞ norm.
 Balles, Pedregosa and Le Roux (2020) found it favourable when the Hessian is concentrated on its diagonal and its largest eigenvalue is much larger than the average.
@@ -47,7 +51,8 @@ Adam uses β₁ = 0.9, β₂ = 0.999, ε = 10⁻⁸; Lion uses β₁ = 0.9, β�
 Gradient noise is σ = 0.005.
 Cohorts start at u = ±0.4, v = ±0.04.
 The step counts come from separate noise-free runs from that point, one for each α in steps of 7.5°: the number of steps until `L − L* < 0.005`.
-The last readout, λ<sub>max</sub>η², sets the loss at which sign descent stops in an axis-aligned valley: it ends in a two-step cycle across the floor, with mean loss between λη²/8 and λη²/4.
+The last readout, λ<sub>max</sub>η², sets the loss at which sign descent stops in an axis-aligned valley.
+There it ends in a two-step cycle across the floor, with mean loss between λη²/8 and λη²/4.
 
 ## Caveat
 
@@ -55,12 +60,24 @@ In two dimensions a sign step can point only along the four diagonals, so the ax
 At 45° every sign step goes either along the valley or straight across it.
 In higher dimensions the effect is a matter of degree, which Balles, Pedregosa and Le Roux (2020) relate to how much of the Hessian lies on its diagonal.
 
+## At scale
+
+In language models, Kunstner et al. (2024) traced much of the gap between SGD and Adam to heavy-tailed class imbalance: gradient descent makes slow progress on the many rare tokens, and Adam and sign descent do not.
+Zhao et al. (2025) found that Adam, Lion and signed momentum train language models about equally well, and that what matters most is adaptivity on the last layer and the normalization parameters.
+In large networks the natural unit is often a whole weight matrix rather than a coordinate.
+Shampoo (Gupta, Koren and Singer 2018) and SOAP (Vyas et al. 2025) precondition each matrix from both sides.
+Muon replaces each matrix’s momentum by the nearest orthogonal matrix, a steepest-descent step in the spectral norm (Bernstein and Newhouse 2024).
+Liu et al. (2025) trained large language models with it on about half of AdamW’s compute.
+These matrix updates rotate along with the matrix’s rows and columns, so within a layer they do not depend on the coordinate axes the way Adam does.
+
 ## References
 
 - Riedmiller, M. and Braun, H. (1993). A direct adaptive method for faster backpropagation learning: the RPROP algorithm. IEEE International Conference on Neural Networks.
   Steps by a per-weight size using only the sign of each partial derivative.
 - Duchi, J., Hazan, E. and Singer, Y. (2011). Adaptive subgradient methods for online learning and stochastic optimization. JMLR 12.
   AdaGrad: per-coordinate step sizes from accumulated squared gradients.
+- Tieleman, T. and Hinton, G. (2012). Lecture 6.5, RMSprop. COURSERA: Neural Networks for Machine Learning.
+  RMSprop: divides each gradient by a running root mean square of its recent values.
 - Kingma, D. P. and Ba, J. (2015). Adam: a method for stochastic optimization. ICLR.
   Introduces Adam.
 - Bernstein, J., Wang, Y.-X., Azizzadenesheli, K. and Anandkumar, A. (2018). signSGD: compressed optimisation for non-convex problems. ICML.
@@ -77,3 +94,15 @@ In higher dimensions the effect is a matter of degree, which Balles, Pedregosa a
   Relates the SGD–Adam gap to Hessian spectra that differ between parameter blocks.
 - Xie, S., Mohamadi, M. A. and Li, Z. (2025). Adam exploits ℓ∞-geometry of loss landscape via coordinate-wise adaptivity. ICLR.
   Convergence under ℓ∞ smoothness; after a random rotation of the loss, Adam can lose to rotation-invariant SGD variants.
+- Gupta, V., Koren, T. and Singer, Y. (2018). Shampoo: preconditioned stochastic tensor optimization. ICML.
+  Preconditions each weight matrix with one matrix per side, instead of per coordinate.
+- Bernstein, J. and Newhouse, L. (2024). Old optimizer, new norm: an anthology. arXiv:2409.20325.
+  Adam, Shampoo and their relatives as steepest descent in different norms; orthogonalized updates as steepest descent in the spectral norm.
+- Kunstner, F., Milligan, A., Yadav, R., Schmidt, M. and Bietti, A. (2024). Heavy-tailed class imbalance and why Adam outperforms gradient descent on language models. NeurIPS.
+  Gradient descent is slow on rare classes, which dominate language data; Adam and sign descent are not.
+- Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982.
+  Muon, with weight decay and per-matrix step scaling, trains large language models about twice as compute-efficiently as AdamW.
+- Vyas, N., Morwani, D., Zhao, R., Shapira, I., Brandfonbrener, D., Janson, L. and Kakade, S. (2025). SOAP: improving and stabilizing Shampoo using Adam for language modeling. ICLR.
+  Runs Adam in the eigenbasis of Shampoo’s preconditioner.
+- Zhao, R., Morwani, D., Brandfonbrener, D., Vyas, N. and Kakade, S. (2025). Deconstructing what makes a good optimizer for autoregressive language models. ICLR.
+  Apart from SGD, the optimizers compared perform about equally; adaptivity on the last layer and LayerNorm parameters is what matters.

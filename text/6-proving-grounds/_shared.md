@@ -3,8 +3,10 @@
 ## Method
 
 <!-- added to the end of every plate's Method -->
-Each sheet shows a window of the (u, v) plane at equal scale on both axes, with u = u₀ + sθ₁ and v = v₀ + sθ₂; λ and η are in θ.
-The surface is `L = A f/(H + f)`, with f measured from its global minimum, so L ≈ (A/H) f near the bottom and levels off below A far up.
+Each sheet shows a window of the (u, v) plane at equal scale on both axes, with u = u₀ + sθ₁ and v = v₀ + sθ₂.
+Curvatures λ and step sizes η are given in the units of θ.
+The surface is f under a soft cap, `L = A f/(H + f)`, with f measured from its global minimum.
+So L ≈ (A/H) f near the bottom, and far up it levels off below A.
 L has the same [[critical points|crit]] as f, of the same kinds, and its gradient points the same way, so [[gradient flow|gflow]] follows the same paths and has the same basins.
 The gradient, and the Hessian at a critical point, are multiplied by `AH/(H + f)²`.
 Each race releases six particles per optimizer, scattered by about 0.006, from one point.

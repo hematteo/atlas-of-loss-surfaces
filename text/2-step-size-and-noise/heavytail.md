@@ -7,8 +7,8 @@ Gaussian and α-stable noise in a narrow, deep crater and a wide, shallow one.
 ## Lead
 
 Şimşekli, Sagun and Gürbüzbalaban (2019) reported that SGD’s gradient noise is heavy-tailed, closer to an [[α-stable law|stable]] with α &lt; 2 than to a Gaussian.
-Such noise leaves a basin in one jump, so exit time depends on width more than depth.
-Other groups found the noise close to Gaussian at common batch sizes.
+With such noise SGD leaves a basin in one jump, so the exit time depends on the basin’s width more than on its depth.
+Panigrahi et al. (2019) and Xie, Sato and Sugiyama (2021) instead found the noise close to Gaussian at common batch sizes.
 
 ## In practice
 
@@ -21,10 +21,10 @@ Fraction of particles still inside each crater after a given number of steps (Ka
 
 ## Try
 
-1. Read the Gaussian medians → Gaussian particles stay longest in the [[Narrow crater|@Narrow crater]], whose barrier is 3.5 times higher.
-2. Read the α medians → heavy-tailed particles leave it first, in a median of about 40 steps, mostly in one jump: its rim is 4.5 times closer.
-3. Compare the wide-crater medians → heavy tails shorten that stay too, by about 15 times (about 210 steps against 3,300).
-4. Set the depth of the narrow crater to 0.3, then 1.2 → its Gaussian median rises from about 340 to over a million; the heavy-tailed one stays about 30–45.
+1. Read the Gaussian medians → Gaussian particles stay longest in the [[Narrow crater|@Narrow crater]], whose barrier is 3.5 times higher than the wide crater’s.
+2. Read the α-stable medians → heavy-tailed particles leave the narrow crater first, in a median of about 40 steps and mostly in one jump, because its rim is 4.4 times closer.
+3. Compare the wide-crater medians → heavy tails shorten the stay in the wide crater too, about 15-fold (about 210 steps against 3,100).
+4. Set the depth of the narrow crater to 0.3, then 1.2 → its Gaussian median rises from about 340 steps to over a million, while the heavy-tailed median stays at about 30–45.
 
 ## Background
 
@@ -37,21 +37,23 @@ Heavy-tailed SGD would then prefer wide minima.
 
 The measurement is disputed.
 Panigrahi et al. (2019) found the noise best described as Gaussian at batch sizes of 256 and above, at least early in training.
-Xie, Sato and Sugiyama (2021) pointed out that the tail index had been estimated by pooling the noise of all parameters as samples of one distribution, which assumes it is isotropic and identically distributed.
-Pooled Gaussians of different variances are themselves heavier-tailed than a Gaussian.
+Xie, Sato and Sugiyama (2021) pointed out that the tail index had been estimated by pooling the noise of all parameters as samples of one distribution, which assumes that the noise is isotropic and identically distributed.
+A pool of Gaussians with different variances is itself heavier-tailed than a single Gaussian.
 They found the noise close to Gaussian for B &gt; 16.
 Battash, Wolf and Lindenbaum (2024) again found heavy tails, and modelled each parameter by its own one-dimensional Lévy process.
-A separate result is proved.
-With the multiplicative noise of SGD, the iterates θ can be heavy-tailed even when the data are Gaussian, more so at larger η/B (Gürbüzbalaban, Şimşekli and Zhu 2021; Hodgkinson and Mahoney 2021).
+A related result, about the iterates rather than the gradient noise, is proved.
+Because SGD’s noise is multiplicative, the iterates θ can be heavy-tailed even when the data are Gaussian, and more so at larger η/B (Gürbüzbalaban, Şimşekli and Zhu 2021; Hodgkinson and Mahoney 2021).
 
 ## Method
 
 Each crater has the profile `D(u² − 1)exp(−u²)`, u = r/R, so its rim is at `r = √2R`, drawn as a dash-dotted circle.
-The narrow crater has R = 0.09 and the depth D set by the slider (at 0.75 its barrier is ΔL = 0.85 and its rim 0.127 from the centre); the wide one has R = 0.4, ΔL = 0.24 and its rim 0.566 away.
+The narrow crater has R = 0.09 and the depth D set by the slider (at 0.75 its barrier is ΔL = 0.85 and its rim 0.127 from the centre).
+The wide one has R = 0.4, ΔL = 0.24 and its rim 0.566 away.
 The marks print both.
 Both ensembles run [[SGD|sgd]] with η = 0.001 and noise scale σ.
 The heavy-tailed noise is `σ√A·ξ`, ξ ~ N(0, I), with A a positive stable variable of index α/2; that makes it an isotropic α-stable vector, and at α = 2 it is the Gaussian.
-Eighteen particles per ensemble and crater (ten on phones) start at the centre; crossing the rim counts as an escape, and the particle is replaced.
+Eighteen particles per ensemble and crater (ten on phones) start at the centre.
+Crossing the rim counts as an escape, and the particle is replaced.
 Steps longer than 0.16 are drawn as arcs.
 The readouts are [[Kaplan–Meier|km]] medians, with particles still inside as censored times.
 Changing σ or α starts a new experiment.
@@ -59,6 +61,13 @@ Changing σ or α starts a new experiment.
 ## Caveat
 
 The noise here is isotropic, the case the pooled tail-index estimates assumed.
+
+## At scale
+
+Zhang et al. (2020) found that the gradient noise in transformers does look heavy-tailed, unlike in ResNets on ImageNet, and took this as an argument for [[gradient clipping|clip]] and adaptive methods.
+But [[Adam|adam]] still beats SGD on these models at full batch, where there is no noise, so the tails are not the main cause of its advantage (Kunstner et al. 2023).
+In many dimensions, isotropic stable noise, as on this sheet, differs from independent stable noise in each parameter.
+The second kind makes its large jumps along the coordinate axes.
 
 ## References
 
@@ -78,3 +87,7 @@ The noise here is isotropic, the case the pooled tail-index estimates assumed.
   SGD’s iterates can be heavy-tailed on linear regression with Gaussian data; tails get heavier as η/B grows.
 - Hodgkinson, L. and Mahoney, M. W. (2021). Multiplicative noise and heavy tails in stochastic optimization. ICML.
   Multiplicative noise makes the stationary distribution of stochastic optimizers heavy-tailed.
+- Zhang, J., Karimireddy, S. P., Veit, A., Kim, S., Reddi, S. J., Kumar, S. and Sra, S. (2020). Why are adaptive methods good for attention models? NeurIPS.
+  Heavy-tailed gradient noise in BERT pretraining; clipping makes SGD converge under it.
+- Kunstner, F., Chen, J., Lavington, J. W. and Schmidt, M. (2023). Noise is not the main factor behind the gap between SGD and Adam on transformers, but sign descent might be. ICLR.
+  Adam still beats SGD on transformers at full batch, so noise and heavy tails are not the main cause.
