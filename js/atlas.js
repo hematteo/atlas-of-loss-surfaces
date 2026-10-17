@@ -4106,8 +4106,8 @@ const SIMKEYS = {
   beta2: { label: 'Adam β₂', min: 0.9, max: 0.9999, step: 0.0001, f: (v) => v.toFixed(4) },
 };
 const F = Frame.init({ standalone: true, byline: 'By hematteo, made with Claude (Anthropic).',
-  slug: 'pilgrims', number: 3, title: 'An Atlas of Loss Surfaces', year: 2026,
-  medium: "Forty loss surfaces in raised relief, explored by twelve optimizers",
+  slug: 'atlas-of-loss-surfaces', number: 3, title: 'An Atlas of Loss Surfaces', year: 2026,
+  medium: "A map of the places gradient descent gets stuck, and the ways it gets out.",
   tone: 'light', accent: '#4b3fa0', seed: 1938, maxDpr: 2,
   statement: TEXT.about,
   hint: 'drag to turn · right-drag to pan · scroll to approach · click to release a cohort · <kbd>↑</kbd><kbd>↓</kbd> plates',

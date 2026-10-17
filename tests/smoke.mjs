@@ -27,10 +27,12 @@ const watch = (page, tag) => {
 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  // reduced motion: plates switch at once instead of after the page-turn animation, which only advances as frames
+  // are drawn and so can take tens of seconds under software WebGL on CI
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   watch(page, 'desktop');
   await page.goto(URL0);
-  await page.waitForFunction(() => typeof PLATES !== 'undefined' && window.__debug && window.__debug.fps != null, null, { timeout: 30000 });
+  await page.waitForFunction(() => typeof PLATES !== 'undefined' && window.__debug && window.__debug.fps != null, null, { timeout: 60000 });
   const n = await page.evaluate(() => { F.setParam('speed', 60); return PLATES.length; });
   // a plate without text throws on load; here, text without a plate, or filed under the wrong chapter
   const text = await page.evaluate(() => ({
@@ -45,7 +47,7 @@ try {
   if (!text.chapters) failures.push('text/chapters.md is missing a chapter');
   for (let i = 0; i < n; i++) {
     await page.evaluate((k) => gotoPlate(k), i);
-    await page.waitForFunction((k) => PL.index === k, i, { timeout: 15000 });   // the page turn swaps the plate when it is done
+    await page.waitForFunction((k) => PL.index === k, i, { timeout: 30000 });
     await wait(1800);
     const s = await page.evaluate(() => ({ id: PL.id, nan: window.__debug.nan, broken: !!document.querySelector('.hl-error') }));
     const bad = s.nan > 0 || s.broken;
@@ -53,10 +55,11 @@ try {
     if (s.broken) failures.push(`plate ${i + 1} (${s.id}): error screen`);
     console.log(`${bad ? 'FAIL' : 'ok  '}  ${String(i + 1).padStart(2)}  ${s.id}`);
   }
-  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  // device scale 1: at 2 the first frame alone can outlast the timeout under software WebGL on CI; the layout is the same
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
   watch(phone, 'phone');
   await phone.goto(URL0);
-  await phone.waitForFunction(() => typeof PLATES !== 'undefined' && window.__debug && window.__debug.fps != null, null, { timeout: 30000 });
+  await phone.waitForFunction(() => typeof PLATES !== 'undefined' && window.__debug && window.__debug.fps != null, null, { timeout: 60000 });
   await wait(1500);
   const inCard = await phone.evaluate(() => document.querySelector('.pl-tools').closest('.pl-card') !== null);
   console.log(`${inCard ? 'ok  ' : 'FAIL'}  phone: tools in the plate card`);

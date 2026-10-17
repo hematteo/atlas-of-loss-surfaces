@@ -9,7 +9,9 @@ version: 1.0.0
 date-released: 2026-10-17
 url: "https://matteohe.com/atlas-of-loss-surfaces/"
 repository-code: "https://github.com/hematteo/atlas-of-loss-surfaces"
-license: MIT
+license:
+  - MIT
+  - CC-BY-4.0
 keywords:
   - optimization
   - loss landscape

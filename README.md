@@ -5,10 +5,10 @@
 [![Licence: MIT](https://img.shields.io/badge/code-MIT-24262b)](LICENSE)
 [![Content: CC BY 4.0](https://img.shields.io/badge/content-CC%20BY%204.0-24262b)](https://creativecommons.org/licenses/by/4.0/)
 
-Forty results from the optimization literature, drawn as raised-relief maps you can turn and approach, and explored
-by twelve optimizers. Each plate is a seeded two-parameter surface `L(θ₁, θ₂)` built to show one phenomenon. Particles
-cross it taking real optimizer steps, leave ink, and come to rest where the theory says they should. The plates cite
-[200 papers](REFERENCES.md).
+I wanted to see what the optimization papers describe, so I drew it. Each plate is a small loss surface built to show
+one thing from the literature, such as a saddle, a ravine or the edge of stability, as a raised-relief map you can turn
+and approach. Particles cross it taking real optimizer steps, leave ink, and come to rest where the theory says they
+should. Every plate cites its sources ([277 works](REFERENCES.md)).
 
 **[Open the atlas →](https://matteohe.com/atlas-of-loss-surfaces/)**
 
@@ -16,10 +16,10 @@ cross it taking real optimizer steps, leave ink, and come to rest where the theo
 
 The plates are grouped in eight chapters:
 
-![One plate from each chapter: Ravines, Stability and catapults, Adam and the axes, The river valley, Mode connectivity, Rastrigin's egg crate, Two players on one sheet, The safety basin](img/chapters.jpg)
+![One plate from each chapter: Ravines, Stability and catapults, Adam, sign descent and the axes, The river valley, Mode connectivity, Rastrigin's egg crate, Two players on one sheet, The safety basin](img/chapters.jpg)
 
 
-1. **Landforms**: basins of attraction, saddles, plateaus, ravines, cliffs, sharp and flat minima
+1. **Landforms**: a survey of a loss surface, basins of attraction, saddles, plateaus, ravines, cliffs, sharp and flat minima
 2. **Step size and noise**: stability and catapults, the edge of stability, implicit gradient regularization, noise as
    temperature, the shape and the tails of the noise, label noise
 3. **Optimizers**: momentum, Adam and sign descent, weight decay and scale invariance, Newton's method, sharpness-aware
@@ -38,8 +38,9 @@ saddle-free Newton and schedule-free SGD, plus plate-specific update rules for g
 
 Every sheet is an analytic function, and every number printed on a plate is computed from the surface it is printed
 on: critical points by Newton's method, curvatures from the Hessian, and rates, escape times and equilibria measured
-from the particles. Each plate card states the finding, cites the papers it comes from, says how settled the result
-is, and gives experiments to try, with predictions that were checked in the page. The about panel (**I**) explains
+from the particles. Each plate card states the finding, cites the papers it comes from, says for most plates how
+settled the result is, and gives experiments to try, with predictions that were checked in the page. Where the result
+works differently in networks with millions or billions of parameters, a section of the card, *At scale*, says how. The about panel (**I**) explains
 what a two-parameter map cannot show.
 
 Come close and the particles become stick men. Their gait, poses and reactions are read from the optimizer's state:
@@ -57,14 +58,15 @@ the minimum is for their step size.
   (**O**).
 - **P** parameters and seed, **S** capture the frame as a PNG, **H** hide the interface.
 
-It runs in any browser with WebGL2. It is plain HTML, JavaScript and WebGL2, with no libraries and no build step. To
+It runs in any browser with WebGL2. It is plain HTML, JavaScript and WebGL2, with no JavaScript libraries and nothing to build before serving it. To
 run it locally, open `index.html`, or serve the folder with `python3 -m http.server`.
 
 ## Editing the text
 
 All the prose is Markdown in [`text/`](text/): one file per plate, plus the glossary and the about panel. You can edit
 it without reading any code. [`text/README.md`](text/README.md) describes the format. After editing, run
-`npm run text` (it needs only Node) to rebuild `js/text.js`, which the page loads, and commit both.
+`npm run text` (it needs only Node 20 or later) to rebuild `js/text.js`, which the page loads, and `REFERENCES.md`, and
+commit them with your edits.
 
 ## How the code is laid out
 
@@ -76,7 +78,8 @@ it without reading any code. [`text/README.md`](text/README.md) describes the fo
     refinement, Hessian classification), cross-sections and the disconnectivity scaffold;
   - the optimizers and the forty plates. Each plate is one object, `plate({ … })`, holding its sheet builder, names,
     experiments and figure; `plate()` adds its text from `TEXT.plates[id]`. Plates sit in blocks marked
-    `// <<chN … // chN>>`; a plate's chapter is its `ch` field, and the reading order is the `ORDER` list;
+    `// <<chN … // chN>>`, which group them roughly in the order they were written, not by chapter; a plate's chapter
+    is its `ch` field, and the reading order is the `ORDER` list;
   - the WebGL renderer (relief, ink, baked shadows, and the stick men, drawn as signed-distance figures in a
     fragment shader) and the printed layer (names, contours, margin);
   - the particles: a struct-of-arrays simulation that steps every optimizer on the same stochastic gradient;
