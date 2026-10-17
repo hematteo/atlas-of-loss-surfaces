@@ -32,14 +32,20 @@ try {
   await page.goto(URL0);
   await page.waitForFunction(() => typeof PLATES !== 'undefined' && window.__debug && window.__debug.fps != null, null, { timeout: 30000 });
   const n = await page.evaluate(() => { F.setParam('speed', 60); return PLATES.length; });
-  // a plate without text throws on load; text without a plate is caught here
-  const orphans = await page.evaluate(() => Object.keys(TEXT.plates).filter((id) => !PLATES.some((p) => p.id === id)));
-  const chapters = await page.evaluate(() => CHAPTERS.filter(Boolean).length === ROMAN.length);
-  console.log(`${orphans.length || !chapters ? 'FAIL' : 'ok  '}  text: every entry in text/ belongs to a plate, every chapter has a title`);
-  if (orphans.length) failures.push(`text/ has entries for no plate: ${orphans.join(', ')}`);
-  if (!chapters) failures.push('text/ is missing a chapter title');
+  // a plate without text throws on load; here, text without a plate, or filed under the wrong chapter
+  const text = await page.evaluate(() => ({
+    orphans: Object.keys(TEXT.plates).filter((id) => !PLATES.some((p) => p.id === id)),
+    misfiled: PLATES.filter((p) => TEXT.chapterOf[p.id] !== p.ch).map((p) => `${p.id} (chapter ${p.ch + 1})`),
+    chapters: CHAPTERS.filter(Boolean).length === ROMAN.length,
+  }));
+  const textOK = !text.orphans.length && !text.misfiled.length && text.chapters;
+  console.log(`${textOK ? 'ok  ' : 'FAIL'}  text: every plate in text/ exists and is in its chapter's folder`);
+  if (text.orphans.length) failures.push(`text/ has files for no plate: ${text.orphans.join(', ')}`);
+  if (text.misfiled.length) failures.push(`text/ files in the wrong chapter folder: ${text.misfiled.join(', ')}`);
+  if (!text.chapters) failures.push('text/chapters.md is missing a chapter');
   for (let i = 0; i < n; i++) {
     await page.evaluate((k) => gotoPlate(k), i);
+    await page.waitForFunction((k) => PL.index === k, i, { timeout: 15000 });   // the page turn swaps the plate when it is done
     await wait(1800);
     const s = await page.evaluate(() => ({ id: PL.id, nan: window.__debug.nan, broken: !!document.querySelector('.hl-error') }));
     const bad = s.nan > 0 || s.broken;

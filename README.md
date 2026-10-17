@@ -60,13 +60,17 @@ the minimum is for their step size.
 It runs in any browser with WebGL2. It is plain HTML, JavaScript and WebGL2, with no libraries and no build step. To
 run it locally, open `index.html`, or serve the folder with `python3 -m http.server`.
 
+## Editing the text
+
+All the prose is Markdown in [`text/`](text/): one file per plate, plus the glossary and the about panel. You can edit
+it without reading any code. [`text/README.md`](text/README.md) describes the format. After editing, run
+`npm run text` (it needs only Node) to rebuild `js/text.js`, which the page loads, and commit both.
+
 ## How the code is laid out
 
-- `index.html`: the page, its metadata and its scripts: the text first, then the code.
-- `text/`: all the prose, as plain scripts that fill one global, `TEXT`. One file per chapter holds each plate's card
-  (title, deck, lead, what to try, background, method, caveats, references, figure caption) and the chapter's title;
-  `glossary.js` holds the hover definitions and `about.js` the about panel. Card text is HTML; `[[text|key]]` links a
-  glossary term and `[[text|@Name]]` rings a map label.
+- `index.html`: the page, its metadata and four scripts.
+- `text/`: all the prose, in Markdown (see above). `tools/build-text.mjs` builds it into `js/text.js`, which defines
+  one global, `TEXT`.
 - `js/atlas.js`: the atlas, one script. Sections open with a `// ----` banner, in this order:
   - the surfaces: seeded noise, the loss `L(θ₁, θ₂)`, the height grid, critical points (grid scan, Newton
     refinement, Hessian classification), cross-sections and the disconnectivity scaffold;
@@ -87,10 +91,11 @@ stick men, and the project was first called Pilgrims.
 
 ## Testing
 
-`npm test` serves the folder, opens the atlas in headless Chromium with software WebGL2, and visits all forty plates.
-It fails on any page or console error, any non-finite particle, or the error screen, and checks the phone layout. It
-runs on every push ([workflow](.github/workflows/test.yml)). The site itself needs no install; `package.json` exists
-only for the test.
+`npm test` checks that `js/text.js` is up to date with `text/`, then serves the folder, opens the atlas in headless
+Chromium with software WebGL2, and visits all forty plates. It fails on any page or console error, any non-finite
+particle, the error screen, or text that belongs to no plate, and checks the phone layout. It runs on every push
+([workflow](.github/workflows/test.yml)). The site itself needs no install; `package.json` exists only for the text
+build and the test.
 
 ```sh
 npm ci && npx playwright install chromium && npm test
