@@ -1,0 +1,26 @@
+name: An error in a plate
+description: A claim, number, citation or figure on a plate that looks wrong.
+title: "Plate: "
+labels: [correction]
+body:
+  - type: input
+    id: plate
+    attributes:
+      label: Plate
+      description: Its title, or the link from the address bar (it ends in ?plate=…).
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: What the plate says
+      description: Quote the sentence, or describe the number or figure.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: What you think is right, and the source
+      description: A paper, section or equation helps most.
+    validations:
+      required: true

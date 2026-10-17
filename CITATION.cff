@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use or refer to the atlas, please cite it as below."
+type: software
+title: "An Atlas of Loss Surfaces"
+abstract: "Forty loss surfaces in raised relief, explored by twelve optimizers: an interactive WebGL2 atlas of results from the optimization literature, from saddles and the edge of stability to catapults, games and post-training."
+authors:
+  - alias: hematteo
+version: 1.0.0
+date-released: 2026-10-17
+url: "https://matteohe.com/atlas-of-loss-surfaces/"
+repository-code: "https://github.com/hematteo/atlas-of-loss-surfaces"
+license: MIT
+keywords:
+  - optimization
+  - loss landscape
+  - deep learning
+  - edge of stability
+  - interactive visualization

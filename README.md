@@ -1,14 +1,23 @@
 # An Atlas of Loss Surfaces
 
+[![Open the atlas](https://img.shields.io/badge/open-the%20atlas-4b3fa0)](https://matteohe.com/atlas-of-loss-surfaces/)
+[![test](https://github.com/hematteo/atlas-of-loss-surfaces/actions/workflows/test.yml/badge.svg)](https://github.com/hematteo/atlas-of-loss-surfaces/actions/workflows/test.yml)
+[![Licence: MIT](https://img.shields.io/badge/code-MIT-24262b)](LICENSE)
+[![Content: CC BY 4.0](https://img.shields.io/badge/content-CC%20BY%204.0-24262b)](https://creativecommons.org/licenses/by/4.0/)
+
+Forty results from the optimization literature, drawn as raised-relief maps you can turn and approach, and explored
+by twelve optimizers. Each plate is a seeded two-parameter surface `L(θ₁, θ₂)` built to show one phenomenon. Particles
+cross it taking real optimizer steps, leave ink, and come to rest where the theory says they should. The plates cite
+[200 papers](REFERENCES.md).
+
 **[Open the atlas →](https://matteohe.com/atlas-of-loss-surfaces/)**
 
-![Dusk at a rest point: stick men round a campfire by a paper tent on a raised-relief map, one toasting a marshmallow, one lying back pointing at the stars](img/preview.jpg)
-
-Forty loss surfaces in raised relief, explored by twelve optimizers. Each plate is a seeded two-parameter surface
-`L(θ₁, θ₂)` built to show one phenomenon from the optimization literature. Particles cross it taking real optimizer
-steps, and leave ink.
+![The atlas in a browser: a printed loss surface rises into relief while cohorts of SGD, heavy-ball and Adam particles set off across it, with the plate card on the right and the tools along the bottom](img/hero.gif)
 
 The plates are grouped in eight chapters:
+
+![One plate from each chapter: Ravines, Stability and catapults, Adam and the axes, The river valley, Mode connectivity, Rastrigin's egg crate, Two players on one sheet, The safety basin](img/chapters.jpg)
+
 
 1. **Landforms**: basins of attraction, saddles, plateaus, ravines, cliffs, sharp and flat minima
 2. **Step size and noise**: stability and catapults, the edge of stability, implicit gradient regularization, noise as
@@ -37,6 +46,8 @@ Come close and the particles become stick men. Their gait, poses and reactions a
 they scratch their heads at saddles, cartwheel when catapulted, and sit round a fire at rest points, posed by how sharp
 the minimum is for their step size.
 
+![Dusk at a rest point: stick men round a campfire by a paper tent on a raised-relief map, one toasting a marshmallow, one lying back pointing at the stars](img/preview.jpg)
+
 ## Using it
 
 - Drag to turn the model, right-drag to pan, scroll to approach, click to release a cohort.
@@ -51,13 +62,17 @@ run it locally, open `index.html`, or serve the folder with `python3 -m http.ser
 
 ## How the code is laid out
 
-- `index.html`: the page, its metadata and three scripts.
+- `index.html`: the page, its metadata and its scripts: the text first, then the code.
+- `text/`: all the prose, as plain scripts that fill one global, `TEXT`. One file per chapter holds each plate's card
+  (title, deck, lead, what to try, background, method, caveats, references, figure caption) and the chapter's title;
+  `glossary.js` holds the hover definitions and `about.js` the about panel. Card text is HTML; `[[text|key]]` links a
+  glossary term and `[[text|@Name]]` rings a map label.
 - `js/atlas.js`: the atlas, one script. Sections open with a `// ----` banner, in this order:
   - the surfaces: seeded noise, the loss `L(θ₁, θ₂)`, the height grid, critical points (grid scan, Newton
     refinement, Hessian classification), cross-sections and the disconnectivity scaffold;
-  - the optimizers and the forty plates. Each plate is one object, `PLATES.push({ … })`, holding its sheet builder,
-    names, experiments, card text and figure. Plates sit in blocks marked `// <<chN … // chN>>`; a plate's chapter
-    is its `ch` field, and the reading order is the `ORDER` list;
+  - the optimizers and the forty plates. Each plate is one object, `plate({ … })`, holding its sheet builder, names,
+    experiments and figure; `plate()` adds its text from `TEXT.plates[id]`. Plates sit in blocks marked
+    `// <<chN … // chN>>`; a plate's chapter is its `ch` field, and the reading order is the `ORDER` list;
   - the WebGL renderer (relief, ink, baked shadows, and the stick men, drawn as signed-distance figures in a
     fragment shader) and the printed layer (names, contours, margin);
   - the particles: a struct-of-arrays simulation that steps every optimizer on the same stochastic gradient;
@@ -69,6 +84,27 @@ run it locally, open `index.html`, or serve the folder with `python3 -m http.ser
 
 Some internal names predate the current wording: `TRIBES` are the optimizers, the `pilgrim…` functions draw the
 stick men, and the project was first called Pilgrims.
+
+## Testing
+
+`npm test` serves the folder, opens the atlas in headless Chromium with software WebGL2, and visits all forty plates.
+It fails on any page or console error, any non-finite particle, or the error screen, and checks the phone layout. It
+runs on every push ([workflow](.github/workflows/test.yml)). The site itself needs no install; `package.json` exists
+only for the test.
+
+```sh
+npm ci && npx playwright install chromium && npm test
+```
+
+## Corrections
+
+The cards make specific, checkable claims. If one looks wrong, please
+[open an issue](https://github.com/hematteo/atlas-of-loss-surfaces/issues/new?template=plate-error.yml) with the plate,
+the claim and a source.
+
+## Citing
+
+GitHub's **Cite this repository** button gives the reference, from [`CITATION.cff`](CITATION.cff).
 
 ## Credits and licence
 
