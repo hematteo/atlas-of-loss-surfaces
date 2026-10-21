@@ -2,12 +2,14 @@
 
 ## Subtitle
 
-Gradient descent, the heavy ball and Nesterov’s method start together near the rim of an elliptical crater.
+Gradient descent, the heavy ball and Nesterov’s method start together near the rim of an elliptical crater, to ask when momentum speeds up the descent.
 
 ## Lead
 
-The [[heavy ball|hb]] adds a fraction β of its previous step to each gradient step.
-On a quadratic with condition number [[κ|cond]], with the [[learning rate|lr]] η and β tuned to the largest and smallest curvatures, it needs of order √κ steps where [[gradient descent|gd]] needs of order κ (Polyak 1964).
+The [[heavy ball|hb]] adds a fraction β of its previous step to each gradient step, so steps that keep pointing the same way build up.
+Take a quadratic with condition number [[κ|cond]], the ratio of its largest to its smallest curvature.
+With the [[learning rate|lr]] η and β tuned to those two curvatures, the heavy ball needs of order √κ steps where [[gradient descent|gd]] needs of order κ (Polyak 1964).
+On this plate we can see how much of that speed-up depends on choosing β well.
 
 ## In practice
 
@@ -18,29 +20,37 @@ With an untuned β or noisy gradients, momentum need not beat [[SGD|sgd]].
 
 ## Figure caption
 
-Log₁₀ of the mean loss above the crater floor for the latest cohort, by optimizer. A curve oscillates when its particles overshoot the floor and swing back.
+Log₁₀ of the mean loss above the crater floor for the latest cohort, by optimizer.
+On this log scale, a straight falling stretch means the loss shrinks by a fixed factor per step.
+A curve oscillates when its particles overshoot the floor and swing back.
 
 ## Try
 
 1. Leave β at 0.9 → in the figure the heavy ball lags gradient descent: its underdamped directions shrink by √0.9 ≈ 0.95 per step, gradient descent’s slowest by 0.92.
-2. Set β to 0.5, just below the readout β* for λ<sub>min</sub>, the β that [[critically damps|critdamp]] the floor’s shallower direction → the heavy ball reaches the floor in under half gradient descent’s steps: its slowest direction shrinks by about 0.75 per step, against gradient descent’s 0.92.
+   Above β*, every direction shrinks by √β, so too much momentum slows them all alike.
+2. Set β to 0.5, just below the readout β* for λ<sub>min</sub> → the heavy ball reaches the floor in under half gradient descent’s steps.
+   β* is the β that [[critically damps|critdamp]] the floor’s shallower direction, and that direction now shrinks by about 0.75 per step, against gradient descent’s 0.92.
 3. Set β to 0.99 → the heavy ball keeps swinging across the [[Crater floor|@Crater floor]] after [[Nesterov’s method|nag]] has settled: its error shrinks by only √β ≈ 0.995 per step.
+   Nesterov’s rate, given in the Background, is below √β in every direction.
 
 ## Background
 
 Polyak (1964) introduced the heavy ball, `v ← βv − η∇L`, `θ ← θ + v`.
 On a quadratic each eigendirection of the [[Hessian|hessian]] evolves separately, as a damped oscillator.
 For curvature λ the error is multiplied each step by a root of `z² − (1 + β − ηλ)z + β = 0`.
-Above `β* = (1 − √(ηλ))²` the roots are complex, the iterate overshoots and swings back, and the error shrinks by √β per step.
+The two roots multiply to β, so when they are complex, and so equal in size, each has size √β.
+Above `β* = (1 − √(ηλ))²` the roots are complex: the iterate overshoots and swings back, and the error shrinks by √β per step.
 At β* the direction is [[critically damped|critdamp]] and shrinks by `1 − √(ηλ)`, the fastest rate at that η (Qian 1999).
 Take `η = 4/(√λ_max + √λ_min)²` and `β = ((√κ − 1)/(√κ + 1))²`.
 Then every direction shrinks by `(√κ − 1)/(√κ + 1)` per step, against `(κ − 1)/(κ + 1)` for gradient descent at its best η.
 Goh (2017) works through this analysis.
 
-Nesterov (1983) evaluates the gradient at the look-ahead point θ + βv.
+Nesterov (1983) evaluates the gradient at the look-ahead point θ + βv, where the momentum alone would carry the iterate.
 Sutskever et al. (2013) wrote it in this form and showed that momentum, with a good initialization, trains deep and recurrent networks as well as Hessian-free optimization had.
 Nesterov’s oscillating directions shrink by `√(β(1 − ηλ))` per step, so its damping grows with the curvature.
+Intuitively, the look-ahead gradient already sees part of the coming overshoot and pushes back early.
 
+Outside quadratics, and with noise, these guarantees weaken.
 On a one-dimensional strongly convex function with condition number 25, the heavy ball with Polyak’s parameters falls into a limit cycle from some starting points (Lessard, Recht and Packard 2016).
 With stochastic gradients neither method need improve on SGD (Kidambi et al. 2018).
 
@@ -49,10 +59,12 @@ With stochastic gradients neither method need improve on SGD (Kidambi et al. 201
 The crater is an anisotropic Gaussian well on a gentle bowl, ringed by six low hills.
 The [[Crater floor|@Crater floor]] is labelled with its two Hessian eigenvalues (8.3 and 22.5 on this seed, so κ = 2.7 and the crater is well conditioned).
 There is no gradient noise, so each [[cohort|cohort]] moves almost as one.
-Cohorts start on an ellipse about 0.4 from the floor, outside the region where the well is quadratic. η = 0.01.
+Cohorts start on an ellipse about 0.4 from the floor, outside the region where the well is quadratic.
+The learning rate is η = 0.01.
 The readouts give `β* = (1 − √(ηλ))²` for each eigenvalue, κ = λ<sub>max</sub>/λ<sub>min</sub>, and Polyak’s β for that κ.
 That β is optimal only together with Polyak’s η, `4/(√λ_max + √λ_min)²` ≈ 0.07 here.
 At the sheet’s η the fastest β is close to β* for λ<sub>min</sub>.
+This is because β* falls as the curvature rises, so the steeper direction is already underdamped there and shrinks just as fast.
 The figure plots log₁₀ of the cohort’s mean `L − L*` against steps since release.
 
 ## At scale
@@ -62,6 +74,7 @@ On high-dimensional random least-squares problems, a model of training with many
 Long momentum averages can still help language models.
 AdEMAMix (Pagliardini, Ablin and Grangier 2025) adds a second, much slower average of the gradient to [[Adam|adam]].
 A 1.3B-parameter model trained with it on 101B tokens matched one trained with AdamW on 197B.
+So at scale, momentum may matter less as an accelerator than as a long average of past gradients.
 
 ## References
 

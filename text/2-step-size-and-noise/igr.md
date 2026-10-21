@@ -2,30 +2,36 @@
 
 ## Subtitle
 
-Gradient descent, gradient flow and the modified flow on the two-parameter network L = ½(wa − 1)².
+Gradient descent, gradient flow and the modified flow on the two-parameter network L = ½(wa − 1)², to see which flow finite steps follow.
 
 ## Lead
 
-Finite-step [[gradient descent|gd]] does not follow [[gradient flow|gflow]].
-Backward error analysis proves that, to second order in η, it follows the flow of a [[modified loss|modloss]] `L̃ = L + (η/4)‖∇L‖²`, which penalizes large gradients (Barrett and Dherin 2021).
+Finite-step [[gradient descent|gd]] does not follow [[gradient flow|gflow]], its limit as the step size goes to zero.
+Each step moves in a straight line where the flow would curve, and the small errors add up to a systematic bias.
+Backward error analysis proves that, to second order in η, gradient descent follows the flow of a [[modified loss|modloss]] `L̃ = L + (η/4)‖∇L‖²`, which penalizes large gradients (Barrett and Dherin 2021).
 How much this bias explains the benefit of large learning rates is debated.
+On this sheet we can test the prediction exactly: if it holds, gradient descent should end where the flow of L̃ ends, and not where the flow of L does.
 
 ## In practice
 
-Changing η changes where gradient descent ends, not just how fast it gets there.
+Changing η changes where gradient descent ends, as well as how fast it gets there.
 To leading order, larger steps add a penalty on the squared gradient norm that biases runs toward flatter regions.
 
 ## Figure caption
 
-Each release gives two points: gradient descent’s final w² − a² against the prediction of gradient flow (black rings) and of the flow of L̃ (green dots). The green dots lie nearer the diagonal, but gradient descent goes further toward balance than either flow predicts.
+Each release gives two points: gradient descent’s final w² − a² against the prediction of gradient flow (black rings) and of the flow of L̃ (green dots), so a perfect prediction lies on the diagonal.
+The green dots lie nearer the diagonal, but gradient descent goes further toward balance than either flow predicts.
 
 ## Try
 
 1. Keep η = 0.42 and compare the readouts after each release → gradient descent’s final `w² − a²` goes past the modified flow’s prediction toward balance, but lies closer to it than to gradient flow’s.
+   So L̃ captures most of the bias, but not all of it.
 2. Compare starting points → from starts where `η′λ_max` stays above 1, so that gradient descent overshoots the floor on every step, it changes `w² − a²` 3.6 to 3.8 times as much as L̃ predicts.
    From the other starts the factor is 1.4 to 2.2.
+   The expansion behind L̃ assumes small steps, and a step that overshoots every time is not small.
 3. Lower η to 0.2 → the three readouts draw together and the factor falls to 1.2–1.8, because L̃ is only the first term of an expansion in η.
-4. Raise η to 0.55 → the gap between the black and green rings widens.
+   The terms it leaves out shrink faster with η than the term it keeps.
+4. Raise η to 0.55 → the gap between the black and green rings widens, since the penalty in L̃ grows in proportion to η.
 
 ## Background
 
@@ -39,15 +45,17 @@ Smith et al. (2021) extended the analysis to SGD, whose modified loss also penal
 
 On this model the bias can be written exactly.
 Gradient flow conserves `w² − a²`, so it ends where its hyperbola of constant `w² − a²` meets the floor.
-This is the two-layer case of the layer balancing proved by Du, Hu and Lee (2018).
-With η′ the step on `½(wa − 1)²` (see Method), one step of gradient descent multiplies `w² − a²` by `1 − η′²r²`, with `r = wa − 1`.
-The flow of L̃ shrinks it at the matching rate, `d(w² − a²)/dt = −η′r²(w² − a²)`.
+This is because, with `r = wa − 1` the residual, the flow changes w² and a² at the same rate, −2rwa.
+It is the two-layer case of the layer balancing proved by Du, Hu and Lee (2018).
+With η′ the step on `½(wa − 1)²` (see Method), one step of gradient descent multiplies `w² − a²` by `1 − η′²r²`.
+The flow of L̃ shrinks it at the matching rate, `d(w² − a²)/dt = −η′r²(w² − a²)`, which over a time η′ multiplies it by about the same factor.
 Both move toward the [[Balanced point|@Balanced point]] `w = a`, where λ<sub>max</sub> = `w² + a²` is smallest on the floor.
+So both predict that larger steps end nearer balance.
 
 ## Method
 
 The sheet is `L = ½(wa − 1)²` with `w = 1.5θ₁` and `a = 1.5θ₂`, scaled by 0.247 to fit the relief.
-So a step η on the sheet is a step `η′ = 0.555η` on `½(wa − 1)²`; the formulas on this card use η′.
+So a step η on the sheet is a step `η′ = 0.555η` on `½(wa − 1)²` (0.247 × 1.5²), and the formulas on this card use η′.
 The minima form the hyperbola `wa = 1` (blue), with balanced points `w = a = ±1`.
 The dotted lines are hyperbolas of constant `w² − a²`, the paths of gradient flow.
 Each release starts one noiseless gradient-descent particle at one of eight fixed points.
@@ -63,6 +71,7 @@ But gradient descent on networks usually reaches the [[edge of stability|eos]], 
 The factor of 3.6 to 3.8 on this sheet already shows it failing.
 Two models are built for that regime: the principal flow, which follows the oscillation (Rosca et al. 2023), and the [[central flow|centralflow]], which follows its time average (Cohen, Damian et al. 2025).
 For full-batch [[Adam|adam]], Cattaneo, Klusowski and Shigida (2024) used backward error analysis to find a different bias, one that typically rewards, rather than penalizes, a perturbed 1-norm of the gradient.
+What survives at scale is that the step size biases where training ends; the penalty in L̃ is a small-step result.
 
 ## References
 

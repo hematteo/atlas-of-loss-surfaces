@@ -2,43 +2,54 @@
 
 ## Subtitle
 
-Newton, saddle-free Newton and gradient descent start from the same points on three hills and three hollows.
+Newton, saddle-free Newton and gradient descent start from the same points on three hills and three hollows, to ask which critical points draw each one.
 
 ## Lead
 
-[[Newton’s method|newton]] steps to the stationary point of the local quadratic model, `θ ← θ − H⁻¹∇L`, where H is the [[Hessian|hessian]].
-From close enough, it converges to any nondegenerate [[critical point|crit]], so [[saddles|saddle]] and maxima attract it as well as minima (Nocedal and Wright 2006).
+[[Newton’s method|newton]] fits a quadratic model to the loss and steps to that model’s stationary point, `θ ← θ − H⁻¹∇L`, where H is the [[Hessian|hessian]].
+That stationary point may be a bottom, a top or a pass, and Newton’s method does not ask which.
+So from close enough, it converges to any nondegenerate [[critical point|crit]], and [[saddles|saddle]] and maxima attract it as well as minima (Nocedal and Wright 2006).
 Dauphin et al. (2014) proposed [[saddle-free Newton|sfn]], which uses |H|, the Hessian with each eigenvalue replaced by its absolute value, and is repelled by saddles.
+On this plate we can count how often each method ends at a saddle.
 
 ## In practice
 
 Do not take raw Newton steps on a non-convex loss: they are drawn to saddles and maxima.
 Use a positive-semidefinite curvature model, such as Gauss–Newton or |H|, or a trust region.
+With no negative curvature in the model, its stationary point is a minimum, so the step heads downhill.
 
 ## Figure caption
 
-The kind of critical point at which each optimizer’s particles came to rest, as shares of its rings. Particles that never came to rest are not counted.
+The kind of critical point at which each optimizer’s particles came to rest, as shares of its rings.
+Particles that never came to rest are not counted.
 
 ## Try
 
 1. Leave the step size α at 0.1 → almost all Newton rings are at saddles (114 of 120 in the first minute on this seed).
-2. Compare saddle-free Newton and [[gradient descent|gd]] → all their particles come to rest at minima, the only points where they can rest: along negative curvature the Newton step moves toward the critical point, and |H| reverses that component.
+   This is the attraction from the Lead: Newton heads for its model’s stationary point, whatever its kind.
+2. Compare saddle-free Newton and [[gradient descent|gd]] → all their particles come to rest at minima, the only points where they can rest.
+   Along negative curvature the Newton step moves toward the critical point, and |H| reverses that component.
 3. Watch Newton’s particles → on this seed about two in three never come to rest.
-4. Raise α to 1 → saddles still take most of Newton’s rings, and the shares shift only a little toward minima and summits (over four minutes on this seed, about 27% at minima, 60% at saddles and 13% at summits, against 20%, 70% and 10% at α = 0.1).
+   Some of them chatter near a curve where det H = 0, as the Caveat describes.
+4. Raise α to 1 → saddles still take most of Newton’s rings, and the shares shift only a little toward minima and summits.
+   Over four minutes on this seed, about 27% are at minima, 60% at saddles and 13% at summits, against 20%, 70% and 10% at α = 0.1.
    Because steps are capped at 0.02, the two step sizes differ only where the Newton step is shorter than 0.2, close to a critical point.
+   So α changes mostly the last stretch of each approach.
 
 ## Background
 
 Newton’s method solves `H s = −∇L` and steps to θ + s.
 Near a critical point with nonsingular Hessian, full steps converge quadratically, whatever the signs of the eigenvalues.
 In the eigenbasis of H the step along eigenvector i is `−g_i/λ_i`.
+On a quadratic, g<sub>i</sub> is λ<sub>i</sub> times the distance to the critical point along that eigenvector, so this step cancels the distance whatever the sign of λ<sub>i</sub>.
 When λ<sub>i</sub> &lt; 0 it moves toward the critical point, which is uphill.
-For minimization the method is therefore used with a modified Hessian that keeps the model convex, or with a trust region that bounds the step (Nocedal and Wright 2006, chapters 3 and 4).
+So for minimization the method is used with a modified Hessian that keeps the model convex, or with a trust region that bounds the step (Nocedal and Wright 2006, chapters 3 and 4).
 For deep networks, Martens (2010) used a Hessian-free method built on the Gauss–Newton matrix, which is positive semidefinite.
 
 Dauphin et al. (2014) argued, from results on random Gaussian fields and from experiments, that in high dimensions most critical points of high loss are saddles, and that their neighbourhoods slow down first-order methods.
 They proposed the saddle-free Newton method: replace H by |H|, the matrix with the same eigenvectors and the absolute values of the eigenvalues.
 Each direction is rescaled by 1/|λ<sub>i</sub>| and the step always descends.
+In effect it keeps Newton’s step length in every direction but turns the uphill components around.
 Using a Krylov-subspace approximation, they reported faster escape from saddles than SGD in deep and recurrent networks.
 Gradient descent with a small enough step converges to a [[strict saddle|strictsaddle]] only from a set of starting points of measure zero (Lee et al. 2016).
 It can still take exponentially long to pass a sequence of saddles (Du et al. 2017).
@@ -46,7 +57,7 @@ It can still take exponentially long to pass a sequence of saddles (Du et al. 20
 ## Method
 
 The sheet is a bowl with three Gaussian hills, three Gaussian hollows and a faint texture.
-Its critical points are found by Newton’s method from a grid and classified by the signs of the Hessian’s eigenvalues.
+Its critical points are found by Newton’s method from a grid and classified by the signs of the Hessian’s eigenvalues: both positive at a minimum, both negative at a summit, mixed at a saddle.
 Newton and saddle-free Newton take damped steps `θ ← θ − αH⁻¹∇L` (|H| for saddle-free Newton), with the Hessian from finite differences, no noise, and each step capped at length 0.02.
 Where |det H| &lt; 10⁻⁹ they take a small gradient step instead.
 Saddle-free Newton floors each |λ<sub>i</sub>| at 0.5.
@@ -54,12 +65,12 @@ Gradient descent uses η = 0.004.
 A Newton particle can come [[to rest|rest]] at any critical point, the others only at a minimum.
 The kind of point is read from the Hessian at the particle’s position averaged exponentially over about its last 60 steps.
 Particles that never come to rest are retired after 2475 steps without a ring.
-The readouts count Newton’s rings by kind; the figure shows the shares for all three optimizers.
+The readouts count Newton’s rings by kind, and the figure shows the shares for all three optimizers.
 The counts restart, and particles in flight are retired, whenever α or η changes.
 
 ## Caveat
 
-Where det H = 0 the Newton step is undefined, and near such a curve it is very long.
+Where det H = 0 the Newton step is undefined, and near such a curve it is very long, since it divides by an eigenvalue close to zero.
 With the cap at 0.02, Newton particles near it chatter back and forth across the curve until they are retired.
 Saddle-free Newton avoids this only through its floor on |λ<sub>i</sub>|.
 
@@ -69,6 +80,7 @@ A network with millions of weights has a Hessian with millions of rows, which no
 Its spectrum is mostly a bulk near zero with a few large outliers (see <i>Survey of a loss surface</i>).
 At that scale, second-order methods use positive-semidefinite or clipped approximations to the curvature, layer by layer or diagonal, as [[preconditioners|precond]].
 Examples are K-FAC (Martens and Grosse 2015), Shampoo (Gupta, Koren and Singer 2018) and Sophia (Liu et al. 2024).
+Because their curvature is never negative, none of them is drawn to saddles the way raw Newton is.
 Escaping saddles is then left to gradient noise, as for SGD (see <i>Saddle points</i>).
 
 ## References

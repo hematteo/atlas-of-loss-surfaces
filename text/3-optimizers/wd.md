@@ -2,35 +2,45 @@
 
 ## Subtitle
 
-SGD with and without weight decay, and [[AdamW|adamw]], on a loss that depends only on the bearing of θ.
+SGD with and without weight decay, and [[AdamW|adamw]], on a loss that depends only on the bearing of θ, to ask what decay is for there.
 
 ## Lead
 
-Behind a normalization layer the loss is [[scale-invariant|scaleinv]], `L(cθ) = L(θ)`.
-Gradient steps then lengthen θ, lowering the [[effective learning rate|efflr]] η/‖θ‖².
-Weight decay with coefficient λ holds ‖θ‖ at an equilibrium where θ turns by about √(2ηλ) per step, or √(2ηλ/(1 + β)) with momentum β (van Laarhoven 2017; Wan et al. 2021; Kosson, Messmer and Jaggi 2024).
+Behind a normalization layer, scaling the weights leaves the output unchanged, so the loss is [[scale-invariant|scaleinv]], `L(cθ) = L(θ)`.
+Gradient steps then lengthen θ, and a longer θ turns less for the same step, which lowers the [[effective learning rate|efflr]] η/‖θ‖².
+Weight decay with coefficient λ pulls the other way and holds ‖θ‖ at an equilibrium.
+There θ turns by about √(2ηλ) per step, or √(2ηλ/(1 + β)) with momentum β (van Laarhoven 2017; Wan et al. 2021; Kosson, Messmer and Jaggi 2024).
 Measured angular updates in trained networks match this approximation (Wan et al. 2021; Kosson, Messmer and Jaggi 2024).
+On this plate we can watch the norm settle and check the turning rate against that prediction.
 
 ## In practice
 
 For weights behind a normalization layer, weight decay does not shrink the function.
 It sets the effective learning rate, and at equilibrium the product ηλ, not η or λ alone, sets how fast the weights turn.
+So for such weights, raising η and lowering λ by the same factor leaves their turning rate unchanged.
 
 ## Figure caption
 
-Above: mean ‖θ‖ of one cohort, followed through its run, by optimizer, with the predicted equilibria dashed. Below: the angle θ turns per step (root mean square), with √(2ηλ) for SGD with weight decay and √(2ηλ(1 − β₁)/(1 + β₁)) for AdamW dashed.
+Above: mean ‖θ‖ of one cohort, followed through its run, by optimizer, with the predicted equilibria dashed.
+Below: the angle θ turns per step (root mean square), with √(2ηλ) for SGD with weight decay and √(2ηλ(1 − β₁)/(1 + β₁)) for AdamW dashed.
+A curve that flattens onto its dashed line has reached its equilibrium.
 
 ## Try
 
 1. Let the first cohort finish → SGD with weight decay holds ‖θ‖ ≈ 0.60 (predicted 0.595) and turns θ by √(2ηλ) = 0.0283 rad per step, while without decay SGD’s norm grows just past 1 by the end of its run.
+   As that norm grows, its effective learning rate keeps falling, which is what decay prevents.
 2. Raise the noise σ to 4 → the violet circle and SGD’s norm move out to about 0.75, while AdamW’s stays near 0.8: Adam divides out the noise.
+   SGD’s equilibrium `(ησ²/2λ)^¼` grows with σ, while AdamW’s `√(ηC/2λ)` does not contain σ at all.
 3. Set σ to 0.3 → SGD with weight decay settles at 0.23, above the predicted 0.21.
-4. Set σ to 0 → SGD with decay shrinks to the ticks and AdamW to about 0.2: without noise, θ lengthens only when particles bounce, which happens at f″/‖θ‖² = 2/η, with f″ the valley’s labelled curvature.
+   The prediction assumes that noise dominates the gradient (see the Caveat).
+4. Set σ to 0 → SGD with decay shrinks to the ticks and AdamW to about 0.2.
+   Without noise, θ lengthens only when particles bounce, which happens at f″/‖θ‖² = 2/η, with f″ the valley’s labelled curvature.
+   This is the [[edge of stability|eos]] of the Background, reached by shrinking θ.
 
 ## Background
 
-For a scale-invariant loss, `∇L(cθ) = ∇L(θ)/c` and the gradient is perpendicular to θ.
-A gradient step can therefore only lengthen θ, and the angle it turns θ through scales as `η/‖θ‖²`.
+For a scale-invariant loss, `∇L(cθ) = ∇L(θ)/c`, and the gradient is perpendicular to θ, since moving along θ does not change the loss.
+So a gradient step, being at right angles to θ, can only lengthen it, and the angle it turns θ through scales as `η/‖θ‖²`.
 Van Laarhoven (2017) concluded that L2 regularization of such weights does not regularize but sets this effective learning rate.
 Zhang et al. (2019) identified the same mechanism in trained networks.
 Without weight decay ‖θ‖ grows and the effective learning rate decays by itself.
@@ -39,6 +49,7 @@ Li and Arora (2020) showed that weight decay on such weights is equivalent to an
 Li, Lyu and Arora (2020) conjectured that SGD reaches equilibrium in about 1/(ηλ) steps, with the intrinsic learning rate ηλ as the only parameter.
 
 At equilibrium the growth from gradient steps balances the decay.
+Each step, decay removes about 2ηλ‖θ‖² from ‖θ‖², while the gradient step adds η²‖g̃‖²/‖θ‖².
 For SGD this gives `‖θ‖⁴ = ηE‖g̃‖²/2λ`, with g̃ measured at unit norm, and an [[angular update|angupd]] of `√(2ηλ)` per step, or `√(2ηλ/(1 + β))` with momentum β (Wan et al. 2021).
 For AdamW (Loshchilov and Hutter 2019), Kosson, Messmer and Jaggi (2024) derived `‖θ‖ = √(ηC/2λ)` for C coordinates and an angular update of `√(2ηλ(1 − β₁)/(1 + β₁))` per step, assuming updates dominated by noise.
 Without noise, decay shrinks θ until gradient descent reaches the [[edge of stability|eos]].
@@ -48,11 +59,14 @@ Lyu, Li and Arora (2022) analysed this regime in normalized networks and showed 
 
 The loss is `f(φ)`, with φ the bearing of θ: three von Mises valleys, each labelled with its curvature f″.
 It is exactly scale-invariant outside a disc of radius 0.06 at the origin, where the bearing is undefined.
-Gradient noise is perpendicular to θ with standard deviation σ/‖θ‖, as in a scale-invariant network.
-Both SGD ensembles use η = 0.004; AdamW uses η = 0.016, β₁ = 0.9, β₂ = 0.999, and its λ is scaled so that both decayed optimizers share the ηλ set by the control.
+Gradient noise is perpendicular to θ with standard deviation σ/‖θ‖, as in a scale-invariant network, so the noise falls as ‖θ‖ grows, just as the gradient does.
+Both SGD ensembles use η = 0.004.
+AdamW uses η = 0.016, β₁ = 0.9 and β₂ = 0.999, and its λ is scaled so that both decayed optimizers share the ηλ set by the control.
 The dashed circles are the predicted equilibria, `(ησ²/2λ)^¼` for SGD with decay and `√(ηC/2λ)` with C = 2 for AdamW.
+The SGD circle is the Background’s formula with E‖g̃‖² set to σ², which is where the assumption that noise dominates enters.
 The ticks mark `‖θ‖ = √(ηf″/2)`, where f″/‖θ‖² = 2/η.
-The figure follows one cohort for 6000 steps; the readouts average its ‖θ‖ and its root-mean-square angle per step over ages from 2500 on (4000 for SGD without decay).
+The figure follows one cohort for 6000 steps.
+The readouts average its ‖θ‖ and its root-mean-square angle per step over ages from 2500 on (4000 for SGD without decay).
 
 ## Caveat
 
@@ -65,6 +79,7 @@ With only two coordinates, AdamW’s angle per step is 8–15% below its predict
 In a layer with millions of coordinates a noisy update is almost perpendicular to θ, as the AdamW prediction assumes, so the two-coordinate shortfall above should shrink.
 D’Angelo et al. (2024) found that in language models trained for about one epoch, weight decay helps less by regularizing than by changing the dynamics: it lowers the training loss and makes training more stable.
 Wang and Aitchison (2025) treat AdamW’s weights as an exponential average of its updates over about 1/(ηλ) steps.
+This is because each step multiplies the old weights by 1 − ηλ.
 The best window stays at about the same number of epochs as models and datasets grow, so λ should fall with more data and, under μP learning-rate scaling, rise with width.
 Not every weight in a transformer sits behind a normalization: the output layer and the normalization gains do not, and the equilibrium here does not describe them.
 

@@ -5,10 +5,14 @@
 [![Licence: MIT](https://img.shields.io/badge/code-MIT-24262b)](LICENSE)
 [![Content: CC BY 4.0](https://img.shields.io/badge/content-CC%20BY%204.0-24262b)](https://creativecommons.org/licenses/by/4.0/)
 
-I wanted to see what the optimization papers describe, so I drew it. Each plate is a small loss surface built to show
-one thing from the literature, such as a saddle, a ravine or the edge of stability, as a raised-relief map you can turn
+I wanted to see what the optimization papers describe, so I drew it. Those papers are about saddles, ravines and the
+edge of stability in networks with millions of parameters, which we cannot picture directly. Two parameters can be
+drawn, and they are enough to show most of what those words mean.
+
+Each plate is a small loss surface built to show one thing from the literature, as a raised-relief map you can turn
 and approach. Particles cross it taking real optimizer steps, leave ink, and come to rest where the theory says they
-should. Every plate cites its sources ([277 works](REFERENCES.md)).
+should. So when a plate states a result, we can watch it happen there. Every plate cites its sources
+([277 works](REFERENCES.md)).
 
 **[Open the atlas →](https://matteohe.com/atlas-of-loss-surfaces/)**
 
@@ -37,15 +41,17 @@ saddle-free Newton and schedule-free SGD, plus plate-specific update rules for g
 ## How it is built
 
 Every sheet is an analytic function, and every number printed on a plate is computed from the surface it is printed
-on: critical points by Newton's method, curvatures from the Hessian, and rates, escape times and equilibria measured
-from the particles. Each plate card states the finding, cites the papers it comes from, says for most plates how
-settled the result is, and gives experiments to try, with predictions that were checked in the page. Where the result
-works differently in networks with millions or billions of parameters, a section of the card, *At scale*, says how. The about panel (**I**) explains
-what a two-parameter map cannot show.
+on. Critical points are found by Newton's method and curvatures come from the Hessian, while rates, escape times and
+equilibria are measured from the particles. So each number on a card is something you can check on its plate.
 
-Come close and the particles become stick men. Their gait, poses and reactions are read from the optimizer's state:
-they scratch their heads at saddles, cartwheel when catapulted, and sit round a fire at rest points, posed by how sharp
-the minimum is for their step size.
+Each plate card states the finding and cites the papers it comes from. For most plates it also says how settled the
+result is. It then gives experiments to try, with predictions that were checked in the page. Where the result works
+differently in networks with millions or billions of parameters, a section of the card, *At scale*, says how. The
+about panel (**I**) explains what a two-parameter map cannot show.
+
+Come close and the particles become stick men, which makes each optimizer's state visible at a glance. Their gait,
+poses and reactions are read from that state: they scratch their heads at saddles, cartwheel when catapulted, and sit
+round a fire at rest points. How they sit depends on how sharp the minimum is for their step size.
 
 ![Dusk at a rest point: stick men round a campfire by a paper tent on a raised-relief map, one toasting a marshmallow, one lying back pointing at the stars](img/preview.jpg)
 
@@ -58,15 +64,15 @@ the minimum is for their step size.
   (**O**).
 - **P** parameters and seed, **S** capture the frame as a PNG, **H** hide the interface.
 
-It runs in any browser with WebGL2. It is plain HTML, JavaScript and WebGL2, with no JavaScript libraries and nothing to build before serving it. To
-run it locally, open `index.html`, or serve the folder with `python3 -m http.server`.
+It runs in any browser with WebGL2. It is plain HTML, JavaScript and WebGL2, with no JavaScript libraries and nothing
+to build before serving it. To run it locally, open `index.html`, or serve the folder with `python3 -m http.server`.
 
 ## Editing the text
 
-All the prose is Markdown in [`text/`](text/): one file per plate, plus the glossary and the about panel. You can edit
-it without reading any code. [`text/README.md`](text/README.md) describes the format. After editing, run
-`npm run text` (it needs only Node 20 or later) to rebuild `js/text.js`, which the page loads, and `REFERENCES.md`, and
-commit them with your edits.
+All the prose is Markdown in [`text/`](text/): one file per plate, plus the glossary and the about panel. So you can
+correct or extend it without reading any code, and [`text/README.md`](text/README.md) describes the format. After
+editing, run `npm run text` (it needs only Node 20 or later). It rebuilds `js/text.js`, which the page loads, and
+`REFERENCES.md`. Commit both with your edits, since the site is served as is, with no build step.
 
 ## How the code is laid out
 
@@ -106,7 +112,8 @@ npm ci && npx playwright install chromium && npm test
 
 ## Corrections
 
-The cards make specific, checkable claims. If one looks wrong, please
+The cards make specific, checkable claims, and every plate cites the papers its findings come from. If one looks
+wrong, please
 [open an issue](https://github.com/hematteo/atlas-of-loss-surfaces/issues/new?template=plate-error.yml) with the plate,
 the claim and a source.
 
@@ -116,6 +123,8 @@ GitHub's **Cite this repository** button gives the reference, from [`CITATION.cf
 
 ## Credits and licence
 
-By hematteo, made with Claude (Anthropic). The results shown belong to the papers cited on each plate.
+By hematteo, made with Claude (Anthropic). The results shown belong to the authors of the papers cited on each plate.
+The atlas only draws them.
 
-Code: [MIT](LICENSE). Text, figures and images: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Code: [MIT](LICENSE). Text, figures and images: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), so they can
+be reused with credit.

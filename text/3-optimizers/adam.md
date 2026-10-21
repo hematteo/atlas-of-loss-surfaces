@@ -2,14 +2,15 @@
 
 ## Subtitle
 
-A narrow quadratic valley that can be turned against the parameter axes.
+A narrow quadratic valley that can be turned against the parameter axes, to ask how much Adam and sign descent rely on them.
 
 ## Lead
 
-[[Adam|adam]] divides each coordinate’s step by a running root mean square of that coordinate’s gradient.
-Unlike [[gradient descent|gd]], it therefore depends on how the axes are oriented.
+[[Adam|adam]] divides each coordinate’s step by a running root mean square of that coordinate’s gradient, which gives each coordinate its own step size.
+So, unlike [[gradient descent|gd]], it depends on how the axes are oriented: if we rotate the loss, gradient descent’s path rotates with it, while Adam’s changes.
 Why Adam outperforms [[SGD|sgd]] on transformers is an open question.
 Proposed explanations include its closeness to [[sign descent|signsgd]] (Kunstner et al. 2023) and an ℓ∞ geometry of the loss that rotation destroys (Xie, Mohamadi and Li 2025).
+On this plate we can turn the valley against the axes and count what Adam loses.
 
 ## In practice
 
@@ -19,22 +20,28 @@ Retest Adam after any reparametrization that mixes coordinates.
 
 ## Figure caption
 
-Above: steps to come within 0.005 of the floor, by the angle of the basin; gradient descent is flat, Adam is fastest along an axis. Below: mean loss above the floor for the latest cohort; the sign methods level off.
+Above: steps to come within 0.005 of the floor, by the angle of the basin.
+Gradient descent’s curve is flat, and Adam is fastest when the valley lies along an axis.
+Below: mean loss above the floor for the latest cohort, on a log scale.
+The sign methods level off, since a step of fixed size cannot settle onto the floor.
 
 ## Try
 
-1. Turn the basin to 45° → ‘Adam steps’ rises from 37 to 132 while ‘GD steps’ stays about 145: a diagonal [[preconditioner|precond]] rescales the curvatures only along the axes.
-2. At 45°, watch [[signSGD|signsgd]] → its particles barely move down the valley and never come to rest: while the cross-valley gradient dominates both coordinates, each diagonal step goes straight across the floor.
+1. Turn the basin to 45° → ‘Adam steps’ rises from 37 to 132 while ‘GD steps’ stays about 145.
+   A diagonal [[preconditioner|precond]] rescales the curvatures only along the axes, and at 45° each coordinate mixes the steep and shallow directions, so no per-coordinate scale can separate them.
+2. At 45°, watch [[signSGD|signsgd]] → its particles barely move down the valley and never come to rest.
+   While the cross-valley gradient dominates both coordinates, each diagonal step goes straight across the floor.
 3. Watch [[Lion|lion]] → its particles get further down the valley than signSGD’s: its momentum averages out the alternating cross-valley gradient.
+   That gradient flips sign each time a particle crosses the floor, while the small gradient along the valley keeps its sign and survives the average.
 
 ## Background
 
-Adam (Kingma and Ba 2015) keeps exponential averages of the gradient and of its elementwise square and steps by `η m̂/(√v̂ + ε)`.
+Adam (Kingma and Ba 2015) keeps exponential averages of the gradient and of its elementwise square, m̂ and v̂, and steps by `η m̂/(√v̂ + ε)`.
 It descends from RPROP (Riedmiller and Braun 1993), which used only the sign of each partial derivative, through [[RMSprop|rmsprop]] (Tieleman and Hinton 2012), a minibatch form of RPROP that divides each gradient by a running root mean square.
 It also descends from AdaGrad (Duchi, Hazan and Singer 2011).
-With β₁ = β₂ = 0 and ε = 0 the step is `η sign(g)`, which is sign descent (Bernstein et al. 2018).
+With β₁ = β₂ = 0 (no averaging) and ε = 0, each coordinate of the gradient is divided by its own size, so the step is `η sign(g)`, which is sign descent (Bernstein et al. 2018).
 Balles and Hennig (2018) split Adam into the sign of the gradient and a magnitude set by its relative variance, so Adam approaches sign descent when the noise is small.
-Sign descent is steepest descent in the ℓ∞ norm.
+Sign descent is steepest descent in the ℓ∞ norm, and it moves every coordinate by the same amount.
 Balles, Pedregosa and Le Roux (2020) found it favourable when the Hessian is concentrated on its diagonal and its largest eigenvalue is much larger than the average.
 Lion (Chen et al. 2023), found by program search, takes the sign of an interpolation between momentum and the current gradient.
 
@@ -45,14 +52,18 @@ Xie, Mohamadi and Li (2025) proved convergence under ℓ∞ smoothness and found
 
 ## Method
 
-The valley is an exact quadratic, `½(λ_u u² + λ_v v²)` with λ<sub>u</sub> = 1 and λ<sub>v</sub> = 200, in coordinates (u, v) turned by α against (θ₁, θ₂) and capped smoothly far from the floor.
-A faint bowl and texture bring the floor’s eigenvalues to about 1.5 and 197. η = 0.009, so ηλ<sub>max</sub> ≈ 1.8 and gradient descent is stable.
-Adam uses β₁ = 0.9, β₂ = 0.999, ε = 10⁻⁸; Lion uses β₁ = 0.9, β₂ = 0.99.
+The valley is an exact quadratic, `½(λ_u u² + λ_v v²)` with λ<sub>u</sub> = 1 and λ<sub>v</sub> = 200, so it curves 200 times more steeply across than along.
+Its coordinates (u, v) are turned by α against (θ₁, θ₂), and it is capped smoothly far from the floor.
+A faint bowl and texture bring the floor’s eigenvalues to about 1.5 and 197.
+η = 0.009, so ηλ<sub>max</sub> ≈ 1.8 and gradient descent is [[stable|stab]].
+Adam uses β₁ = 0.9, β₂ = 0.999 and ε = 10⁻⁸.
+Lion uses β₁ = 0.9 and β₂ = 0.99.
 Gradient noise is σ = 0.005.
 Cohorts start at u = ±0.4, v = ±0.04.
 The step counts come from separate noise-free runs from that point, one for each α in steps of 7.5°: the number of steps until `L − L* < 0.005`.
 The last readout, λ<sub>max</sub>η², sets the loss at which sign descent stops in an axis-aligned valley.
 There it ends in a two-step cycle across the floor, with mean loss between λη²/8 and λη²/4.
+This is because each sign step moves the steep coordinate by η, so the cycle alternates between two points η apart, which give λη²/8 when they straddle the floor evenly.
 
 ## Caveat
 
@@ -69,6 +80,7 @@ Shampoo (Gupta, Koren and Singer 2018) and SOAP (Vyas et al. 2025) precondition 
 Muon replaces each matrix’s momentum by the nearest orthogonal matrix, a steepest-descent step in the spectral norm (Bernstein and Newhouse 2024).
 Liu et al. (2025) trained large language models with it on about half of AdamW’s compute.
 These matrix updates rotate along with the matrix’s rows and columns, so within a layer they do not depend on the coordinate axes the way Adam does.
+So the axes may still matter at scale, with parameter blocks and matrices as the units rather than single coordinates.
 
 ## References
 

@@ -2,42 +2,50 @@
 
 ## Subtitle
 
-A curve with one trained bend finds a low road around a hill between two minima.
+A curve with one trained bend finds a low road around the hill between two minima, to ask whether they are really apart.
 
 ## Lead
 
 Two networks trained from different random initializations reach different minima, and the loss on the straight segment between them is high.
-Yet a simple curve can usually join them, with the training loss along it close to its value at the ends.
-This is [[mode connectivity|modeconn]] (Garipov et al. 2018; Draxler et al. 2018).
+Yet a simple curve can usually join them, with the training loss along it staying close to its value at the ends.
+This is [[mode connectivity|modeconn]] (Garipov et al. 2018; Draxler et al. 2018): two minima are connected when some path between them stays low, even if the straight one does not.
+So the minima SGD finds may not be isolated basins.
+Here a curve learns to bend around the hill, and we watch the barrier fall.
 
 ## In practice
 
-A low-loss curve between two trained networks does not mean their weights can be averaged.
-Averaging needs a low [[barrier|barrier]] on the straight segment, as between fine-tunes of one pretrained model.
-Check the segment before averaging.
+Before averaging two trained networks, check the loss along the straight segment between them.
+The average is the midpoint of that segment, so it needs a low [[barrier|barrier]] there, as between fine-tunes of one pretrained model.
+A low-loss curve does not help, since it may pass far from the midpoint.
 
 ## Figure caption
 
-Above: the loss along the straight segment from A to B (dashed) and along the trained curve. Below: the loss along the straight line from each recent particle’s start to its resting point, blue where it falls all the way, orange where it rises.
+Above: the loss along the straight segment from A to B (dashed) and along the trained curve.
+Below: the loss along the straight line from each recent particle’s start to its resting point, blue where it falls all the way and orange where it rises.
+The drop between the two peaks is what the bend has removed.
 
 ## Try
 
 1. Press “Start the curve again” → in about 70 control-point updates, ‘barrier, curve’ falls below a tenth of ‘barrier, straight’.
    Gradient steps push the bend off the hill and into the trench.
+   The control point descends the loss averaged along the curve, most of which sits on the hill.
 2. Watch the lower figure → most lines from a particle’s start to its [[rest point|rest]] are blue: the loss falls [[monotonically|mli]] along them.
 3. Look at the orange lines → most start inside the trench.
    The particle follows the trench’s curved floor, and the straight line back to its start cuts through the trench wall.
+   So a rise on that line means the path curved, not that optimization failed (Vlaar and Frankle, in the Background).
 
 ## Background
 
+Low-loss paths were first proved to exist in a simple case, then found by training.
 Freeman and Bruna (2017) proved that for networks with one hidden layer of rectified units, the [[sublevel sets|sublevel]] of the loss become connected as the layer widens, up to a gap that shrinks with width.
 Garipov et al. (2018) trained a polygonal chain with one bend, or a quadratic Bézier curve, between two independently trained networks by minimizing the loss averaged over the curve.
+The plate’s green curve is such a Bézier curve.
 For VGG, ResNets and wide ResNets on CIFAR-10 and CIFAR-100, training loss and test error stayed nearly constant along the curve, while the straight segment crossed a large [[barrier|barrier]].
 Draxler et al. (2018) found paths with essentially no barrier using the nudged elastic band method.
 They proposed that the minima found by SGD are points on one connected low-loss set.
 Straight segments between minima are the subject of <i>Forks in the road</i> and <i>Twins and re-basin</i>.
 
-A second straight line runs from the initialization θ₀ to the trained weights θ<sub>T</sub>.
+The lower figure uses a second straight line, from the initialization θ₀ to the trained weights θ<sub>T</sub>.
 Goodfellow, Vinyals and Saxe (2015) found that the loss usually falls monotonically along it, which is now called [[monotonic linear interpolation|mli]].
 Lucas et al. (2021) found it across many architectures, gave sufficient conditions for it under mean squared error, and produced violations by pushing the weights far from θ₀.
 Vlaar and Frankle (2022) found that the shape of this path does not track test accuracy, and that a barrier on it does not mean optimization failed.
@@ -48,25 +56,28 @@ Wang et al. (2023) traced the long plateau the path often shows near θ₀ to th
 Two Gaussian wells on a gentle bowl hold [[Minimum A|@Minimum A]] and [[Minimum B|@Minimum B]], at θ₁ ≈ ±0.76, with a hill between them on the straight segment.
 A trench, the low road, follows a circular arc through both minima that passes on the far side of the hill.
 Inside the wells the trench is faded out, so it joins them without dipping below them.
-The green curve is `φ(t) = (1−t)²A + 2t(1−t)C + t²B`.
-Its control point C starts at the segment’s midpoint and takes gradient steps of size 0.02 on `E_t L(φ(t))`, t uniform on [0, 1], estimated from 12 stratified samples of t and clipped to norm 3.
+The green curve is `φ(t) = (1−t)²A + 2t(1−t)C + t²B`, which runs from A (t = 0) to B (t = 1) and bends towards the control point C.
+C starts at the segment’s midpoint, which makes the curve the straight segment itself.
+It then takes gradient steps of size 0.02 on `E_t L(φ(t))`, t uniform on [0, 1], estimated from 12 stratified samples of t and clipped to norm 3.
 Each barrier readout is the largest loss on 101 points of the path minus the larger of L(A) and L(B).
 Particles run [[SGD|sgd]] with η = 0.004 and σ = 0.3, and every third [[cohort|cohort]] starts in the trench.
 For each distinct run, the line from its start to its rest point counts as monotone if the loss on 61 points never rises more than 0.002 above its lowest earlier value.
 
 ## Caveat
 
-The low road was built into this sheet.
+The low road was built into this sheet, so the plate shows what such a curve looks like, not why one exists.
 In two dimensions, two minima are usually separated by a ridge with no way around it.
 In networks the low-loss curves are found by training in millions of dimensions, and their existence has been attributed to overparameterization (Freeman and Bruna 2017; Draxler et al. 2018).
 
 ## At scale
 
-In large networks the low-loss set is more than a curve: Benton et al. (2021) trained whole simplices of low loss, each joining several independently trained networks at once.
-Averaging weights needs a low straight segment.
+In large networks the low-loss set is more than a curve.
+Benton et al. (2021) trained whole simplices of low loss (think of a filled triangle), each joining several independently trained networks at once.
+Averaging weights still needs a low straight segment.
 At scale that holds mainly between fine-tunes of one pretrained model (Wortsman et al. 2022; see <i>Weight averaging</i>), and between some independently trained networks once their hidden units are matched (see <i>Twins and re-basin</i>).
 Even fine-tunes can split into separate basins.
 Juneja et al. (2023) found that text classifiers fine-tuned from one pretrained checkpoint form clusters that generalize differently, each linearly connected within itself but not to the others.
+So curved low-loss paths are common, but the straight ones that averaging needs hold mainly in those two cases.
 
 ## References
 

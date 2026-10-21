@@ -2,46 +2,57 @@
 
 ## Subtitle
 
-Five schedules run down one river valley.
+Five schedules run down one river valley, to ask why the loss drops so sharply when η decays.
 
 ## Lead
 
 Language models are often trained with a [[warmup–stable–decay|wsd]] schedule (Hu et al. 2024; Hägele et al. 2024).
 The loss falls slowly during a long phase at a constant [[learning rate|lr]] η, then sharply during a short decay.
 Wen et al. (2025) offer one of several explanations: the loss surface is a river valley, with steep walls on either side and a gentle slope along the river.
+This sheet builds such a valley, so we can watch five schedules trade distance along the river against height up the walls.
 
 ## In practice
 
-A checkpoint’s loss during the constant-η phase is a poor guide to its loss after decay.
 Compare runs or checkpoints after a short cooldown, whatever explains the drop.
+During the constant-η phase, a checkpoint’s loss is a poor guide to its loss after decay, since part of it may be height that a decay removes.
 
 ## Figure caption
 
-Mean loss of each schedule in the latest cohort; for schedule-free, the loss at its averages. The dotted line marks the start of the decay.
+Mean loss of each schedule in the latest [[cohort|cohort]], with schedule-free read at its averages.
+The dotted line marks the start of the decay, where warmup–stable–decay leaves the constant schedule behind.
 
 ## Try
 
 1. Leave the noise σ at 1.4 → warmup–stable–decay falls below the constant schedule during its decay, and the batch ramp ends lower still.
+   The batch ramp lowers the noise without lowering η, so it loses no distance downstream.
 2. Watch cosine → it ends highest.
    Distance along the river is proportional to the summed learning rate, so cosine travels half as far.
+   This is because the floor has a constant slope.
 3. Watch schedule-free, read at its average → it reaches the end of the river in about 800 steps, about five times as fast as the constant schedule.
    Its average x moves at half the speed of the iterate z that it averages, `γ/2 = 5η`.
+   A uniform average of a steadily moving point trails halfway behind it.
 4. Set σ to 0 → the constant schedule and the batch ramp end together, lowest of the four SGD schedules.
-   Decay pays off only when noise holds particles up the walls.
+   Decay pays off only when noise holds particles up the walls, since without noise the bouncing dies out on its own.
 
 ## Background
 
 Hu et al. (2024) introduced warmup–stable–decay for MiniCPM.
 Hägele et al. (2024) showed that a constant rate with a short cooldown matches cosine and lets one run serve many training lengths.
-In the river valley of Wen et al. (2025), the high η of the stable phase makes the iterate oscillate across the valley while it moves quickly along the river.
-The decay damps the oscillation and reveals the progress made along the river.
-Wen et al. also showed that such a landscape arises even for a bigram model.
-Schaipp et al. (2025) give another account: a bound from non-smooth convex optimization, with no valley in it, already predicts the benefit of the cooldown.
 
+Accounts of the drop differ:
+
+1. In the river valley of Wen et al. (2025), the high η of the stable phase makes the iterate oscillate across the valley while it moves quickly along the river.
+   The decay damps the oscillation and reveals the progress made along the river.
+   Wen et al. also showed that such a landscape arises even for a bigram model.
+2. Schaipp et al. (2025) give another account: a bound from non-smooth convex optimization, with no valley in it, already predicts the benefit of the cooldown.
+
+So the drop alone does not prove a river valley.
+
+Two other methods get down from the walls without decaying η.
 [[Schedule-free SGD|sf]] (Defazio et al. 2024) has no schedule: it evaluates a running average of its iterates and takes gradients at a point between that average and the latest iterate.
 Song et al. (2025) found that schedule-free AdamW follows the river without a decay phase or an extra averaged copy of the weights.
 A larger [[batch|batch]] also lowers the noise: Smith et al. (2018) showed that multiplying the batch size B by k can replace dividing η by k.
-The cost in samples depends on the critical batch size (McCandlish et al. 2018).
+The cost in samples depends on the [[critical batch size|cbs]] (McCandlish et al. 2018).
 Merrill et al. (2025) found that in OLMo pretraining the critical batch size starts near zero, rises quickly and levels off.
 A batch grown to follow it reached a slightly lower loss in 43% fewer steps.
 Zhou et al. (2026, a preprint) also argue for raising the batch late.
@@ -49,19 +60,23 @@ Zhou et al. (2026, a preprint) also argue for raising the batch late.
 ## Method
 
 Across the river the loss is `H·s/(1 + s)` with `s = λv²/2H`, v the distance from the river, λ = 140 and H = 0.9, plus a small `0.05v²`.
-Along it the loss falls by 0.08 per unit of θ₁ to the minimum, at a wall at the far end.
+So λ is the curvature across the floor, and H the height of the walls.
+Along the river the loss falls by 0.08 per unit of θ₁ to the minimum, at a wall at the far end.
 Twelve particles per schedule run 1,800 steps from the head at η = 0.0125, so ηλ = 1.75 across.
-The noise covariance is proportional to |H|, so the noise falls almost entirely across the river.
+With ηλ between 1 and 2, each step overshoots the floor, but the overshoot shrinks, so without noise the bouncing dies out.
+The noise covariance is proportional to |H|, here the Hessian, so the noise falls almost entirely across the river.
 Cosine and warmup–stable–decay (40 warmup steps, then linear decay over the last 20%) end at 2% of η.
-The batch ramp doubles its batch at 80, 85, 90 and 95% of the run, dividing the noise by √B; it uses 2.3 times the samples.
+The batch ramp doubles its batch at 80, 85, 90 and 95% of the run, dividing the noise by √B.
+It keeps the constant schedule’s η and uses 2.3 times the samples.
 Schedule-free SGD steps `z ← z − γg̃(y)`, `x ← (1−c)x + cz`, `y = (1−β)z + βx`.
-Its c is proportional to γ² (uniform after its 100-step warmup), β = 0.9 and γ = 10η, so (1−β)γ = η; its loss is read at x.
+Its c is proportional to γ² (uniform after its 100-step warmup), β = 0.9 and γ = 10η, so (1−β)γ = η.
+So the z step moves y as far as an SGD step at η would, and the loss is read at x.
 Final L averages each schedule’s last 64 finishers.
 
 ## Caveat
 
 Along this river the loss falls linearly with distance, so every unit of summed learning rate is worth the same.
-A schedule that gives some up never recovers it.
+A schedule that gives some up never recovers it, which is why cosine ends so far behind here.
 In pretraining the loss falls ever more slowly, and cosine and warmup–stable–decay end close together (Hägele et al. 2024).
 
 ## At scale
@@ -71,6 +86,7 @@ One is the summed learning rate, which corresponds to the distance along the riv
 The other is the area of the decay, which corresponds to the drop from the walls.
 Unlike on this sheet, the loss falls as a power law of the summed learning rate, not linearly.
 Bergsma et al. (2025) found that decaying linearly all the way to zero beats the common cosine decay to 10% of the peak.
+So the split this sheet draws survives at scale.
 
 ## References
 

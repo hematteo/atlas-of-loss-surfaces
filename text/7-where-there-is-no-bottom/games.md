@@ -2,28 +2,37 @@
 
 ## Subtitle
 
-Four update rules start from one point; the figure plots their distance to the equilibrium.
+Four update rules start from one point of a two-player game, to ask which can reach its equilibrium at all.
 
 ## Lead
 
 A generative adversarial network (GAN; Goodfellow et al. 2014) trains two networks against each other, so training seeks an [[equilibrium|equil]] of a game, not a minimum.
-On the [[bilinear game|bilinear]] `f = aθ₁θ₂`, simultaneous [[gradient descent–ascent|gda]] spirals away from the equilibrium at every step size, while [[extragradient|extragrad]] and [[optimistic|optimistic]] updates converge to it for small enough steps (Korpelevich 1976; Daskalakis et al. 2018).
+At an equilibrium, neither player can improve by changing only its own variable.
+The simplest case is the [[bilinear game|bilinear]] `f = aθ₁θ₂`, in which θ₁ wants f small and θ₂ wants it large.
+There, simultaneous [[gradient descent–ascent|gda]] spirals away from the equilibrium at every step size, while [[extragradient|extragrad]] and [[optimistic|optimistic]] updates converge to it for small enough steps (Korpelevich 1976; Daskalakis et al. 2018).
+This plate races four rules from one start, so we can compare their rates directly.
 
 ## In practice
 
 Most GANs are trained with alternating steps for the two networks and a gradient penalty on the discriminator, such as R1 (Mescheder et al. 2018).
 The penalty adds curvature in the discriminator’s own variable, which this sheet lacks.
 With it, Mescheder et al. proved that gradient steps converge locally, near the equilibrium.
+Without it, as here, alternating steps only circle.
 
 ## Figure caption
 
-Distance to the equilibrium in the latest race, on a log scale, for each update rule. Dashed: the exact rates of simultaneous descent–ascent (rising) and extragradient (falling).
+Distance to the equilibrium in the latest race, on a log scale, for each update rule.
+Dashed: the exact rates of simultaneous descent–ascent (rising) and extragradient (falling).
+On a log scale a constant factor per step is a straight line.
 
 ## Try
 
 1. Watch the figure at the default η = 0.1 → the simultaneous curve climbs along the rising dashed line: each step multiplies the distance by `√(1 + η²a²)`.
+   This is because the field points at right angles to the line from the equilibrium, so every step lands further out.
 2. Watch the sheet → the simultaneous particles leave it after about 650 steps, while the alternating particles circle: from a start at 0.35, their distance stays between 0.33 and 0.37.
+   An alternating step preserves area (its determinant is 1), so it can spiral neither in nor out.
 3. Compare extragradient and optimistic → they fall together along the lower dashed line.
+   Both approximate the same proximal point method (see the Background).
 4. Raise η to 0.3 → all the rates steepen: the simultaneous particles leave within about 80 steps, and extragradient reaches the [[Equilibrium|@Equilibrium]] in about 250.
 
 ## Background
@@ -35,29 +44,34 @@ Mescheder, Nowozin and Geiger (2017) traced GAN instability to this rotation, wh
 Mescheder, Geiger and Nowozin (2018) reduced a GAN to one generator and one discriminator parameter, the Dirac-GAN, whose linearization at the equilibrium is this bilinear game.
 They showed that unregularized GAN training need not converge on it.
 
-On bilinear games the behaviour of each rule has been proved.
-Simultaneous gradient descent–ascent diverges for every constant step.
-Alternating updates stay bounded and cycle (Gidel, Askari Hemmat et al. 2019; Bailey, Gidel and Piliouras 2020).
-Extragradient (Korpelevich 1976) converges on monotone problems, which include bilinear games, and Gidel, Berard et al. (2019) carried it over to GAN training.
-Optimistic gradient descent–ascent goes back to Popov (1980).
-Daskalakis et al. (2018) proved last-iterate convergence on bilinear games.
+On bilinear games the behaviour of each rule has been proved:
+
+1. Simultaneous gradient descent–ascent diverges for every constant step.
+2. Alternating updates stay bounded and cycle (Gidel, Askari Hemmat et al. 2019; Bailey, Gidel and Piliouras 2020).
+3. Extragradient (Korpelevich 1976) converges on monotone problems, which include bilinear games, and Gidel, Berard et al. (2019) carried it over to GAN training.
+4. Optimistic gradient descent–ascent goes back to Popov (1980), and Daskalakis et al. (2018) proved its last-iterate convergence on bilinear games.
+
 Mokhtari, Ozdaglar and Pattathil (2020) showed that both methods approximate the proximal point method and converge linearly on bilinear problems.
+The proximal point method steps with the gradient at its own landing point, and on a rotation that step always moves inward.
 
 ## Method
 
-The sheet is `f(θ₁, θ₂) = aθ₁θ₂` with a = 0.6 and no texture, raised by a constant; the [[Equilibrium|@Equilibrium]] at the origin has [[Hessian|hessian]] eigenvalues ±0.6.
+The sheet is `f(θ₁, θ₂) = aθ₁θ₂` with a = 0.6 and no texture, raised by a constant.
+The [[Equilibrium|@Equilibrium]] at the origin has [[Hessian|hessian]] eigenvalues ±0.6, so f curves up in one direction and down in the other.
 Central differences are exact on a bilinear function, so the gradients are exact.
 Each race releases five particles per rule at one point 0.28 to 0.42 from the origin, without noise.
 With e = ηa, a simultaneous step multiplies the distance by `√(1 + e²)` and an extragradient step by `√(1 − e² + e⁴)`.
+For small e these are close to 1 ± e²/2, so the dashed lines rise and fall at nearly equal slopes.
 An optimistic step, whose first step is a simultaneous one, contracts the slow mode by `√((1 + √(1 − 4e²))/2)`.
 An alternating step has determinant 1 and, for e &lt; 2, eigenvalues on the unit circle, so the iterates stay on a closed curve.
-The figure averages log₁₀ distance per rule; the dashed lines are the first two rates, drawn from the race’s nominal start.
+The figure averages log₁₀ distance per rule, and the dashed lines are the first two rates, drawn from the race’s nominal start.
 Measured slopes agree with all three rates to four significant digits.
 Particles within 0.006 of the equilibrium retire.
 
 ## Caveat
 
 A bilinear game has no curvature in either player’s own variable.
+With θ₂ held fixed, f is a straight line in θ₁, with no bottom to fall into.
 Near a strict local equilibrium of a real game, each player’s own curvature adds contraction, and simultaneous gradient descent–ascent converges there for small enough steps.
 The bilinear case isolates the rotation that makes it fail.
 

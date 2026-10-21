@@ -2,7 +2,7 @@
 
 ## Subtitle
 
-A two-parameter diagonal linear network fits two targets of different strength.
+A two-parameter diagonal linear network fits two targets of different strength, so we can watch it learn them one at a time.
 
 ## Lead
 
@@ -11,54 +11,68 @@ The loss falls in steps separated by [[plateaus|plateau]], and the parameters pa
 Saxe, McClelland and Ganguli (2014) solved this exactly for deep linear networks started from aligned (decoupled) initial conditions.
 Pesme and Flammarion (2023) proved it for diagonal linear networks.
 For nonlinear networks the evidence is partial.
+On this sheet each plateau is a saddle on the map, and we can time how long the network waits there.
 
 ## In practice
 
 When training starts from a small initialization, a loss that has stalled on a plateau may not have converged: the network may still be waiting to learn its next component.
 This is proved for linear networks and only partly supported for nonlinear ones.
+Here a smaller start means a longer stall.
 
 ## Figure caption
 
-Mean loss of the latest cohort. Dashed lines mark the two plateaus and the predicted escape times of the strong and the weak mode.
+Mean loss of the latest cohort.
+Dashed lines mark the two plateaus and the predicted escape times of the strong and the weak mode, so we can check each drop against its prediction.
 
 ## Try
 
 1. Lower the initialization scale δ a decade at a time → each tenfold reduction adds about 35 steps to ‘strong mode at’ and 110 to 140 to ‘weak mode at’.
+   Near zero each coordinate grows by a fixed factor per step, so each decade of δ costs a fixed number of steps, and more for the weak mode, whose factor is closer to 1.
 2. Hold δ at 10⁻⁷ → paths run along θ₁ to the [[saddle|@Saddle]], stop, and turn through a right angle.
    For several hundred steps the loss waits ½s₂² above the minimum, where s₂ is the strength of the weak mode.
+   This is the weak mode’s term of the loss, with θ₂ still near zero.
 3. Raise δ to 0.3 → the corner rounds off: when the strong mode is half learned, the weak one is already a third learned.
+   A larger start leaves both modes less to grow, so their escape times move closer together.
 
 ## Background
 
 Saxe, McClelland and Ganguli (2014) solved the [[gradient flow|gflow]] of deep linear networks trained on whitened inputs from a small initialization.
 Each singular mode of the input–output map is learned on its own sigmoidal curve, after a time inversely proportional to its strength, so strong modes come first.
+A mode is one rank-one piece of the map, and its strength is its singular value.
 Gidel, Bach and Lacoste-Julien (2019) showed the same order for discrete gradient descent.
 Gissin, Shalev-Shwartz and Daniely (2020) argued that depth makes learning more incremental.
 
-In diagonal linear networks the scale of the initialization moves training between a [[kernel regime|lazy]] at large scale and a rich regime with a sparse implicit bias at small scale (Woodworth et al. 2020).
+In diagonal linear networks, the kind on this sheet, the scale of the initialization moves training between a [[kernel regime|lazy]] at large scale and a rich regime with a sparse [[implicit bias|implicit]] at small scale (Woodworth et al. 2020).
+A sparse bias favours solutions that use few coordinates.
 As the initialization vanishes, gradient flow jumps from saddle to saddle until it reaches the minimum ℓ₁-norm solution.
 Each saddle minimizes the loss over an active set of coordinates, and the set can lose coordinates as well as gain them.
 Berthier (2023) proved this in a restricted setting, and Pesme and Flammarion (2023) under negligible assumptions on the data.
-Jacot et al. (2021) conjectured the same dynamics for deep linear networks, with the rank of the learned map growing by one per saddle, and proved it up to the second saddle.
-For deep ReLU networks, Bantzis, Simon and Jacot (2026) proved that the first escape from the origin is low rank in the deeper layers.
-Boix-Adserà et al. (2023) proved a stagewise rank increase for simplified transformers and observed it without the simplifications.
+
+Beyond diagonal networks, the results so far are partial:
+
+1. Jacot et al. (2021) conjectured the same dynamics for deep linear networks, with the rank of the learned map growing by one per saddle, and proved it up to the second saddle.
+2. For deep ReLU networks, Bantzis, Simon and Jacot (2026) proved that the first escape from the origin is low rank in the deeper layers.
+3. Boix-Adserà et al. (2023) proved a stagewise rank increase for simplified transformers and observed it without the simplifications.
 
 ## Method
 
 The sheet is the exact population loss of a two-layer diagonal linear network `f(x) = Σ u_i v_i x_i` on whitened inputs with target weights s₁ and s₂.
 It is restricted to the balanced slice `u_i = v_i = θ_i`: `L = ½(s₁ − θ₁²)² + ½(s₂ − θ₂²)²`, plus 0.03.
+So θ_i² is the network’s weight on coordinate i, and each term is half its squared error against the target s_i.
 The ratio s₁/s₂ lies between 3.1 and 4.3, depending on the seed.
 On this slice the origin is a local maximum (in the full network it is a saddle), each axis carries a saddle where one mode is learned, and the four minima have `θ_i² = s_i`.
-Gradient descent on the slice equals gradient descent on the full network with step 2η; η = 0.02, without noise.
+Gradient descent on the slice equals gradient descent on the full network with step 2η, and here η = 0.02, without noise.
 Each cohort of ten particles starts at (±δ, ±δ) with 10% jitter.
 Near zero each coordinate grows only by the factor `1 + 2ηs_i` per step.
 A mode counts as learned when `θ_i²` first exceeds `s_i/2`.
 The readouts give the mean step of that crossing and the prediction `ln(s/δ² − 1) / (2 ln(1 + 2ηs))`, the logistic solution of the flow at gradient descent’s growth rate per step.
+For small ηs the denominator is nearly proportional to s, so the wait is roughly inversely proportional to the mode’s strength, as Saxe et al. found.
 
 ## Caveat
 
 The two modes are decoupled: each coordinate evolves on its own, and the staircase comes only from their different time scales.
 With correlated inputs, or in deep linear networks, the coordinates interact, and which saddle comes next depends on what has already been learned.
+So the sheet shows when each step comes, but not how a network chooses the next one.
 The slider stops at δ = 0.5, which rounds the corner but does not reach the kernel regime.
 
 ## At scale
@@ -68,7 +82,8 @@ The steps need a small initialization, or a parametrization such as μP that kee
 Kunin et al. (2024) showed that how unbalanced the layers start also changes how fast features are learned.
 This sheet keeps the two layers balanced.
 Abbe, Boix-Adserà and Misiakiewicz (2023) studied two-layer networks trained by SGD on high-dimensional inputs.
-For a class of targets and a modified SGD, they proved that the network picks up the relevant coordinates in stages, from saddle to saddle, and that each stage takes a number of steps that grows as a power of the input dimension.
+For a class of targets and a modified SGD, they proved that the network picks up the relevant coordinates in stages, from saddle to saddle.
+Each stage takes a number of steps that grows as a power of the input dimension.
 Michaud et al. (2023) proposed that in a large model many such steps, of different sizes, add up to a smooth power law, and that single steps show only for particular skills.
 
 ## References
