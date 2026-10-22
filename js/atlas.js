@@ -4782,6 +4782,291 @@ function symEig(A, n) {
   return { vals, vecs };
 }
 // plate: sinking (minima in many dimensions)
+// A random loss in d dimensions: a Gaussian random field of K random Fourier features, L(θ) = √(2d/K) Σₖ cos(wₖ·θ + bₖ),
+// wₖ ~ N(0, I/d), bₖ uniform. Its covariance tends to d·exp(−|θ − θ′|²/2d) (Bray and Dean's scaling), so the loss per parameter
+// L/d, the Hessian's spread and the curve α(L/d) are the same in every d, and the correlation length is √d. Critical points
+// are found by eigenvector following towards a chosen index; the particles take gradient steps in all d coordinates. The
+// map is the plane through three minima found while the sheet is built, and a particle is drawn at its projection on it.
+const SNK = { K: 256, dmax: 32, d: 2, lc: 1, amp: 1, S: 1, h: 0.02, W: null, B: null, cs: null, G: null, gw: 0, gh: 0, mins: [], seed: 1,
+  P: null, PL: null, PG: null, D2: [0, 0] };
+function skLand(R, d) {
+  const K = SNK.K;
+  SNK.d = d; SNK.lc = Math.sqrt(d); SNK.amp = Math.sqrt(2 * d / K);
+  SNK.W = new Float64Array(K * d); SNK.B = new Float64Array(K); SNK.cs = new Float64Array(K);
+  for (let k = 0; k < K; k++) { for (let i = 0; i < d; i++) SNK.W[k * d + i] = R.normal() / SNK.lc; SNK.B[k] = R() * TAU; }
+  SNK.g = new Float64Array(d); SNK.pg = new Float64Array(d); SNK.H = new Float64Array(d * d); SNK.s = new Float64Array(d); SNK.tmp = new Float64Array(d);
+  if (!SNK.P) { SNK.P = new Float64Array(CAP * SNK.dmax); SNK.PL = new Float64Array(CAP); SNK.PG = new Float64Array(CAP); }
+}
+// the loss L(θ) (not per parameter) and its gradient into g, θ read from th at offset o; keeps cos(wₖ·θ + bₖ) for skHess
+function skGrad(th, g, o = 0) {
+  const { K, d, W, B, amp, cs } = SNK; let s = 0;
+  for (let i = 0; i < d; i++) g[i] = 0;
+  for (let k = 0; k < K; k++) {
+    const q = k * d; let p = B[k];
+    for (let i = 0; i < d; i++) p += W[q + i] * th[o + i];
+    const c = Math.cos(p), a = -amp * Math.sin(p); s += c; cs[k] = c;
+    for (let i = 0; i < d; i++) g[i] += a * W[q + i];
+  }
+  return amp * s;
+}
+function skHess(H) {             // the Hessian (d × d, row-major) at the point of the last skGrad
+  const { K, d, W, amp, cs } = SNK; H.fill(0);
+  for (let k = 0; k < K; k++) { const a = -amp * cs[k], q = k * d; for (let i = 0; i < d; i++) { const wi = a * W[q + i]; for (let j = i; j < d; j++) H[i * d + j] += wi * W[q + j]; } }
+  for (let i = 0; i < d; i++) for (let j = 0; j < i; j++) H[i * d + j] = H[j * d + i];
+}
+// one step of eigenvector following towards a critical point of index J.k: a Newton step in the Hessian's eigenbasis with
+// |λ| floored at 0.03, uphill along the k lowest modes and downhill along the rest, at most half a correlation length long.
+// Returns 1 at a critical point (J.neg negative eigenvalues), −1 if it gives up, 0 to go on
+function skEF(J) {
+  const { d, g, H, s } = SNK;
+  J.L = skGrad(J.th, g); const gn = normN(g, d);
+  skHess(H); const E = symEig(H, d);
+  if (gn < 1e-7 * SNK.lc) { let neg = 0; for (let j = 0; j < d; j++) if (E.vals[j] < 0) neg++; J.neg = neg; return 1; }
+  if (J.it++ >= 80 || !Number.isFinite(gn)) return -1;
+  s.fill(0);
+  for (let j = 0; j < d; j++) {
+    let gj = 0; for (let i = 0; i < d; i++) gj += E.vecs[i * d + j] * g[i];
+    const a = (j < J.k ? 1 : -1) * gj / Math.max(Math.abs(E.vals[j]), 0.03);
+    for (let i = 0; i < d; i++) s[i] += a * E.vecs[i * d + j];
+  }
+  const sl = normN(s, d), f = sl > 0.5 * SNK.lc ? 0.5 * SNK.lc / sl : 1;
+  for (let i = 0; i < d; i++) J.th[i] += f * s[i];
+  return 0;
+}
+// sheet coordinates of a point θ (read at offset o): its projection on the plane, in units of S
+const skX = (th, o = 0) => { let a = 0; for (let i = 0; i < SNK.d; i++) a += (th[o + i] - SNK.c[i]) * SNK.e1[i]; return a / SNK.S; };
+const skY = (th, o = 0) => { let a = 0; for (let i = 0; i < SNK.d; i++) a += (th[o + i] - SNK.c[i]) * SNK.e2[i]; return a / SNK.S; };
+// a start: at sheet point (x, y) of the plane (uniform over the middle of the sheet if not given), moved off the plane by a
+// Gaussian offset of one correlation length in each of the other d − 2 directions
+function skStart(R, x, y, out) {
+  const { d, c, e1, e2, S, lc } = SNK;
+  if (x == null) { x = R.range(-1.35, 1.35); y = R.range(-0.8, 0.8); }
+  for (let i = 0; i < d; i++) out[i] = R.normal() * lc;
+  const a = dotN(out, e1, d), b = dotN(out, e2, d);
+  for (let i = 0; i < d; i++) out[i] += c[i] + (S * x - a) * e1[i] + (S * y - b) * e2[i];
+  return out;
+}
+// the plane: through the three lowest of the minima reached from eight starts (four above d = 8), centred on their centroid
+function skPlane(R) {
+  const { d, lc } = SNK, mins = [];
+  for (let t = 0, n = d <= 8 ? 8 : 4; t < n; t++) {
+    const J = { th: new Float64Array(d), k: 0, it: 0 };
+    const u = unitN(R, d); for (let i = 0; i < d; i++) J.th[i] = u[i] * lc;
+    let r; while ((r = skEF(J)) === 0);
+    if (r > 0 && J.neg === 0 && !mins.some((m) => Math.sqrt(m.th.reduce((s, v, i) => s + (v - J.th[i]) ** 2, 0)) < 1e-3 * lc)) mins.push(J);
+  }
+  mins.sort((a, b) => a.L - b.L); mins.length = Math.min(3, mins.length);
+  const c = new Float64Array(d), e1 = new Float64Array(d), e2 = new Float64Array(d);
+  if (mins.length) for (const m of mins) for (let i = 0; i < d; i++) c[i] += m.th[i] / mins.length;
+  if (mins.length >= 2) { for (let i = 0; i < d; i++) e1[i] = mins[1].th[i] - mins[0].th[i]; const l = normN(e1, d); for (let i = 0; i < d; i++) e1[i] /= l; }
+  else e1.set(unitN(R, d));
+  if (mins.length >= 3) for (let i = 0; i < d; i++) e2[i] = mins[2].th[i] - mins[0].th[i];
+  else e2.set(gaussN(R, d));
+  orthoN(e1, e2, d);
+  SNK.c = c; SNK.e1 = e1; SNK.e2 = e2; SNK.S = 1;
+  let S = 3 * lc;
+  for (const m of mins) { S = Math.max(S, Math.abs(skX(m.th)) / 1.3, Math.abs(skY(m.th)) / 0.8); }
+  SNK.S = S;
+  SNK.mins = mins.map((m, j) => ({ x: skX(m.th), y: skY(m.th), L: m.L / d, th: m.th, key: 'ABC'[j] }));
+}
+// the loss per parameter on the plane, on a grid over the sheet with one cell of margin (angle addition along each row)
+function skSlice() {
+  const { K, d, W, B, amp, c, e1, e2, S, h } = SNK, gw = Math.round(MAPW / h) + 3, gh = Math.round(MAPH / h) + 3;
+  const G = new Float64Array(gw * gh), x0 = X0 - h, y0 = Y0 - h;
+  for (let k = 0; k < K; k++) {
+    const q = k * d; let A = B[k], P = 0, Q = 0;
+    for (let i = 0; i < d; i++) { A += W[q + i] * c[i]; P += W[q + i] * e1[i]; Q += W[q + i] * e2[i]; }
+    P *= S; Q *= S;
+    const cr = Math.cos(h * P), sr = Math.sin(h * P);
+    for (let j = 0; j < gh; j++) {
+      const ph = A + x0 * P + (y0 + j * h) * Q, row = j * gw;
+      let cc = Math.cos(ph), ss = Math.sin(ph);
+      for (let i = 0; i < gw; i++) { G[row + i] += cc; const t = cc * cr - ss * sr; ss = ss * cr + cc * sr; cc = t; }
+    }
+  }
+  for (let q = 0; q < G.length; q++) G[q] *= amp / d;
+  SNK.G = G; SNK.gw = gw; SNK.gh = gh;
+}
+const SNU = new Float64Array(4), SNV = new Float64Array(4);
+function skCR(t, o) { const t2 = t * t, t3 = t2 * t; o[0] = 0.5 * (-t3 + 2 * t2 - t); o[1] = 0.5 * (3 * t3 - 5 * t2 + 2); o[2] = 0.5 * (-3 * t3 + 4 * t2 + t); o[3] = 0.5 * (t3 - t2); }
+function skMap(x, y) {          // Catmull–Rom bicubic on the grid: the sheet's L(θ₁, θ₂)
+  const { G, gw, gh, h } = SNK;
+  const fx = clamp((x - X0) / h + 1, 1, gw - 2.000001), fy = clamp((y - Y0) / h + 1, 1, gh - 2.000001), i = fx | 0, j = fy | 0;
+  skCR(fx - i, SNU); skCR(fy - j, SNV);
+  let s = 0;
+  for (let b = 0; b < 4; b++) { const r = (j - 1 + b) * gw + i - 1; s += SNV[b] * (SNU[0] * G[r] + SNU[1] * G[r + 1] + SNU[2] * G[r + 2] + SNU[3] * G[r + 3]); }
+  return s;
+}
+function sheetSinking(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  skLand(R, +SIM.dim || 2);
+  skPlane(R); skSlice();
+  const t0 = performance.now(); for (let k = 0; k < 20; k++) skGrad(SNK.c, SNK.pg); SNK.gradMs = (performance.now() - t0) / 20;
+  SNK.seed = (R() * 4294967296) >>> 0;
+  EXTRA = skMap;
+  sheetEnd(R);
+}
+// the fraction of eigenvalues below zero of a semicircle of radius 2 centred on −e: the index fraction of a critical point
+// at loss per parameter e when d → ∞ (the Hessian there is −e·I plus a GOE matrix of spectral radius 2)
+const skFsc = (e) => (e <= -2 ? 0 : e >= 2 ? 1 : 0.5 + e * Math.sqrt(4 - e * e) / (4 * Math.PI) + Math.asin(e / 2) / Math.PI);
+function skFeatures() {
+  const d = SNK.d, st = PL.st = { crit: [], done: 0, nS: d >= 32 ? 160 : 240, J: null, R: Frame.rng(SNK.seed), fin: [], typ: [], map: [] };
+  for (const m of SNK.mins) skAdd(st, { th: m.th, L: m.L * d, neg: 0 });
+  if (d === 2) {           // in two dimensions the sheet is the whole landscape: mark every critical point on it
+    const th = new Float64Array(2);
+    for (const c of findCritical(140, true)) {
+      if (SNK.mins.some((m) => Math.hypot(m.x - c.x, m.y - c.y) < 0.01)) continue;
+      for (let i = 0; i < 2; i++) th[i] = SNK.c[i] + SNK.S * (c.x * SNK.e1[i] + c.y * SNK.e2[i]);
+      const J = { th: Float64Array.from(th), k: c.type === 'min' ? 0 : c.type === 'saddle' ? 1 : 2, it: 0 };
+      let r; while ((r = skEF(J)) === 0);
+      if (r > 0) st.map.push({ x: skX(J.th), y: skY(J.th), L: J.L / 2, sym: J.neg === 0 ? 'min' : J.neg === 1 ? 'pass' : 'peak' });
+    }
+  }
+}
+function skAdd(st, J) {          // a critical point, unless it is one already found
+  const d = SNK.d, tol = 1e-4 * SNK.lc;
+  for (const p of st.crit) {
+    if (p.neg !== J.neg || Math.abs(p.L * d - J.L) > 1e-6 * d) continue;
+    let s = 0; for (let i = 0; i < d; i++) s += (p.th[i] - J.th[i]) ** 2;
+    if (s < tol * tol) return;
+  }
+  st.crit.push({ th: Float64Array.from(J.th), L: J.L / d, neg: J.neg, a: J.neg / d });
+}
+// the critical-point search, a few eigenvector-following steps per frame: it stops before a step would overrun the budget
+function skSearch(budget) {
+  const st = PL.st; if (!st || st.done >= st.nS) return;
+  const t0 = performance.now();
+  for (let n = 0; st.done < st.nS && (n === 0 || performance.now() - t0 + st.est < budget); n++) {
+    if (!st.J) { const k = st.R() < 1 / 3 ? 0 : 1 + Math.floor(st.R() * SNK.d); st.J = { th: skStart(st.R, null, null, new Float64Array(SNK.d)), k, it: 0 }; }
+    const a = performance.now(), r = skEF(st.J);
+    st.est = st.est ? 0.8 * st.est + 0.2 * (performance.now() - a) : performance.now() - a;
+    if (r !== 0) { if (r > 0) skAdd(st, st.J); st.J = null; st.done++; }
+  }
+}
+const skPush = (a, v) => { a.push(v); if (a.length > 5000) a.shift(); };      // the latest 5000 particles
+const skFresh = () => { if (STAT.released === 0) { PL.st.fin.length = 0; PL.st.typ.length = 0; } };   // the sheet was cleared: count afresh
+const skCap = () => Math.round((PHONE ? 0.5 : 1) * (SNK.d >= 32 ? 30 : SNK.d >= 16 ? 60 : 96));
+function skSpawn(th) {           // a particle at θ, drawn at its projection; false if that falls off the sheet
+  const x = skX(th), y = skY(th);
+  if (!(x > X0 + 0.03 && x < X1 - 0.03 && y > Y0 + 0.03 && y < Y1 - 0.03)) return -1;
+  const i = spawn(x, y, 0); if (i < 0) return -1;
+  SNK.P.set(th, i * SNK.dmax); SNK.PG[i] = Infinity;
+  SNK.PL[i] = skGrad(th, SNK.pg) / SNK.d; Wl[i] = SNK.PL[i]; skPush(PL.st.typ, SNK.PL[i]);
+  stamp(x, y, 0.006, 1, 0.12, 0.125, 0.14, 0.7, 0.0018);
+  return i;
+}
+// gradient descent in all d coordinates; the particle moves to the projection of its new θ
+function skFn(i, x, y, eta) {
+  const d = SNK.d, o = i * SNK.dmax, P = SNK.P, g = SNK.pg;
+  const Lv = skGrad(P, g, o);
+  let gg = 0; for (let k = 0; k < d; k++) { gg += g[k] * g[k]; P[o + k] -= eta * g[k]; }
+  SNK.PL[i] = Lv / d; SNK.PG[i] = Math.sqrt(gg / d);
+  SNK.D2[0] = skX(P, o) - x; SNK.D2[1] = skY(P, o) - y;
+  return SNK.D2;
+}
+const skN = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+function skStats(a) { let m = 0, lo = Infinity, hi = -Infinity; for (const v of a) { m += v; if (v < lo) lo = v; if (v > hi) hi = v; } m /= a.length; let s = 0; for (const v of a) s += (v - m) ** 2; return { m, sd: Math.sqrt(s / a.length), lo, hi }; }
+function skSummary() {
+  const st = PL.st, C = st.crit, mins = C.filter((p) => p.neg === 0).map((p) => p.L), out = { n: C.length, nMin: mins.length, nMax: C.filter((p) => p.neg === SNK.d).length };
+  if (C.length > 3) {
+    const L = skStats(C.map((p) => p.L)), A = skStats(C.map((p) => p.a));
+    let cv = 0; for (const p of C) cv += (p.L - L.m) * (p.a - A.m);
+    out.corr = A.sd > 0 ? cv / C.length / (L.sd * A.sd) : NaN;
+    out.dev = C.reduce((s, p) => s + Math.abs(p.a - skFsc(p.L)), 0) / C.length;
+  }
+  if (mins.length > 1) out.min = skStats(mins);
+  if (st.fin.length > 1) {
+    out.fin = skStats(st.fin); out.typ = skStats(st.typ).m;
+    out.low = Math.min(out.fin.lo, out.min ? out.min.lo : Infinity);
+    out.rel = out.fin.sd / (out.typ - out.low);
+  }
+  return out;
+}
+plate({
+  id: 'sinking', ch: 8, seed: 3401,
+  run: [
+    (T) => { T.set('dim', '2'); },
+    (T) => { T.set('dim', '32'); },
+    (T) => { T.set('dim', '2'); },
+    (T) => { T.set('dim', '4'); },
+    (T) => { T.set('dim', '32'); T.clear(); T.release(0.2, 0.1); },
+  ],
+  status: 'established',
+  tribes: [{ k: 'gd', kind: K_FN, sigMul: 0, rest: 'never', maxAge: 8000, rule: 'θ ← θ − η∇L(θ) in all d coordinates, η = 0.1', fn: skFn }],
+  sim: { lr: 0.1, noise: 0, dim: '2' },
+  ctl: [{ type: 'select', key: 'dim', label: 'Parameters d', options: { 2: 'd = 2', 4: 'd = 4', 8: 'd = 8', 16: 'd = 16', 32: 'd = 32' } }],
+  view: { yaw: -8, pitch: 50 }, speed: 4, figH: 300,
+  sheet: sheetSinking,
+  features: skFeatures,
+  names: (S) => {
+    SNK.mins.forEach((m, j) => S.marks.push({ p: m, name: `Minimum ${m.key}`, sub: `L/d ${fmt(m.L, 2)}`, sym: 'min', pri: 9 - j }));
+  },
+  print: () => { for (const m of PL.st.map) drawSymbol({ p: m, sym: m.sym }); },
+  release: () => {
+    const n = PHONE ? 3 : 6;
+    if (!F.params.auto || STAT.alive + n > skCap()) { nextRelease = STAT.steps + 45; return; }
+    skFresh();
+    for (let q = 0; q < n; q++) skSpawn(skStart(RREL, null, null, SNK.tmp));
+    STAT.released++;
+    nextRelease = STAT.steps + 150;
+  },
+  click: (x, y) => {           // starts that share this projection, each moved off the plane in its own direction
+    const n = PHONE ? 3 : 6;
+    skFresh();
+    for (let q = 0; q < n; q++) skSpawn(skStart(RREL, x + RREL.normal() * 0.003, y + RREL.normal() * 0.003, SNK.tmp));
+    STAT.released++;
+    nextRelease = STAT.steps + 2400;
+  },
+  frame: (dt, n) => {          // the search gets what is left of about 3 ms (2.4 on a phone) after this frame's particle steps
+    const used = n * STAT.alive * SNK.gradMs;
+    skSearch(clamp((PHONE ? 2.4 : 3.2) - used, 0.4, PHONE ? 1.2 : 1.8));
+  },
+  step: (i) => {
+    Wl[i] = SNK.PL[i];
+    if (SNK.PG[i] < 1e-3) { skPush(PL.st.fin, SNK.PL[i]); Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); return false; }
+  },
+  onSim: (k) => { if (k === 'dim') reshape(); },
+  readouts: () => {
+    const st = PL.st, s = skSummary();
+    return [
+      ['critical points', `${s.n} · ${skN(s.nMin, 'minimum', 'minima')} · ${skN(s.n - s.nMin - s.nMax, 'saddle', 'saddles')}${s.nMax ? ` · ${skN(s.nMax, 'maximum', 'maxima')}` : ''}${st.done < st.nS ? ` · searching ${Math.round(100 * st.done / st.nS)}%` : ''}`],
+      ['index against loss', s.corr != null ? `correlation ${s.corr.toFixed(3)} · ${s.dev.toFixed(2)} off the d → ∞ curve` : '…'],
+      ['minima found', s.min ? `L/d ${fmt(s.min.lo, 2)} to ${fmt(s.min.hi, 2)} · sd ${s.min.sd.toFixed(2)}` : '…'],
+      ['descent at rest', s.fin ? `${st.fin.length} · L/d ${fmt(s.fin.m, 2)} ± ${s.fin.sd.toFixed(2)} · ${(100 * s.rel).toFixed(0)}% of the depth` : '…'],
+    ];
+  },
+  debug: () => {
+    const s = skSummary(), r = (v, k = 3) => (v == null || !Number.isFinite(v) ? null : +v.toFixed(k));
+    return { d: SNK.d, done: PL.st.done, nS: PL.st.nS, n: s.n, nMin: s.nMin, nMax: s.nMax, corr: r(s.corr), dev: r(s.dev), min: s.min && [r(s.min.lo), r(s.min.hi), r(s.min.sd)],
+      fin: s.fin && [PL.st.fin.length, r(s.fin.m), r(s.fin.sd), r(s.fin.lo), r(s.fin.hi)], typ: r(s.typ), rel: r(s.rel), plane: SNK.mins.map((m) => r(m.L)), S: r(SNK.S / SNK.lc) };
+  },
+  fig: (c, w, h) => {
+    const st = PL.st, lo = -2.6, hi = 2.6, x0 = 30, x1 = w - 8, y0 = 22, y1 = Math.round(h * 0.58), y2 = y1 + 26, y3 = h - 28;
+    const tx = (v) => x0 + (x1 - x0) * (clamp(v, lo, hi) - lo) / (hi - lo), ty = (a) => y1 - (y1 - y0 - 12) * a;
+    FIG.axes(c, x0, y0, x1, y1, '', 'index fraction: negative curvatures ⁄ d');
+    c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 1; c.beginPath();
+    for (let k = 0; k <= 104; k++) { const v = lo + (hi - lo) * k / 104, X = tx(v), Y = ty(skFsc(v)); if (k) c.lineTo(X, Y); else c.moveTo(X, Y); }
+    c.stroke(); c.setLineDash([]);
+    FIG.note(c, tx(1.55) + 6, ty(0.86), 'd → ∞', 'rgba(36,38,43,0.6)');
+    c.fillStyle = 'rgba(36,38,43,0.5)';
+    for (const p of st.crit) if (p.neg > 0) { c.beginPath(); c.arc(tx(p.L), ty(p.a), 1.7, 0, TAU); c.fill(); }
+    c.fillStyle = TB.sgd.color;
+    for (const p of st.crit) if (p.neg === 0) { c.beginPath(); c.arc(tx(p.L), ty(0), 2.4, 0, TAU); c.fill(); }
+    for (const a of [0, 0.5, 1]) FIG.tick(c, x0 - 3, ty(a), String(a), 'right', 'middle');
+    // below: where the minima found by the search (outline) and the particles at rest (filled) sit in L/d
+    FIG.axes(c, x0, y2, x1, y3, 'loss per parameter L/d', 'minima');
+    const nb = 52, bw = (x1 - x0) / nb, hm = new Float64Array(nb), hf = new Float64Array(nb), bin = (v) => clamp(Math.floor((v - lo) / (hi - lo) * nb), 0, nb - 1);
+    for (const p of st.crit) if (p.neg === 0) hm[bin(p.L)]++;
+    for (const v of st.fin) hf[bin(v)]++;
+    const mm = Math.max(1, ...hm), mf = Math.max(1, ...hf), hh = y3 - y2 - 10;
+    c.fillStyle = rgba(TRIBES[0].color, 0.75);
+    for (let b = 0; b < nb; b++) if (hf[b]) { const H = hh * hf[b] / mf; c.fillRect(x0 + b * bw + 0.5, y3 - H, bw - 1, H); }
+    c.strokeStyle = INK; c.lineWidth = 0.9;
+    for (let b = 0; b < nb; b++) if (hm[b]) { const H = hh * hm[b] / mm; c.strokeRect(x0 + b * bw + 1, y3 - H + 0.5, bw - 2, H - 0.5); }
+    for (const v of [-2, -1, 0, 1, 2]) FIG.tick(c, tx(v), y3 + 4, String(v));
+    if (st.done < st.nS) FIG.note(c, x1, y2 + 6, `searching · ${st.done} of ${st.nS} starts`, 'rgba(36,38,43,0.55)', 'right');
+  },
+});
 //
 // plate: slices (what a slice hides)
 // A loss in d dimensions, written in the eigenbasis of its Hessian at the origin: L(θ) = L₀ + Σᵢ [½λᵢθᵢ² + (κ/4)θᵢ⁴],

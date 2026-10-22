@@ -611,6 +611,18 @@ To second order, a step of size η lowers the loss of the batch it was computed 
 
 The regime of minibatch SGD in which the batch sharpness hovers at about 2/η while λ<sub>max</sub> of the full loss stays below it, further below for smaller batches (Andreyev and Beneventano 2024).
 
+## grf: Gaussian random field
+
+A random function whose values at any finite set of points are jointly Gaussian.
+On <i>Minima in many dimensions</i> it is stationary and isotropic: the covariance of two values depends only on the distance between their points, and it fades over the correlation length.
+A sum of many cosine waves with random directions and phases approximates one.
+
+## efollow: Eigenvector following
+
+A Newton-type search for a critical point of a chosen index k.
+In the eigenbasis of the Hessian it steps uphill along the k directions of lowest curvature and downhill along the rest, dividing each component of the gradient by the absolute value of its curvature.
+Near a critical point of index k it converges as fast as Newton’s method, and with k = 0 it is saddle-free Newton.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.
