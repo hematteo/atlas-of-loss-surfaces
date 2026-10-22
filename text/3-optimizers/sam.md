@@ -7,12 +7,14 @@ A slope with pits narrower than SAM’s radius ρ, leading down to a broad basin
 ## Lead
 
 [[Sharpness-aware minimization|sam]] (Foret et al. 2021) aims to minimize the largest loss within a distance ρ of θ, rather than the loss at θ itself.
+On this sheet the sharp minima are narrow pits.
 A pit narrower than ρ scores badly on that measure, since its walls lie within reach of its floor.
-More concretely, SAM takes the gradient at `θ + ρ∇L/‖∇L‖` instead of at θ.
-This is a first-order approximation to that objective.
-It improves test accuracy across many image and language tasks (Foret et al. 2021; Bahri, Mobahi and Tay 2022).
+
+SAM approximates this objective to first order by taking the gradient at `θ + ρ∇L/‖∇L‖` instead of at θ.
+The method improves test accuracy across many image and language tasks (Foret et al. 2021; Bahri, Mobahi and Tay 2022).
 What it minimizes, and why that helps, are disputed (Andriushchenko and Flammarion 2022; Wen, Ma and Li 2023).
-Here we can see whether SAM skips such pits, and where it stops instead.
+
+On this plate we can see whether SAM skips such pits, and where it stops instead.
 
 ## In practice
 
@@ -29,37 +31,46 @@ SAM particles that stall beside a pit never come to rest and are not counted.
 1. Read ‘SGD rest’ and ‘SAM rest’ at ρ = 0.09 → [[SGD|sgd]] rests in the pits and the basin, SAM only in the [[Broad Basin|@Broad Basin]].
    Every pit is narrower than ρ, so SAM’s ascent step from inside a pit lands outside it.
 2. Look just downhill of each pit → SAM particles stall there until they are retired.
-   Their ascent step points up the slope, so on average it lands on the pit’s floor, where ∇L = 0, though ∇L at the particle is not.
-   This is a hallucinated minimizer (see the Background).
+   Their ascent step points up the slope, so on average it lands on the pit’s floor, where ∇L = 0.
+   The gradient at the particle itself is not zero, so this is a hallucinated minimizer (see the Background).
 3. Read ‘never at rest, SGD · SAM’ → in the first 80 seconds 216 SAM particles stalled, against 67 at rest in the basin.
 4. Lower ρ to 0.02, below the pits’ width → SAM rings land in the pits too.
    After 80 seconds on this seed, 76 are in pits and 100 in the basin, against SGD’s 121 and 95.
-   With ρ smaller than a pit, the ascent step no longer jumps out of it.
 
 ## Background
 
-Foret et al. (2021) defined the SAM objective as `max_{‖ε‖≤ρ} L(θ + ε)` and approximated the inner maximum by one normalized gradient step, `ε = ρ∇L/‖∇L‖`.
+Foret et al. (2021) defined the SAM objective as `max_{‖ε‖≤ρ} L(θ + ε)`.
+They approximated the inner maximum by one normalized gradient step, `ε = ρ∇L/‖∇L‖`.
 The update uses `∇L(θ + ε)`, with ε treated as a constant.
 They reported gains on CIFAR, ImageNet and fine-tuning, and motivated the method by a PAC-Bayes bound.
 
 Why SAM helps is contested.
 Andriushchenko and Flammarion (2022) argued that neither that bound nor convergence to flat minima fully explains the gains.
 Nor do they fully explain why computing ε on small sub-batches (m-sharpness) matters.
-Wen, Ma and Li (2023) showed that each of SAM’s two approximations above, taken alone, predicts the wrong effect.
-They also proved that full-batch SAM reduces λ<sub>max</sub>, the Hessian’s largest eigenvalue, and that SAM with batch size 1 reduces the trace of the Hessian.
 Andriushchenko et al. (2023) found that sharpness correlates poorly with generalization in modern settings (see <i>Sharp and flat minima</i>).
 
-Because SAM evaluates the gradient at θ + ε, it stops wherever `∇L(θ + ε(θ)) = 0`, and such points need not be critical points of L.
-Park et al. (2026) proved that such hallucinated minimizers exist under simple conditions, gave conditions under which SAM converges to them, and reported them in network training at large ρ.
+Wen, Ma and Li (2023) showed that each of SAM’s two approximations above, taken alone, predicts the wrong effect.
+They also proved that full-batch SAM reduces λ<sub>max</sub>, the Hessian’s largest eigenvalue.
+SAM with batch size 1, they proved, reduces the trace of the Hessian instead.
+
+Because SAM evaluates the gradient at θ + ε, it stops wherever `∇L(θ + ε(θ)) = 0`.
+Such points need not be critical points of L.
+Park et al. (2026) proved that such hallucinated minimizers exist under simple conditions.
+They also gave conditions under which SAM converges to them, and reported them in network training at large ρ.
 
 ## Method
 
-The surface is a gentle bowl tilted by about `0.26θ₁`, with a broad Gaussian basin at its low end, two ridges, and five narrow Gaussian pits on the slope.
-The pits have depth about 0.18, width about 0.03 and Hessian eigenvalues 210–275 at their floors, against about 5 and 6 at the [[Basin floor|@Basin floor]].
+The surface is a gentle bowl tilted by about `0.26θ₁`.
+It has a broad Gaussian basin at its low end, two ridges, and five narrow Gaussian pits on the slope.
+The pits have depth about 0.18 and width about 0.03.
+Their floors have Hessian eigenvalues of 210–275, against about 5 and 6 at the [[Basin floor|@Basin floor]].
+
 SGD and SAM share η = 0.003 and isotropic gradient noise σ = 0.25, so they differ only in where the gradient is taken.
 SAM computes ε from the noisy gradient and uses the same noise at θ + ε, as with one minibatch.
-Particles are released on the high ground, θ₁ &gt; 0.9.
-The green dashed lines are contours of the largest loss over 24 points on the circle of radius ρ around each point, computed on a grid.
+Particles are released high on the slope, at θ₁ &gt; 0.9.
+
+The green dashed lines are contours computed on a grid.
+At each grid point they take the largest loss over 24 points on the circle of radius ρ around it.
 The readouts and the figure count rings within 0.06 of a pit’s floor, within 0.3 of the basin’s floor, or elsewhere.
 The counts restart, and the particles in flight are retired, whenever ρ, η or σ changes.
 
@@ -71,11 +82,17 @@ Stalled particles never come to rest, so the rest counts and the figure leave th
 
 ## At scale
 
-Andriushchenko and Flammarion (2022) found that much of SAM’s gain in networks depends on computing ε on small sub-batches (m-sharpness), which a two-parameter surface with one noise source cannot show.
+Andriushchenko and Flammarion (2022) found that much of SAM’s gain in networks depends on computing ε on small sub-batches (m-sharpness).
+A two-parameter surface with one noise source cannot show this.
 In high dimensions, full-batch SAM and SAM with batch size 1 reduce different quantities: λ<sub>max</sub> and the trace of the Hessian (Wen, Ma and Li 2023).
+
 Each SAM step costs a second gradient.
-Its clearest gains at scale are for vision transformers and MLP-Mixers trained without large-scale pretraining, and for fine-tuning language models (Bahri, Mobahi and Tay 2022).
-In the first setting, Chen, Hsieh and Gong (2022) found that SAM raised ViT-B/16’s ImageNet top-1 accuracy by 5.3 points.
+Its clearest gains at scale are in two settings (Bahri, Mobahi and Tay 2022):
+
+1. Vision transformers and MLP-Mixers trained without large-scale pretraining.
+   There, Chen, Hsieh and Gong (2022) found that SAM raised ViT-B/16’s ImageNet top-1 accuracy by 5.3 points.
+2. Fine-tuning language models.
+
 What survives at scale is the gain in these settings, while the reason for it is still disputed.
 
 ## References

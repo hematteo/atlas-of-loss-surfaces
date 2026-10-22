@@ -6,9 +6,12 @@ A saddle of index 1, with gradient descent, perturbed gradient descent and SGD s
 
 ## Lead
 
-A [[saddle point|saddle]] is a [[critical point|crit]] at which the loss falls in some directions and rises in others (think of a mountain pass).
-Dauphin et al. (2014) argued that in high dimensions most high-loss critical points are saddles.
-Gradient descent almost never converges to a saddle (Lee et al. 2016), but it can linger near one, where the slope is small.
+A [[critical point|crit]] is a point where the gradient is zero.
+A [[saddle point|saddle]] is a critical point at which the loss falls in some directions and rises in others, like a mountain pass.
+Dauphin et al. (2014) argued that in high dimensions, most high-loss critical points are saddles.
+
+Gradient descent almost never converges to a saddle (Lee et al. 2016).
+But it can linger near one, where the gradient is small.
 Noise shortens the stay (Jin et al. 2017).
 This plate times that stay, starting particles ever closer to the line that leads straight into the saddle.
 
@@ -16,7 +19,7 @@ This plate times that stay, starting particles ever closer to the line that lead
 
 Dauphin et al. (2014) argued that when the loss stalls at a high value, the parameters are more likely near a saddle than in a bad local minimum.
 Later work found the evidence for this weaker than it looked (Frye et al. 2021).
-Noise speeds up escape, but escape is still slow where the negative curvature is weak, since the downhill direction then pulls only gently.
+Noise speeds up escape, but escape is still slow where the negative curvature is weak.
 
 ## Figure caption
 
@@ -25,57 +28,77 @@ The dashed line is the linear estimate ln(r/δ) / ln(1 + η|λ₋|) for gradient
 
 ## Try
 
-1. Watch the figure fill → for δ ≤ 10⁻⁴, gradient descent’s stay near the [[saddle|@Saddle]] grows by about 60–75 steps per tenfold drop in δ, close to the dashed line’s slope of 63.
+1. Watch the figure fill → for δ ≤ 10⁻⁴, gradient descent’s stay near the [[saddle|@Saddle]] grows by about 60–75 steps per tenfold drop in δ.
+   That is close to the dashed line’s slope of 63.
    Each step multiplies the offset by the same factor, 1 + η|λ₋|, so every tenfold drop in δ adds the same number of steps.
-2. Look at δ ≥ 10⁻³ → particles leave far sooner than the dashed line says: the texture makes the loss fall faster along θ₁.
-3. Compare SGD and perturbed gradient descent → their stay hardly depends on δ: noise replaces the initial offset.
-4. Set the noise σ to 0 → SGD matches gradient descent exactly, since its noise term σξ is then zero.
-   Perturbed gradient descent, whose kicks do not depend on σ, still leaves in about 70 steps from δ ≤ 10⁻⁵.
+2. Look at δ ≥ 10⁻³ → particles leave far sooner than the dashed line says.
+   At these offsets the sheet’s texture makes the loss fall faster along θ₁.
+3. Compare SGD and perturbed gradient descent → their stay hardly depends on δ.
+   Noise replaces the initial offset.
+4. Set the noise σ to 0 → SGD matches gradient descent exactly.
+   Its noise term σξ is then zero.
+   Perturbed gradient descent still leaves in about 70 steps from δ ≤ 10⁻⁵, because its kicks do not depend on σ.
    Gradient descent takes 120 steps on average from δ = 10⁻⁵ and 190 from δ = 10⁻⁶.
 
 ## Background
 
-Near a critical point θ* the loss is close to `L* + ½ uᵀHu`, with `u = θ − θ*`.
+Near a critical point θ*, the loss is close to `L* + ½ uᵀHu`, with `u = θ − θ*`.
 Along an eigenvector of the [[Hessian|hessian]] with eigenvalue λ, gradient descent multiplies the offset by `1 − ηλ` per step.
 For λ &lt; 0 the factor is `1 + η|λ|`, so an offset δ grows to size r in about `ln(r/δ) / ln(1 + η|λ|)` steps.
 So the stay grows only logarithmically as δ shrinks, but it grows without limit.
-Started on the saddle’s [[stable manifold|stablemfd]] (here, the divide between the two hills), gradient descent converges to the saddle, but that set has zero volume.
+
+Started on the saddle’s [[stable manifold|stablemfd]], gradient descent converges to the saddle.
+Here that manifold is the divide between the two hills, and it has zero volume.
 
 Theory separates whether gradient descent reaches a saddle from how long it stays near one.
-Lee et al. (2016) proved that from a random start, gradient descent with a small step almost surely does not converge to a [[strict saddle|strictsaddle]], one that has a negative eigenvalue.
+A [[strict saddle|strictsaddle]] is a saddle that has a negative eigenvalue.
+Lee et al. (2016) proved that from a random start, gradient descent with a small step almost surely does not converge to one.
 This says nothing about time.
+
 Ge et al. (2015) had proved that noisy SGD escapes strict saddles in polynomial time.
 Without noise, escape can take far longer.
 Du et al. (2017) built functions on which gradient descent takes time exponential in the dimension to pass a chain of strict saddles.
-Jin et al. (2017) proved that perturbed gradient descent, which adds a small random kick when the gradient is small, needs a number of steps that grows only polylogarithmically with the dimension.
+Perturbed gradient descent adds a small random kick when the gradient is small.
+Jin et al. (2017) proved that it needs a number of steps that grows only polylogarithmically with the dimension.
 
-Dauphin et al. (2014) drew on results for random Gaussian fields and on measurements in small networks: the higher the loss at a critical point, the larger the fraction of negative eigenvalues.
-They argued that saddles surrounded by [[plateaus|plateau]] slow training and can look like local minima, and that Newton’s method is attracted to saddles (see <i>Newton’s method and saddles</i>).
-This is because Newton’s method divides the gradient along each direction by its curvature, so where the curvature is negative it steps uphill, towards the saddle.
+Dauphin et al. (2014) related the loss at a critical point to its eigenvalues, drawing on results for random Gaussian fields and on measurements in small networks.
+The higher the loss, the larger the fraction of negative eigenvalues.
+They argued that saddles surrounded by [[plateaus|plateau]] slow training and can look like local minima.
+They also argued that Newton’s method is attracted to saddles (see <i>Newton’s method and saddles</i>).
+Newton’s method divides the gradient along each direction by its curvature, so where the curvature is negative it steps uphill, towards the saddle.
 
 ## Method
 
-The sheet is mirror symmetric in θ₁: two hills on the θ₂ axis, two equal basins on either side and the saddle between them, so the [[divide|divide]] is exactly the line θ₁ = 0.
-The symmetry fixes the divide, so each particle’s offset from it is exactly δ.
-The readouts give λ₋, the negative Hessian eigenvalue at the saddle (−0.93 on the default sheet, against 19.4 for the positive one), and η|λ₋|.
-Each release starts all three optimizers at θ₁ = ±δ, 0.4 north or south of the saddle, with δ cycling through 10⁻¹ … 10⁻⁶.
+The sheet is mirror symmetric in θ₁.
+It has two hills on the θ₂ axis, two equal basins on either side and the saddle between them.
+So the [[divide|divide]] is exactly the line θ₁ = 0, and each particle’s offset from it is exactly δ.
+
+Each release starts all three optimizers at θ₁ = ±δ, 0.4 north or south of the saddle.
+The offset δ cycles through 10⁻¹ … 10⁻⁶.
 So each particle first runs down to the saddle and then must drift off the divide.
 The figure counts the steps each particle spends within r = 0.12 of the saddle.
 
-Perturbed gradient descent, after Jin et al. (2017), adds a kick drawn uniformly from a disc of radius 0.003 whenever `‖∇L‖ < 0.05` and no kick has been given in the last 40 steps (so none in its first 40).
+Perturbed gradient descent follows Jin et al. (2017).
+It adds a kick drawn uniformly from a disc of radius 0.003 whenever `‖∇L‖ < 0.05`.
+A kick also requires that none was given in the last 40 steps, so there is none in the first 40.
 SGD adds isotropic noise σξ, the same size in every direction, to every gradient.
 
-The dashed line is `ln(r/δ) / ln(1 + η|λ₋|)`.
-This linear estimate holds only within about 0.001 of the saddle.
-Beyond that, the sheet’s fine texture makes the loss fall faster along θ₁: at θ₁ = 0.003 the gradient is already 5 times `|λ₋|θ₁`, and at θ₁ = 0.02 it is 12 times.
-Without the texture the saddle’s negative eigenvalue would be about −7.5.
+The dashed line is `ln(r/δ) / ln(1 + η|λ₋|)`, a linear estimate that holds only within about 0.001 of the saddle.
+Beyond that, the sheet’s fine texture makes the loss fall faster along θ₁.
+At θ₁ = 0.003 the gradient is already 5 times `|λ₋|θ₁`, and at θ₁ = 0.02 it is 12 times.
+
+The readouts give λ₋, the negative Hessian eigenvalue at the saddle, and η|λ₋|.
+On the default sheet λ₋ is −0.93, against 19.4 for the positive eigenvalue.
+Without the texture it would be about −7.5.
 The texture has its own dimple at the saddle, and that dimple is what makes λ₋ weak.
 
 ## Caveat
 
-This saddle has [[index|index]] 1: there is one direction in which the loss falls, and it is in plain view.
+The [[index|index]] of a saddle is the number of independent directions in which the loss falls.
+This saddle has index 1, and its one falling direction is in plain view.
 In a network the negative eigenvalues can be few and small, or absent.
-Small ones mean a slow escape, by the estimate in the Background, and absent ones mean its theorems do not apply.
+Small ones mean a slow escape, by the estimate in the Background.
+Absent ones mean the Background’s theorems do not apply.
 
 ## At scale
 
@@ -83,9 +106,12 @@ The critical points behind the evidence relating index to loss were found with N
 Frye et al. (2021) showed that in networks these methods often stop in gradient-flat regions that are not critical points at all.
 
 The theorems above also assume that every saddle is strict.
-In deep linear networks with more than one hidden layer some saddles have no negative eigenvalue, and there the theorems say nothing (Kawaguchi 2016).
-The origin is such a saddle: with two or more hidden layers the loss there is flat to second order.
-This is because the output is then a product of three or more weight matrices, so near the origin the loss changes only at third order or higher.
+In deep linear networks with more than one hidden layer, some saddles have no negative eigenvalue (Kawaguchi 2016).
+There the theorems say nothing.
+
+The origin is such a saddle.
+With two or more hidden layers, the output is a product of three or more weight matrices.
+So near the origin the loss is flat to second order: it changes only at third order or higher.
 Training from a small initialization starts near the origin and then passes from one saddle to the next (see <i>Saddle to saddle</i>).
 
 ## References

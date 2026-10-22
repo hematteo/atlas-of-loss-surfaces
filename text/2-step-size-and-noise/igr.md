@@ -6,11 +6,17 @@ Gradient descent, gradient flow and the modified flow on the two-parameter netwo
 
 ## Lead
 
-Finite-step [[gradient descent|gd]] does not follow [[gradient flow|gflow]], its limit as the step size goes to zero.
+[[Gradient flow|gflow]] is the limit of [[gradient descent|gd]] as the step size goes to zero.
+Gradient descent with a finite step does not follow it.
 Each step moves in a straight line where the flow would curve, and the small errors add up to a systematic bias.
-Backward error analysis proves that, to second order in η, gradient descent follows the flow of a [[modified loss|modloss]] `L̃ = L + (η/4)‖∇L‖²`, which penalizes large gradients (Barrett and Dherin 2021).
+
+Backward error analysis describes this bias.
+It proves that, to second order in η, gradient descent follows the flow of a [[modified loss|modloss]] (Barrett and Dherin 2021).
+That loss is `L̃ = L + (η/4)‖∇L‖²`, which penalizes large gradients.
 How much this bias explains the benefit of large learning rates is debated.
-On this sheet we can test the prediction exactly: if it holds, gradient descent should end where the flow of L̃ ends, and not where the flow of L does.
+
+On this sheet we can test the prediction exactly.
+If it holds, gradient descent should end where the flow of L̃ ends, and not where the flow of L does.
 
 ## In practice
 
@@ -19,49 +25,65 @@ To leading order, larger steps add a penalty on the squared gradient norm that b
 
 ## Figure caption
 
-Each release gives two points: gradient descent’s final w² − a² against the prediction of gradient flow (black rings) and of the flow of L̃ (green dots), so a perfect prediction lies on the diagonal.
+Each release gives two points, each plotting gradient descent’s final w² − a² against a prediction.
+Black rings use the prediction of gradient flow, and green dots that of the flow of L̃.
+A perfect prediction lies on the diagonal.
 The green dots lie nearer the diagonal, but gradient descent goes further toward balance than either flow predicts.
 
 ## Try
 
-1. Keep η = 0.42 and compare the readouts after each release → gradient descent’s final `w² − a²` goes past the modified flow’s prediction toward balance, but lies closer to it than to gradient flow’s.
+1. Keep η = 0.42 and compare the readouts after each release → gradient descent ends closer to the modified flow’s prediction than to gradient flow’s.
+   Its final `w² − a²` goes past that prediction, toward balance.
    So L̃ captures most of the bias, but not all of it.
-2. Compare starting points → from starts where `η′λ_max` stays above 1, so that gradient descent overshoots the floor on every step, it changes `w² − a²` 3.6 to 3.8 times as much as L̃ predicts.
+2. Compare starting points → from some starts, gradient descent changes `w² − a²` 3.6 to 3.8 times as much as L̃ predicts.
+   These are the starts where `η′λ_max` stays above 1, so gradient descent overshoots the floor on every step.
    From the other starts the factor is 1.4 to 2.2.
    The expansion behind L̃ assumes small steps, and a step that overshoots every time is not small.
-3. Lower η to 0.2 → the three readouts draw together and the factor falls to 1.2–1.8, because L̃ is only the first term of an expansion in η.
+3. Lower η to 0.2 → the three readouts draw together, and the factor falls to 1.2–1.8.
+   L̃ is only the first term of an expansion in η.
    The terms it leaves out shrink faster with η than the term it keeps.
-4. Raise η to 0.55 → the gap between the black and green rings widens, since the penalty in L̃ grows in proportion to η.
+4. Raise η to 0.55 → the gap between the black and green rings widens.
+   The penalty in L̃ grows in proportion to η.
 
 ## Background
 
 Backward error analysis comes from numerical integration (Hairer, Lubich and Wanner 2006).
 Instead of measuring how far a discrete method strays from an ODE, it finds a modified ODE that the method follows more closely.
-For gradient descent with step η it gives the gradient flow of L̃, whose error per step is of order η³ instead of η² (Barrett and Dherin 2021).
-The added term, implicit gradient regularization, slows descent where the gradient is large.
-Barrett and Dherin used this same model, `f(x) = wax` fitted to one point, and found that larger steps end at minima of smaller norm, nearer the flattest point.
+For gradient descent with step η, that ODE is the gradient flow of L̃ (Barrett and Dherin 2021).
+Its error per step is of order η³, instead of η².
+The added term, implicit gradient regularization, penalizes large gradients, so it steers descent toward regions where the gradient is small.
+
+Barrett and Dherin used this same model: `f(x) = wax`, fitted to one point.
+They found that larger steps end at minima of smaller norm, nearer the flattest point.
 In deep networks they found that a larger implicit regularization strength went with higher test accuracy.
 Smith et al. (2021) extended the analysis to SGD, whose modified loss also penalizes the mean squared norm of the minibatch gradients.
 
 On this model the bias can be written exactly.
-Gradient flow conserves `w² − a²`, so it ends where its hyperbola of constant `w² − a²` meets the floor.
-This is because, with `r = wa − 1` the residual, the flow changes w² and a² at the same rate, −2rwa.
-It is the two-layer case of the layer balancing proved by Du, Hu and Lee (2018).
+With `r = wa − 1` the residual, gradient flow changes w² and a² at the same rate, −2rwa.
+So gradient flow conserves `w² − a²`, and ends where its hyperbola of constant `w² − a²` meets the floor.
+This is the two-layer case of the layer balancing proved by Du, Hu and Lee (2018).
+
+Finite steps break this conservation.
 With η′ the step on `½(wa − 1)²` (see Method), one step of gradient descent multiplies `w² − a²` by `1 − η′²r²`.
-The flow of L̃ shrinks it at the matching rate, `d(w² − a²)/dt = −η′r²(w² − a²)`, which over a time η′ multiplies it by about the same factor.
-Both move toward the [[Balanced point|@Balanced point]] `w = a`, where λ<sub>max</sub> = `w² + a²` is smallest on the floor.
+The flow of L̃ shrinks it at the matching rate, `d(w² − a²)/dt = −η′r²(w² − a²)`.
+Over a time η′, that rate multiplies it by about the same factor.
+
+Both dynamics move toward the [[Balanced point|@Balanced point]] `w = a`, where λ<sub>max</sub> = `w² + a²` is smallest on the floor.
 So both predict that larger steps end nearer balance.
 
 ## Method
 
 The sheet is `L = ½(wa − 1)²` with `w = 1.5θ₁` and `a = 1.5θ₂`, scaled by 0.247 to fit the relief.
-So a step η on the sheet is a step `η′ = 0.555η` on `½(wa − 1)²` (0.247 × 1.5²), and the formulas on this card use η′.
+So a step η on the sheet is a step `η′ = 0.555η` on `½(wa − 1)²` (0.247 × 1.5²).
+The formulas on this card use η′.
+
 The minima form the hyperbola `wa = 1` (blue), with balanced points `w = a = ±1`.
 The dotted lines are hyperbolas of constant `w² − a²`, the paths of gradient flow.
-Each release starts one noiseless gradient-descent particle at one of eight fixed points.
-From the same point it integrates, by fourth-order Runge–Kutta, the gradient flow of L (black path and ring) and of L̃ (green path and ring).
 From starts where `η′λ_max` stays above 1, gradient descent overshoots the floor on every step.
-The readouts give `w² − a²` at the end of each of the three for the latest release.
+
+Each release starts one noiseless gradient-descent particle at one of eight fixed points.
+From the same point, fourth-order Runge–Kutta integrates the gradient flow of L (black path and ring) and of L̃ (green path and ring).
+The readouts give `w² − a²` at the end of all three paths for the latest release.
 The figure plots gradient descent’s final value against each prediction, one pair per release.
 
 ## At scale
@@ -69,9 +91,17 @@ The figure plots gradient descent’s final value against each prediction, one p
 The expansion assumes ηλ well below 1.
 But gradient descent on networks usually reaches the [[edge of stability|eos]], where ηλ<sub>max</sub> ≈ 2 and the expansion breaks down.
 The factor of 3.6 to 3.8 on this sheet already shows it failing.
-Two models are built for that regime: the principal flow, which follows the oscillation (Rosca et al. 2023), and the [[central flow|centralflow]], which follows its time average (Cohen, Damian et al. 2025).
-For full-batch [[Adam|adam]], Cattaneo, Klusowski and Shigida (2024) used backward error analysis to find a different bias, one that typically rewards, rather than penalizes, a perturbed 1-norm of the gradient.
-What survives at scale is that the step size biases where training ends; the penalty in L̃ is a small-step result.
+
+Two models are built for that regime:
+
+1. The principal flow, which follows the oscillation (Rosca et al. 2023).
+2. The [[central flow|centralflow]], which follows its time average (Cohen, Damian et al. 2025).
+
+For full-batch [[Adam|adam]], Cattaneo, Klusowski and Shigida (2024) used backward error analysis to find a different bias.
+It typically rewards, rather than penalizes, a perturbed 1-norm of the gradient.
+
+What survives at scale is that the step size biases where training ends.
+The penalty in L̃ is a small-step result.
 
 ## References
 

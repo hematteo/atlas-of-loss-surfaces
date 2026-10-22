@@ -6,51 +6,64 @@ The map draws each basin of attraction and counts where particles come to rest, 
 
 ## Lead
 
-Under [[gradient flow|gflow]], the path straight down the slope, almost every starting point that stays on the sheet ends at a minimum, provided every saddle is [[strict|strictsaddle]].
-So the plane splits into [[basins of attraction|basin]], one per minimum, each made of the starts that end there.
-Wu, Zhu and E (2017) and Huang et al. (2020) argued that minima that generalize well have much larger basins, so a random start would usually land in one.
+[[Gradient flow|gflow]] is the limit of gradient descent as the step size goes to zero.
+Under gradient flow, almost every starting point that stays on the sheet ends at a minimum, provided every saddle is [[strict|strictsaddle]].
+So parameter space splits into [[basins of attraction|basin]], one per minimum.
+A minimum’s basin is the set of starting points whose flow ends there.
+
+Wu, Zhu and E (2017) and Huang et al. (2020) argued that minima that generalize well have much larger basins.
+If so, a random initialization would usually land in one.
 Whether basin volume explains which minima training finds is still open.
 On this sheet we can measure each basin’s share of the area and check it against where the optimizers come to rest.
 
 ## In practice
 
-Which minimum a run reaches depends on the seed, the step size and the gradient noise, so use several seeds rather than trusting one.
+Which minimum a run reaches depends on the seed, the learning rate and the gradient noise.
+So use several seeds rather than trusting one.
 Direct evidence that good minima win by basin volume comes only from small networks.
 
 ## Figure caption
 
 The eight largest basins.
-Each outline is the basin’s share of the lettered area, and each bar is the share of one optimizer’s particles at rest that came to rest in it.
+Each outline is the basin’s share of the lettered area.
+Each bar is the share of one optimizer’s particles at rest that came to rest in that basin.
 So a bar that fills its outline matches the basin’s area.
 
 ## Try
 
-1. Let about a thousand drops fall → the [[gradient descent|gd]] bars match the outlines within a few percentage points: at η = 0.004 it follows gradient flow closely.
-2. Read the [[SGD|sgd]] bars → they match too: at σ = 0.6 its noise rarely carries a particle across a [[divide|divide]], the boundary between basins.
-3. Raise η to 0.02, above 2/λ<sub>max</sub> for the basin with the largest printed λ → no arrivals there: gradient descent is not [[stable|stab]] at that minimum.
+1. Let about a thousand drops fall → the [[gradient descent|gd]] bars match the outlines within a few percentage points.
+   At η = 0.004 gradient descent follows gradient flow closely.
+2. Read the [[SGD|sgd]] bars → they match too.
+   A [[divide|divide]] is the boundary between basins, and at σ = 0.6 SGD’s noise rarely carries a particle across one.
+3. Raise η to 0.02 → the basin with the largest printed λ gets no arrivals.
+   That η is above 2/λ<sub>max</sub> for this basin, so gradient descent is not [[stable|stab]] at its minimum.
    The basin on the map has not changed, so area predicts arrivals only at minima where the optimizer can settle.
-4. Raise η to 0.05 → gradient-descent particles are thrown into neighbouring basins, and about 60% of SGD’s keep moving inside the wide basins and time out uncounted.
+4. Raise η to 0.05 → gradient-descent particles are thrown into neighbouring basins.
+   About 60% of SGD’s particles keep moving inside the wide basins and time out uncounted.
 
 ## Background
 
 The basins cover almost the whole plane because almost no run ends at a saddle.
-For a smooth loss whose saddles are all [[strict|strictsaddle]], the starting points from which gradient flow ends at a saddle form a set of zero volume.
-At a degenerate saddle with no negative eigenvalue they need not.
-Lee et al. (2016) proved the same for gradient descent with a small fixed step: from a random start it almost surely does not converge to a strict saddle.
 The divides between basins are made of the paths that run into saddles.
+For a smooth loss whose saddles are all [[strict|strictsaddle]], the starting points of these paths form a set of zero volume.
+At a degenerate saddle, which has no negative eigenvalue, they need not.
 
-With a finite step the basins change: gradient descent cannot settle at a minimum with `λ_max > 2/η`, so that minimum attracts no runs (see <i>Sharp and flat minima</i>).
-SGD’s noise effectively smooths the loss, which lets it escape sharp local minima (Kleinberg, Li and Yuan 2018).
+Lee et al. (2016) proved a matching result for gradient descent with a small fixed step.
+From a random start, it almost surely does not converge to a strict saddle.
+
+With a finite step the basins themselves change.
+Gradient descent cannot settle at a minimum with `λ_max > 2/η`, so that minimum attracts no runs (see <i>Sharp and flat minima</i>).
+SGD’s noise also effectively smooths the loss, which lets it escape sharp local minima (Kleinberg, Li and Yuan 2018).
 So the basins SGD sees depend on η and on the noise.
 
 In a large network the basins cannot be mapped, so the case for volume is indirect.
-Wu, Zhu and E (2017) analysed two-layer networks theoretically and deeper ones in experiments.
-They argued that the basins of minima that generalize well take up far more volume than those of poor minima, so randomly initialized optimizers mostly find good ones.
-Huang et al. (2020) made the same argument with visualizations: in high dimensions a small difference in width becomes a huge difference in volume.
-This is because volume multiplies the widths in every direction, so small gains compound.
+Wu, Zhu and E (2017) made it with theory for two-layer networks and with experiments on deeper ones.
+Huang et al. (2020) made the same argument with visualizations.
+In high dimensions a small difference in width becomes a huge difference in volume, because volume multiplies the widths in every direction.
+
 Chiang et al. (2023) tested this volume hypothesis by drawing random weights until a network fit its training set.
-At small scale these networks generalized about as well as ones trained by SGD.
 If SGD found good minima for reasons beyond volume, it should have beaten this random search.
+At small scale, the random networks generalized about as well as ones trained by SGD.
 The test works only at small scale, so the question is open for large networks.
 
 ## Method
@@ -58,32 +71,40 @@ The test works only at small scale, so the question is open for large networks.
 The surface is built like the survey sheet: a gentle bowl with Gaussian wells and hills, plus a faint ridged texture.
 The basins are computed on a grid of 321 × 201 cells over the surface without the texture.
 Each cell points to its steepest-descending neighbour, and cells that lead to the same lowest cell form one basin.
-This is a discrete gradient flow: following the pointers from any cell traces its path downhill.
+Following the pointers from any cell traces its descent path, so this is a discrete gradient flow.
+
 The dash-dot lines are the basin boundaries.
 Basins larger than 0.8% of the sheet are lettered by area, A largest.
 Each label gives the basin’s share of the area and λ<sub>max</sub> at its minimum.
+
 Under gradient flow, a uniform random start reaches each minimum with probability equal to its basin’s share of the volume.
 So the area shares are the prediction, and the arrivals test it.
 
-A drop is released every 5 steps at a uniformly random point, alternating between full-batch gradient descent and SGD, which move on the textured surface.
+Every 5 steps a drop is released at a uniformly random point, alternating between full-batch gradient descent and SGD.
+Both move on the textured surface.
 When a particle comes [[to rest|rest]], the basin under its averaged position gets one arrival.
 Particles that leave the sheet, or time out after 2,475 steps, are not counted.
 The readout 2/η is the λ<sub>max</sub> of the sharpest minimum gradient descent can settle in.
 
 ## Caveat
 
-The bars count only particles that came to rest, so at large η or σ they show where SGD settles, not where its particles are.
+The bars count only particles that came to rest.
+So at large η or σ they show where SGD settles, not where its particles are.
 At η = 0.05, for instance, the SGD bars describe only the minority of particles that settled.
+
 In a network, basin volumes cannot be counted like this.
 They are estimated from the Hessian or by sampling.
 
 ## At scale
 
-In a large network minima are not isolated points with separate basins.
-Minima found from different seeds are joined by paths of low loss (see <i>Mode connectivity</i>), and may lie in one basin once their hidden units are matched, i.e. put in corresponding order (see <i>Twins and re-basin</i>).
+In a large network, minima are not isolated points with separate basins.
+Minima found from different seeds are joined by paths of low loss (see <i>Mode connectivity</i>).
+They may also lie in one basin once their hidden units are permuted into corresponding order (see <i>Twins and re-basin</i>).
 Which basin a run ends in is decided early in training (see <i>Forks in the road</i>).
+
 At larger scale the volume argument has indirect support.
-Mingard et al. (2021) found that how often SGD finds a function tracks the function’s Bayesian posterior probability, which is a volume under the prior on weights.
+Mingard et al. (2021) found that how often SGD finds a function tracks the function’s Bayesian posterior probability.
+That probability is a volume under the prior on weights.
 
 ## References
 

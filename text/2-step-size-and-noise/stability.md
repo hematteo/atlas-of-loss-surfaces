@@ -6,10 +6,16 @@ A round central well and six ring wells of different sharpness, to ask which min
 
 ## Lead
 
-A step size that is too large for a minimum makes gradient descent overshoot it by more on every step.
-More concretely, on a quadratic with curvature λ, [[gradient descent|gd]] converges only if `η < 2/λ` (LeCun et al. 1998), so it can reach only minima whose [[sharpness|sharpness]] satisfies `λ_max < 2/η`.
-Just above this [[linear stability|stab]] limit, wide networks enter the [[catapult|catapult]] phase: the loss grows while λ<sub>max</sub> falls, then training converges somewhere flatter (Lewkowycz et al. 2020).
-On this sheet, if a well’s ηλ is below 2 we should see particles settle in it; if it is far above 2, we should see the well throw them out.
+A step size η that is too large for a minimum makes [[gradient descent|gd]] overshoot it by more on every step.
+On a quadratic with curvature λ, gradient descent converges only if `η < 2/λ` (LeCun et al. 1998).
+For a general loss the limit is set by the largest curvature, called the [[sharpness|sharpness]] λ<sub>max</sub>.
+So gradient descent can reach only minima that satisfy `λ_max < 2/η`.
+
+Just above this [[linear stability|stab]] limit, wide networks enter the [[catapult|catapult]] phase.
+In this phase the loss grows while λ<sub>max</sub> falls, and training then converges somewhere flatter (Lewkowycz et al. 2020).
+
+On this sheet, a well whose ηλ is below 2 should let particles settle in it.
+A well whose ηλ is far above 2 should throw them out.
 
 ## In practice
 
@@ -25,25 +31,36 @@ Below: for each well, sharpest first and labelled by ηλ, SGD particles that se
 
 ## Try
 
-1. Watch the fans in the [[Central well|@Central well]], whose particles take steps `η = c · 2/λ` with c from 0.4 to 2 → those with c &lt; 1 converge and those with c &gt; 1 keep moving.
+1. Watch the fans in the [[Central well|@Central well]] → particles with c &lt; 1 converge, and those with c &gt; 1 keep moving.
    ‘Largest c that settled’ reads 0.97.
    Near the bottom each step multiplies the distance by 1 − 2c, which is smaller than 1 in size only when c &lt; 1.
-2. Read the upper figure → above c = 1 the particles bounce between two points instead of diverging, because the Gaussian walls soften.
-   The bounce has half-width `s√(2 ln c)`, with s = 0.14 the width of the well: 0.03 at c = 1.03 and 0.10 at c = 1.3.
-   This is the distance at which the softer wall makes one step land exactly on the mirror point.
+2. Read the upper figure → above c = 1 the particles bounce between two points instead of diverging.
+   They stay bounded because the Gaussian walls soften.
+   The bounce has half-width `s√(2 ln c)`, where s = 0.14 is the width of the well.
+   That gives 0.03 at c = 1.03 and 0.10 at c = 1.3.
+   At this distance the softer wall makes one step land exactly on the mirror point.
 3. Raise η until a ring well’s ηλ passes 2 → [[SGD|sgd]] stops settling there.
    Its particles stay in the well but bounce across it instead of settling.
-4. Raise η further → wells with ηλ above about 7 throw particles out (red bars), and these come [[to rest|rest]] only in wells with ηλ &lt; 2.
+4. Raise η further → wells with ηλ above about 7 throw particles out (red bars).
+   The thrown particles come [[to rest|rest]] only in wells with ηλ &lt; 2.
    This is the step size selecting flat minima.
 
 ## Background
 
 The condition comes from linearizing the update at a minimum.
 Along an eigenvector of the [[Hessian|hessian]] with eigenvalue λ, each step multiplies the distance to the minimum by `1 − ηλ`.
-The iterate approaches monotonically for `ηλ < 1`, overshoots but converges for `1 < ηλ < 2`, and moves away for `ηλ > 2`, where the factor is below −1.
-LeCun, Simard and Pearlmutter (1993) used this to set η from an online estimate of λ<sub>max</sub>.
-Wu, Ma and E (2018) read it as a selection rule: gradient descent can converge only to minima with `λ_max < 2/η`, and SGD must also satisfy a condition set by its noise.
-With [[heavy-ball momentum|hb]] of coefficient β, the bound becomes `ηλ < 2(1 + β)`, so momentum lets the same η settle in sharper minima.
+This factor gives three regimes:
+
+1. For `ηλ < 1` the iterate approaches the minimum monotonically.
+2. For `1 < ηλ < 2` it overshoots but converges.
+3. For `ηλ > 2` the factor is below −1, and the iterate moves away.
+
+With [[heavy-ball momentum|hb]] of coefficient β, the bound becomes `ηλ < 2(1 + β)`.
+So momentum lets the same η settle in sharper minima.
+
+LeCun, Simard and Pearlmutter (1993) used the condition to set η from an online estimate of λ<sub>max</sub>.
+Wu, Ma and E (2018) read it as a selection rule: gradient descent can converge only to minima with `λ_max < 2/η`.
+SGD must also satisfy a further condition, set by its noise.
 
 Above the threshold, the higher-order shape of the loss decides what happens.
 Lewkowycz et al. (2020) solved the dynamics of a wide two-layer linear network and found three phases, set by the curvature λ₀ at initialization:
@@ -58,18 +75,26 @@ Jastrzębski et al. (2020) found that a larger learning rate or a smaller batch 
 ## Method
 
 The sheet is a bowl with a round Gaussian well at its centre (depth 0.6, width s = 0.14).
-Around it, six Gaussian wells of depth 0.3 sit on an ellipse, with widths from 0.026 to 0.15 and λ<sub>max</sub> from about 18 to 470, so one η can be above the limit for some and below it for others.
-Each well of the ring is labelled with λ<sub>max</sub> and ηλ, the central well with λ<sub>max</sub> and 2/λ; wells with ηλ &gt; 2 are ringed.
-Fans of nine [[gradient descent|gd]] particles start 0.035 from the central minimum with `η = c · 2/λ`, c from 0.4 to 2, and run 360 steps.
-The upper figure plots each one’s root-mean-square distance from the minimum over its last 40 steps; ‘largest c that settled’ is the largest c whose distance is below 10⁻³.
-[[SGD|sgd]] cohorts (σ = 0.05) at the slider’s η are released next to the ring wells.
-An SGD particle counts as settled when it comes [[to rest|rest]] with steps shorter than 0.004, a stricter test than the glossary’s, so a bouncing particle never counts.
-It counts as thrown out when a step longer than 0.02 carries it out of a well it had occupied for more than three steps.
+Around it, six Gaussian wells of depth 0.3 sit on an ellipse, with widths from 0.026 to 0.15.
+Their λ<sub>max</sub> runs from about 18 to 470, so one η can be above the limit for some wells and below it for others.
+The central well is labelled with λ<sub>max</sub> and 2/λ, and each ring well with λ<sub>max</sub> and ηλ, ringed when ηλ &gt; 2.
+
+Fans of nine [[gradient descent|gd]] particles start 0.035 from the central minimum and run 360 steps.
+Each particle in a fan has its own step `η = c · 2/λ`, with c from 0.4 to 2.
+The upper figure plots each particle’s root-mean-square distance from the minimum over its last 40 steps.
+‘Largest c that settled’ is the largest c whose distance is below 10⁻³.
+
+[[SGD|sgd]] cohorts with noise σ = 0.05 run at the slider’s η and are released next to the ring wells.
+An SGD particle counts as settled when it comes [[to rest|rest]] with steps shorter than 0.004.
+This test is stricter than the glossary’s, so a bouncing particle never counts.
+A particle counts as thrown out when a step longer than 0.02 carries it out of a well it had occupied for more than three steps.
 
 ## Caveat
 
 A fixed two-parameter well cannot lower its own curvature.
-So this sheet shows the instability that starts a catapult but not the fall in curvature that ends it: a thrown particle lands in another, flatter well.
+So this sheet shows the instability that starts a catapult, but not the fall in curvature that ends it.
+Instead, a thrown particle lands in another, flatter well.
+
 How far ηλ can rise above 2 before a particle leaves a well depends on the well’s surroundings.
 Across two seeds of the sheet it ranged from 3.4 to 7, so the 7 in the Try is specific to this layout.
 
@@ -78,8 +103,11 @@ Across two seeds of the sheet it ranged from 3.4 to 7, so the 7 in the Try is sp
 In deep networks the phases depend on depth and width as well as on η.
 Kalra and Barkeshli (2023) found that as depth grows and width shrinks, the loss catapult moves to larger η.
 That opens a phase in which η is above 2/λ₀ and yet the loss falls steadily while the curvature drops.
-Zhu et al. (2024) found that the loss spikes of minibatch SGD are catapults too, confined to a few top directions, and that smaller batches produce more of them.
-Learning-rate [[warmup|warmup]] works largely by letting training reach better-conditioned regions that tolerate a larger η (Kalra and Barkeshli 2024; see <i>Warmup</i>).
+Later they found that learning-rate [[warmup|warmup]] works largely by moving training to better-conditioned regions that tolerate a larger η (Kalra and Barkeshli 2024; see <i>Warmup</i>).
+
+Minibatch SGD has catapults of its own.
+Zhu et al. (2024) found that its loss spikes are catapults confined to a few top directions, and that smaller batches produce more of them.
+
 With [[Adam|adam]], the optimizer of nearly all large models, the limit applies to the [[preconditioned sharpness|psharp]] instead.
 That limit is 38/η at β₁ = 0.9, so λ<sub>max</sub> itself can sit far above 2/η (see <i>The edge of stability</i>).
 What survives at scale is the form of the rule: each optimizer has a measure of curvature that the step size caps.

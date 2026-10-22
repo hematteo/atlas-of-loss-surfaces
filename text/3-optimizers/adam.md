@@ -6,17 +6,25 @@ A narrow quadratic valley that can be turned against the parameter axes, to ask 
 
 ## Lead
 
-[[Adam|adam]] divides each coordinate’s step by a running root mean square of that coordinate’s gradient, which gives each coordinate its own step size.
-So, unlike [[gradient descent|gd]], it depends on how the axes are oriented: if we rotate the loss, gradient descent’s path rotates with it, while Adam’s changes.
-Why Adam outperforms [[SGD|sgd]] on transformers is an open question.
-Proposed explanations include its closeness to [[sign descent|signsgd]] (Kunstner et al. 2023) and an ℓ∞ geometry of the loss that rotation destroys (Xie, Mohamadi and Li 2025).
+[[Adam|adam]] gives each coordinate its own step size.
+It divides each coordinate’s step by a running root mean square of that coordinate’s gradient.
+
+This per-coordinate scaling makes Adam depend on how the axes are oriented, unlike [[gradient descent|gd]].
+If we rotate the loss, gradient descent’s path rotates with it, while Adam’s path changes.
+
+Adam outperforms [[SGD|sgd]] on transformers, and why it does is an open question.
+Proposed explanations include:
+
+1. Its closeness to [[sign descent|signsgd]], which steps by the sign of each gradient coordinate (Kunstner et al. 2023).
+2. An ℓ∞ geometry of the loss that rotation destroys (Xie, Mohamadi and Li 2025).
+
 On this plate we can turn the valley against the axes and count what Adam loses.
 
 ## In practice
 
 Adam exploits the coordinate axes.
-After a random rotation of the loss it trained worse, while SGD, which is rotation-invariant, was unaffected (Xie, Mohamadi and Li 2025).
-Retest Adam after any reparametrization that mixes coordinates.
+After a random rotation of the loss, Adam trained worse, while rotation-invariant SGD was unaffected (Xie, Mohamadi and Li 2025).
+So retest Adam after any reparametrization that mixes coordinates.
 
 ## Figure caption
 
@@ -28,42 +36,59 @@ The sign methods level off, since a step of fixed size cannot settle onto the fl
 ## Try
 
 1. Turn the basin to 45° → ‘Adam steps’ rises from 37 to 132 while ‘GD steps’ stays about 145.
-   A diagonal [[preconditioner|precond]] rescales the curvatures only along the axes, and at 45° each coordinate mixes the steep and shallow directions, so no per-coordinate scale can separate them.
+   Adam is a diagonal [[preconditioner|precond]], so it can rescale the curvature only along the axes.
+   At 45° each coordinate mixes the steep and shallow directions, so no per-coordinate scale can separate them.
 2. At 45°, watch [[signSGD|signsgd]] → its particles barely move down the valley and never come to rest.
    While the cross-valley gradient dominates both coordinates, each diagonal step goes straight across the floor.
-3. Watch [[Lion|lion]] → its particles get further down the valley than signSGD’s: its momentum averages out the alternating cross-valley gradient.
-   That gradient flips sign each time a particle crosses the floor, while the small gradient along the valley keeps its sign and survives the average.
+3. Watch [[Lion|lion]] → its particles get further down the valley than signSGD’s.
+   Lion’s momentum averages out the cross-valley gradient, which flips sign each time a particle crosses the floor.
+   The small gradient along the valley keeps its sign, so it survives the average.
 
 ## Background
 
-Adam (Kingma and Ba 2015) keeps exponential averages of the gradient and of its elementwise square, m̂ and v̂, and steps by `η m̂/(√v̂ + ε)`.
-It descends from RPROP (Riedmiller and Braun 1993), which used only the sign of each partial derivative, through [[RMSprop|rmsprop]] (Tieleman and Hinton 2012), a minibatch form of RPROP that divides each gradient by a running root mean square.
-It also descends from AdaGrad (Duchi, Hazan and Singer 2011).
-With β₁ = β₂ = 0 (no averaging) and ε = 0, each coordinate of the gradient is divided by its own size, so the step is `η sign(g)`, which is sign descent (Bernstein et al. 2018).
-Balles and Hennig (2018) split Adam into the sign of the gradient and a magnitude set by its relative variance, so Adam approaches sign descent when the noise is small.
+Adam (Kingma and Ba 2015) keeps exponential averages of the gradient and of its elementwise square, m̂ and v̂.
+It then steps by `η m̂/(√v̂ + ε)`.
+This update descends from RPROP (Riedmiller and Braun 1993), which used only the sign of each partial derivative.
+The line runs through [[RMSprop|rmsprop]] (Tieleman and Hinton 2012), a minibatch form of RPROP that divides each gradient by a running root mean square.
+Adam also descends from AdaGrad (Duchi, Hazan and Singer 2011).
+
+With β₁ = β₂ = 0 there is no averaging, and with ε = 0 each coordinate of the gradient is divided by its own size.
+The step is then `η sign(g)`, which is sign descent (Bernstein et al. 2018).
+Balles and Hennig (2018) split Adam into the sign of the gradient and a magnitude set by its relative variance.
+So when the noise is small, Adam approaches sign descent.
+
 Sign descent is steepest descent in the ℓ∞ norm, and it moves every coordinate by the same amount.
 Balles, Pedregosa and Le Roux (2020) found it favourable when the Hessian is concentrated on its diagonal and its largest eigenvalue is much larger than the average.
 Lion (Chen et al. 2023), found by program search, takes the sign of an interpolation between momentum and the current gradient.
-
 All these methods are diagonal, so unlike gradient descent they change under a rotation of parameter space.
-Kunstner et al. (2023) found that the gap between SGD and Adam on transformers persists with full batches, where Adam behaves like sign descent with momentum.
-Zhang et al. (2024) related the gap to Hessian spectra that differ between parameter blocks.
-Xie, Mohamadi and Li (2025) proved convergence under ℓ∞ smoothness and found that after a random rotation of the training loss, Adam can be outperformed by rotation-invariant variants of SGD.
+
+Several studies have probed the gap between SGD and Adam on transformers:
+
+1. Kunstner et al. (2023) found that the gap persists with full batches, where Adam behaves like sign descent with momentum.
+2. Zhang et al. (2024) related the gap to Hessian spectra that differ between parameter blocks.
+3. Xie, Mohamadi and Li (2025) proved convergence under ℓ∞ smoothness.
+   They also found that after a random rotation of the training loss, rotation-invariant variants of SGD can outperform Adam.
 
 ## Method
 
-The valley is an exact quadratic, `½(λ_u u² + λ_v v²)` with λ<sub>u</sub> = 1 and λ<sub>v</sub> = 200, so it curves 200 times more steeply across than along.
+The valley is an exact quadratic, `½(λ_u u² + λ_v v²)`, with λ<sub>u</sub> = 1 and λ<sub>v</sub> = 200.
+So it curves 200 times more steeply across than along.
 Its coordinates (u, v) are turned by α against (θ₁, θ₂), and it is capped smoothly far from the floor.
 A faint bowl and texture bring the floor’s eigenvalues to about 1.5 and 197.
-η = 0.009, so ηλ<sub>max</sub> ≈ 1.8 and gradient descent is [[stable|stab]].
+
+The learning rate is η = 0.009, so ηλ<sub>max</sub> ≈ 1.8 and gradient descent is [[stable|stab]].
 Adam uses β₁ = 0.9, β₂ = 0.999 and ε = 10⁻⁸.
 Lion uses β₁ = 0.9 and β₂ = 0.99.
 Gradient noise is σ = 0.005.
+
 Cohorts start at u = ±0.4, v = ±0.04.
-The step counts come from separate noise-free runs from that point, one for each α in steps of 7.5°: the number of steps until `L − L* < 0.005`.
+The step counts come from separate noise-free runs from that point, one for each α in steps of 7.5°.
+Each run counts the steps until `L − L* < 0.005`.
+
 The last readout, λ<sub>max</sub>η², sets the loss at which sign descent stops in an axis-aligned valley.
 There it ends in a two-step cycle across the floor, with mean loss between λη²/8 and λη²/4.
-This is because each sign step moves the steep coordinate by η, so the cycle alternates between two points η apart, which give λη²/8 when they straddle the floor evenly.
+Each sign step moves the steep coordinate by η, so the cycle alternates between two points η apart.
+When those points straddle the floor evenly, the mean loss is λη²/8.
 
 ## Caveat
 
@@ -73,14 +98,20 @@ In higher dimensions the effect is a matter of degree, which Balles, Pedregosa a
 
 ## At scale
 
-In language models, Kunstner et al. (2024) traced much of the gap between SGD and Adam to heavy-tailed class imbalance: gradient descent makes slow progress on the many rare tokens, and Adam and sign descent do not.
-Zhao et al. (2025) found that Adam, Lion and signed momentum train language models about equally well, and that what matters most is adaptivity on the last layer and the normalization parameters.
+In language models, Kunstner et al. (2024) traced much of the gap between SGD and Adam to heavy-tailed class imbalance.
+Gradient descent makes slow progress on the many rare tokens, while Adam and sign descent do not.
+Zhao et al. (2025) found that Adam, Lion and signed momentum train language models about equally well.
+In their comparison, what matters most is adaptivity on the last layer and the normalization parameters.
+
 In large networks the natural unit is often a whole weight matrix rather than a coordinate.
 Shampoo (Gupta, Koren and Singer 2018) and SOAP (Vyas et al. 2025) precondition each matrix from both sides.
-Muon replaces each matrix’s momentum by the nearest orthogonal matrix, a steepest-descent step in the spectral norm (Bernstein and Newhouse 2024).
-Liu et al. (2025) trained large language models with it on about half of AdamW’s compute.
-These matrix updates rotate along with the matrix’s rows and columns, so within a layer they do not depend on the coordinate axes the way Adam does.
-So the axes may still matter at scale, with parameter blocks and matrices as the units rather than single coordinates.
+Muon replaces each matrix’s momentum by the nearest orthogonal matrix.
+This is a steepest-descent step in the spectral norm (Bernstein and Newhouse 2024).
+Liu et al. (2025) trained large language models with Muon on about half of AdamW’s compute.
+
+These matrix updates rotate along with the matrix’s rows and columns.
+So within a layer they do not depend on the coordinate axes the way Adam does.
+At scale the axes may still matter, but with parameter blocks and matrices as the units rather than single coordinates.
 
 ## References
 

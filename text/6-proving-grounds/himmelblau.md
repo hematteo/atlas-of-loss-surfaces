@@ -6,10 +6,13 @@ Gradient descent, the heavy ball and Adam race from shared starts to four equall
 
 ## Lead
 
-Himmelblau’s 1972 test function, `f(u, v) = (u² + v − 11)² + (u + v² − 7)²`, has four global minima with f = 0, one in each quadrant.
-The function is a sum of squares, so f = 0 is as low as it can go, reached where both squares vanish.
-They surround a single maximum at (−0.27, −0.92).
-Which minimum a run reaches depends only on where it starts and how the optimizer moves, and this plate shows three optimizers making that choice.
+Himmelblau’s 1972 test function is `f(u, v) = (u² + v − 11)² + (u + v² − 7)²`.
+It is a sum of squares, so f = 0 is as low as it can go, reached where both squares vanish.
+That happens at four points, one in each quadrant, so f has four global minima with f = 0.
+They surround a single maximum, the peak, at (−0.27, −0.92).
+
+Which minimum a run reaches depends only on where it starts and how the optimizer moves.
+This plate shows three optimizers making that choice.
 
 ## In practice
 
@@ -19,13 +22,17 @@ So compare where runs end, as well as how low.
 
 ## Try
 
-1. Let the races run → in 600 races, the minimum where most of [[Adam|adam]]’s particles came to rest differed from [[gradient descent|gd]]’s in one race in twelve, and the [[heavy ball|hb]]’s in one race in 120.
+1. Let the races run → in 600 races, the minimum where most of [[Adam|adam]]’s particles came to rest differed from [[gradient descent|gd]]’s in one race in twelve.
+   For the [[heavy ball|hb]] it differed in one race in 120.
 2. Click the peak → gradient descent’s six particles split, almost always between C and D, which lie along the peak’s direction of fastest descent.
    Near the peak, small offsets grow fastest along the direction of most negative curvature.
-3. Click the peak again and watch Adam’s particles → they usually reach three or four minima (54 of 60 clicks), because Adam’s first steps, of about η·sign(∇L), send each particle diagonally into the quadrant it starts in.
+3. Click the peak again and watch Adam’s particles → they usually reach three or four minima (54 of 60 clicks).
+   Adam’s first steps are about η·sign(∇L), so each particle moves diagonally into the quadrant it starts in.
    A sign step has full size however small the gradient, so slightly separated particles part at once.
-4. Raise η above 0.038, which is 2/λ<sub>max</sub> at D, the sharpest minimum → gradient descent’s count at D stops growing, because particles there oscillate without coming [[to rest|rest]], while A, B and C stay [[stable|stab]].
-   Near D, each step multiplies the offset along its steepest direction by 1 − ηλ<sub>max</sub>, which is below −1 past that limit, so a particle cannot settle there.
+4. Raise η above 0.038 → gradient descent’s count at D stops growing, while A, B and C stay [[stable|stab]].
+   The value 0.038 is 2/λ<sub>max</sub> at D, the sharpest minimum.
+   Near D, each step multiplies the offset along its steepest direction by 1 − ηλ<sub>max</sub>.
+   Above 0.038 this factor is below −1, so particles at D oscillate without coming [[to rest|rest]].
 
 ## Background
 
@@ -33,18 +40,21 @@ Himmelblau (1972) used the function as a test problem in his textbook on nonline
 It is a standard check that a method can find several minima.
 All four are global, so the question on f is which one a run reaches, rather than which minimum is best.
 
-That question is answered by the basins of attraction.
-[[Gradient flow|gflow]] divides the plane into four [[basins of attraction|basin]], one per minimum.
-Their boundaries run from the maximum through the four [[saddle points|saddle]], and near them a small change of start changes the minimum reached.
-This is why a release at the peak, where all four boundaries meet, splits.
+That question is answered by the four [[basins of attraction|basin]] of [[gradient flow|gflow]], one per minimum.
+Their boundaries run from the maximum through the four [[saddle points|saddle]].
+Near a boundary, a small change of start changes the minimum reached.
+All four boundaries meet at the peak, which is why a release there splits.
 Adam’s update depends on the orientation of the coordinate axes, so its paths, and the basins it effectively sees, differ from those of gradient flow.
 
-The minima are equally deep but not equally curved: in the units of this sheet λ<sub>max</sub> is 32, 31, 41 and 52 at A, B, C and D.
-Gradient descent can converge only to minima with `λ_max < 2/η`, so a large step size excludes the sharpest minima even among minima of equal loss (Wu, Ma and E 2018; see <i>Stability and catapults</i>).
+The minima are equally deep but not equally curved.
+In the units of this sheet, λ<sub>max</sub> is 32, 31, 41 and 52 at A, B, C and D.
+Gradient descent can converge only to minima with `λ_max < 2/η`.
+So a large step size excludes the sharpest minima, even among minima of equal loss (Wu, Ma and E 2018; see <i>Stability and catapults</i>).
 D is the sharpest, so it is the first to be excluded as η grows.
 
 Networks have the same property on a far larger scale.
-Permuting the h hidden units of a layer, together with their incoming and outgoing weights, leaves the function unchanged, so every minimum has up to h! exact copies (see <i>Twins and re-basin</i>).
+Permuting the h hidden units of a layer, together with their incoming and outgoing weights, leaves the function unchanged.
+So every minimum has up to h! exact copies (see <i>Twins and re-basin</i>).
 
 ## Method
 
@@ -53,9 +63,11 @@ The sheet has nine [[critical points|crit]].
 The minima are A (3, 2), B (−2.81, 3.13), C (3.58, −1.85) and D (−3.78, −3.28).
 The four saddles have f = 13.3, 67.7, 104.0 and 178.3, and the maximum has f = 181.6.
 The Hessian eigenvalues at the maximum are −1.09 and −0.39.
-Races start at random points on high ground, one every 900 steps.
+
+Races start at random points of high loss, one every 900 steps.
 A particle retires when it comes to rest or after 1,600 steps.
-The figure shows, for each optimizer, how its particles that came to rest divide among the four minima, counted over all races since the plate opened.
+
+The figure shows how each optimizer’s particles that came to rest divide among the four minima, counted over all races since the plate opened.
 The readouts give the counts.
 Particles that leave the sheet or are still moving at 1,600 steps are not counted.
 
@@ -70,7 +82,9 @@ So its counts at B and D here may be slightly low.
 ## At scale
 
 In networks the equally deep minima are not isolated wells.
-Minima of independently trained networks are joined by curves of low loss (see <i>Mode connectivity</i>), and many become [[linearly connected|lmc]] once their hidden units are matched (see <i>Twins and re-basin</i>).
+Minima of independently trained networks are joined by curves of low loss (see <i>Mode connectivity</i>).
+Many become [[linearly connected|lmc]] once their hidden units are matched (see <i>Twins and re-basin</i>).
+
 The rule that a large η excludes the sharpest minima also works differently there.
 Full-batch training raises λ<sub>max</sub> to about 2/η and holds it there while the loss keeps falling (see <i>The edge of stability</i>).
 So there, the sharpness at the end of training mostly records η.

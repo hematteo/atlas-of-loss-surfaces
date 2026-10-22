@@ -6,15 +6,22 @@ GRPO chooses among three solution strategies while the figure tracks the policy�
 
 ## Lead
 
-A policy’s [[entropy|entropy]] measures how spread out its choices are: high when it samples many different answers, zero when it always gives the same one.
+A policy’s [[entropy|entropy]] measures how spread out its choices are.
+It is high when the policy samples many different answers and zero when it always gives the same one.
+
 Cui et al. (2025) found that reinforcement learning from verifiable rewards ([[RLVR|rlvr]]) makes a reasoning model’s policy entropy fall sharply early in training.
 Once the entropy is used up, accuracy stops improving.
-Whether RL narrows what the base model can solve, as measured by [[pass@k|passk]] at large k (the chance that at least one of k samples is right), is disputed (Yue et al. 2025; Liu et al. 2025).
+
+The metric [[pass@k|passk]] is the chance that at least one of k samples is right.
+At large k it measures what a model can solve.
+Whether RL narrows what the base model can solve is disputed (Yue et al. 2025; Liu et al. 2025).
+
 Here we can watch the entropy fall and see what it costs.
 
 ## In practice
 
-Track policy entropy during RLVR: in Cui et al.’s runs, an early collapse came before accuracy saturated, so it may warn that accuracy will soon saturate.
+Track policy entropy during RLVR.
+In Cui et al.’s runs an early collapse came before accuracy saturated, so it may warn that accuracy will soon saturate.
 Also compare pass@k at large k with the base model’s, since whether RL narrows it is disputed.
 
 ## Figure caption
@@ -25,60 +32,90 @@ Where the two GRPO curves coincide, the first-order rule accounts for the whole 
 
 ## Try
 
-1. Watch the figure → [[GRPO|grpo]]’s entropy falls below 0.1 nats within about 700 steps, and the dashed first-order prediction lies on top of it.
-   Each step changes the entropy by about `−Cov_π(log π, Δz)`, with Δz the change in the logits.
+1. Watch the figure → [[GRPO|grpo]]’s entropy falls below 0.1 nats within about 700 steps.
+   The dashed first-order prediction lies on top of it.
+   Each step changes the entropy by about `−Cov_π(log π, Δz)`, where Δz is the change in the logits.
    A step that raises answers that are already likely makes the covariance positive, so the entropy falls.
-2. Wait for the race to end → GRPO sits on the <em>Shortcut</em>, which has the highest pass@1, 0.54, and its pass@16 has fallen to 0.60 from 0.92 or more.
+2. Wait for the race to end → GRPO sits on the <em>Shortcut</em>, which has the highest pass@1, 0.54.
+   GRPO’s pass@16 has fallen to 0.60 from 0.92 or more.
    The Shortcut never solves a tricky problem, so its pass@16 cannot exceed the 60% of problems that are routine.
-3. Compare the other two optimizers → the pass@16 objective reaches a pass@16 of 0.999, and the entropy bonus holds a mixture that lies between it and GRPO.
+3. Compare the other two optimizers → the pass@16 objective reaches a pass@16 of 0.999.
+   The entropy bonus holds a mixture that lies between it and GRPO.
    <em>Derivation</em> solves tricky problems that the Shortcut never does, which pays when there are many tries.
 4. Wait for a race from the [[base model|@Base model]] that favours <em>Guess</em> (0.65) → GRPO’s entropy rises before it collapses.
-   Guess is likely but rarely passes, so the first steps lower a likely answer’s logit, which raises the entropy.
+   Guess is likely but rarely passes, so the first steps lower its logit.
+   Lowering a likely answer’s logit raises the entropy.
 
 ## Background
 
 GRPO (Shao et al. 2024) samples a group of solutions for each problem.
-It gives each solution an advantage equal to its reward minus the group mean, divided by the group’s standard deviation, and needs no value network.
-Cui et al. (2025) observed that in RLVR the entropy drops sharply early and accuracy then follows an empirical law `R = −a e^H + b`, so accuracy rises as entropy falls.
+Each solution’s advantage is its reward minus the group mean, divided by the group’s standard deviation.
+GRPO needs no value network.
+
+Cui et al. (2025) observed that in RLVR the entropy drops sharply early in training.
+Accuracy then follows an empirical law, `R = −a e^H + b`, so accuracy rises as entropy falls.
 Setting H to 0 gives −a + b, so the law also predicts a ceiling on accuracy once the entropy is gone.
-They derived that for a softmax policy one step changes the entropy by approximately `−Cov_π(log π(a), Δz(a))`, with Δz the change in the logits.
-Under exact policy gradient `Δz(a)` is proportional to π(a) times the advantage of a, so raising actions that are both likely and successful lowers the entropy.
-They proposed limiting updates on high-covariance tokens (Clip-Cov, KL-Cov).
-Hao et al. (2026) showed that the token-level change also depends on clipping and on each token’s probability and entropy, and they reweight tokens to control it.
+
+They also derived how one step changes the entropy of a softmax policy.
+The change is approximately `−Cov_π(log π(a), Δz(a))`, where Δz is the change in the logits.
+Under exact policy gradient `Δz(a)` is proportional to π(a) times the advantage of a.
+So raising actions that are both likely and successful lowers the entropy.
+
+Cui et al. proposed limiting updates on high-covariance tokens (Clip-Cov, KL-Cov).
+Hao et al. (2026) showed that the token-level change also depends on clipping and on each token’s probability and entropy.
+They reweight tokens to control it.
 
 The pass@k debate is about what the lost entropy costs.
-Yue et al. (2025) measured the cost with pass@k: models trained with RLVR win at small k, but their base models reach higher pass@k at large k.
-They read this as RL narrowing the base model’s reasoning rather than extending it.
-Liu et al. (2025) reported that prolonged RL with KL control and reference resets expands it.
+Yue et al. (2025) measured that cost with pass@k.
+Models trained with RLVR win at small k, but their base models reach higher pass@k at large k.
+Yue et al. read this as RL narrowing the base model’s reasoning rather than extending it.
+
+Liu et al. (2025) reported that prolonged RL with KL control and reference resets expands that reasoning.
 Walder and Karkhanis (2025) optimize pass@k directly by transforming each batch’s rewards.
 
 ## Method
 
 A policy chooses among three strategies, `π = softmax(θ₁, θ₂, 0)`, drawn in the projection of <i>The pull of softmax</i>.
 Problems are routine (60%) or tricky (40%).
-The verifier passes the <em>Shortcut</em> on 90% of routine and no tricky problems, <em>Derivation</em> on 40% and 45%, and <em>Guess</em> on 10% and 5%, so their pass@1 values are 0.54, 0.42 and 0.08.
-The sheet is `1.6(1 − pass@1)`; dashed blue lines are contours of pass@16.
-At every step (η = 0.15) GRPO samples a group of 8 rollouts for each kind of problem and takes a policy-gradient step with the group-normalized advantages.
+The verifier passes each strategy on a fixed share of each kind:
+
+1. The <em>Shortcut</em> on 90% of routine and no tricky problems, a pass@1 of 0.54.
+2. <em>Derivation</em> on 40% and 45%, a pass@1 of 0.42.
+3. <em>Guess</em> on 10% and 5%, a pass@1 of 0.08.
+
+The sheet is `1.6(1 − pass@1)`, and dashed blue lines are contours of pass@16.
+
+At every step (η = 0.15) GRPO samples a group of 8 rollouts for each kind of problem.
+It then takes a policy-gradient step with the group-normalized advantages.
 A group that all passed or all failed contributes nothing, since every reward in it equals the group mean.
+
 The entropy bonus adds `τ∇H` with τ = 0.2.
 The pass@16 objective follows the exact gradient of pass@16.
 All updates move θ₁ and θ₂ only.
-The figure averages entropy over each optimizer’s particles; the dashed curve is GRPO’s initial entropy plus the sum of `−Cov_π(log π, Δz)` over its steps.
+
+The figure averages entropy over each optimizer’s particles.
+The dashed curve is GRPO’s initial entropy plus the sum of `−Cov_π(log π, Δz)` over its steps.
 
 ## Caveat
 
-Here the verifier’s pass rates are fixed and a strategy that solves both kinds of problem is always available, so optimizing pass@16 finds it.
+Here the verifier’s pass rates are fixed, and a strategy that solves both kinds of problem is always available.
+So optimizing pass@16 finds it.
 In a language model the alternatives are solution paths the base model rarely samples.
 Whether RL can reach them is what Yue et al. and Liu et al. disagree about.
 
 ## At scale
 
 Here the policy makes one choice among three strategies, whereas a language model makes a choice at every token.
-Most tokens of a reasoning trace are nearly certain, and a small minority of high-entropy “forking” tokens decide which path it takes.
-Wang et al. (2025) restricted policy-gradient updates to the 20% of tokens with the highest entropy, which matched full updates on Qwen3-8B and did better on larger Qwen3 models.
-The fixes for entropy collapse that came into wide use in 2025 also act on single tokens.
-DAPO’s Clip-Higher (Yu et al. 2025) raises only the upper clipping bound of the policy ratio, so that unlikely tokens can gain probability.
-Cui et al.’s Clip-Cov and KL-Cov restrict updates on the tokens with the highest covariance.
+Most tokens of a reasoning trace are nearly certain.
+A small minority of high-entropy “forking” tokens decide which path the trace takes.
+
+Wang et al. (2025) restricted policy-gradient updates to the 20% of tokens with the highest entropy.
+This matched full updates on Qwen3-8B and did better on larger Qwen3 models.
+
+The fixes for entropy collapse that came into wide use in 2025 also act on single tokens:
+
+1. DAPO’s Clip-Higher (Yu et al. 2025) raises only the upper clipping bound of the policy ratio, so that unlikely tokens can gain probability.
+2. Cui et al.’s Clip-Cov and KL-Cov restrict updates on the tokens with the highest covariance.
 
 ## References
 

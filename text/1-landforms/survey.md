@@ -2,22 +2,33 @@
 
 ## Subtitle
 
-SGD, the heavy ball and Adam descend a two-parameter surface built from features described in studies of real networks, to compare how each optimizer fares on each.
+SGD, the heavy ball and Adam descend a two-parameter surface built from features found in real networks.
 
 ## Lead
 
-Training a network moves its parameters θ downhill on the [[loss surface|loss]] `L(θ)`, which pictures the loss on the training data as a height above each setting of θ.
-An optimizer is the rule that turns the local slope, the gradient, into a step.
-The gradient points uphill, so SGD steps against it, with noise added, and the heavy ball also carries a velocity built up over past steps.
-The shape of the surface affects which minimum training reaches, how quickly, and possibly how well the result generalizes to new data.
-Studies of real networks most often describe minima of very different [[sharpness|sharpness]], [[ill-conditioned|cond]] valleys, [[saddle points|saddle]] and [[plateaus|plateau]].
-In map terms, these are steep wells and wide basins, valleys far steeper across than along, passes, and nearly level ground.
-This sheet sets them side by side in two dimensions, where we can watch how each optimizer meets each one.
+A neural network maps inputs to predictions using its parameters, the weights and biases, which we collect into a single vector θ.
+The loss `L(θ)` measures the error of those predictions on the training data, and training minimizes it.
+
+Every θ in parameter space has a loss value, so `L` defines a surface over that space: the [[loss surface|loss]].
+Parameters that fit the training data well sit low on this surface, so training is a descent on it.
+At each step an optimizer computes the gradient `∇L(θ)`, or a noisy estimate of it from a minibatch, and uses it to update θ.
+
+How that descent goes depends on the geometry of the surface.
+The geometry decides which minimum training converges to and how quickly, and it may also affect how well the trained network generalizes.
+Studies of real networks keep finding four recurring features:
+
+1. Minima of very different [[sharpness|sharpness]]: narrow wells and wide basins.
+2. [[Ill-conditioned|cond]] valleys, with far higher curvature across the valley than along it.
+3. [[Saddle points|saddle]], where the loss curves up in some directions and down in others.
+4. [[Plateaus|plateau]], regions where both the gradient and the curvature are close to zero.
+
+Real loss surfaces have millions or billions of dimensions and cannot be plotted directly.
+This sheet builds all four features into a loss over just two parameters, θ₁ and θ₂, so we can plot it in full and watch [[SGD|sgd]], the [[heavy ball|hb]] and [[Adam|adam]] on each one.
 
 ## In practice
 
 Treat a one- or two-dimensional loss plot as a slice, not a map: it shows only the directions it was cut along.
-Normalize its directions filter by filter (Li et al. 2018) and check its apparent sharpness against [[Hessian|hessian]] eigenvalues.
+Normalize its directions filter by filter (Li et al. 2018), and check its apparent sharpness against [[Hessian|hessian]] eigenvalues.
 
 ## Figure caption
 
@@ -27,56 +38,65 @@ Columns are tinted by optimizer.
 ## Try
 
 1. Click the curved ravine’s floor to release a [[cohort|cohort]] → [[SGD|sgd]] creeps along the floor.
-   The curvature λ across the floor is 210 to 330, so at the default [[learning rate|lr]] η, ηλ there is already about 1.
-   Each step multiplies the distance to the floor by 1 − ηλ, so a step across already lands close to the floor.
-   A step small enough to be stable across the ravine makes little progress along it.
-2. Watch the [[heavy ball|hb]] in the same cohort → it runs down the floor far ahead of SGD, because its velocity builds up along the floor, where the gradient keeps its direction (see <i>Ravines</i> and <i>Momentum</i>).
-3. Raise η to about 1.3 times the 2/λ printed at the [[Sharp Minimum|@Sharp Minimum]] → SGD’s particles there no longer come [[to rest|rest]]: gradient descent is [[stable|stab]] only if `η < 2/λ_max`.
-   Above 2/λ, each step overshoots the bottom by more than the last.
-   The heavy ball, stable up to `2(1 + β)/λ_max`, and Adam still settle (see <i>Stability and catapults</i>).
+   Across the floor the curvature λ is 210 to 330, so ηλ is already about 1 at the default [[learning rate|lr]] η.
+   Each step multiplies the distance to the floor by 1 − ηλ, so one step across lands close to the floor.
+   But a step small enough to be stable across the ravine makes little progress along it.
+2. Watch the [[heavy ball|hb]] in the same cohort → it runs down the floor far ahead of SGD.
+   Along the floor the gradient keeps its direction, so the heavy ball’s velocity builds up there (see <i>Ravines</i> and <i>Momentum</i>).
+3. Raise η to about 1.3 times the 2/λ printed at the [[Sharp Minimum|@Sharp Minimum]] → SGD’s particles there no longer come [[to rest|rest]].
+   Gradient descent is [[stable|stab]] only if `η < 2/λ_max`, and above 2/λ each step overshoots the minimum by more than the last.
+   The heavy ball is stable up to `2(1 + β)/λ_max`, so it still settles there, and so does Adam (see <i>Stability and catapults</i>).
 
 ## Background
 
-Real loss surfaces have millions to billions of dimensions, so they are studied indirectly.
-One method plots the loss along a line or a plane through parameter space.
-Goodfellow, Vinyals and Saxe (2015) found that, for a range of standard networks, the loss falls monotonically along the straight line from the initialization to the trained solution.
-Li et al. (2018) showed two-dimensional slices that are nearly convex for networks with skip connections and chaotic for deep networks without them.
-The other method measures curvature through the [[Hessian|hessian]], the matrix of second derivatives of the loss.
-At the end of training its spectrum is a bulk of eigenvalues near zero plus a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019).
+Real loss surfaces are studied in two indirect ways:
 
-Each feature on this sheet has its own literature.
-Minima differ in sharpness, which has been linked to generalization (Keskar et al. 2017; see <i>Sharp and flat minima</i>).
-Dauphin et al. (2014) argued that in high dimensions, [[critical points|crit]] (points where the gradient is zero) with high loss are mostly saddles, not local minima.
-Plateaus appear when hidden units start nearly identical and training must break the symmetry between them (Saad and Solla 1995).
-Ill-conditioning limits the step size: gradient descent needs `η < 2/λ_max`, so it moves slowly along directions of low curvature (LeCun et al. 1998).
+1. Slices plot the loss along a line or a plane through parameter space.
+   Along the straight line from initialization to the trained solution, the loss falls monotonically for a range of standard networks (Goodfellow, Vinyals and Saxe 2015).
+   Two-dimensional slices by Li et al. (2018) are nearly convex for networks with skip connections and chaotic for deep networks without them.
+2. The [[Hessian|hessian]], the matrix of second derivatives of the loss, measures curvature.
+   At the end of training its spectrum is a bulk of eigenvalues near zero plus a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019).
+
+Each feature also has its own literature:
+
+1. Minima differ in sharpness, which has been linked to generalization (Keskar et al. 2017; see <i>Sharp and flat minima</i>).
+2. Ill-conditioning limits the step size to `η < 2/λ_max`, so gradient descent moves slowly along directions of low curvature (LeCun et al. 1998).
+3. [[Critical points|crit]] are points where the gradient is zero.
+   Dauphin et al. (2014) argued that in high dimensions, those with high loss are mostly saddles, not local minima.
+4. Plateaus appear when hidden units start nearly identical and training must break the symmetry between them (Saad and Solla 1995).
 
 ## Method
 
 The sheet is an analytic function: a gentle bowl plus Gaussian wells and hills, a curved ravine, a high plateau and a faint ridged texture.
 [[SGD|sgd]], the [[heavy ball|hb]] and [[Adam|adam]] start from the same points, so only the optimizer differs, and every step leaves ink.
-Each [[particle|particle]] takes real optimizer steps on the gradient, computed by central differences, with noise added: `g̃ = ∇L(θ) + σξ`, `ξ ~ N(0, I)`.
-This isotropic noise, the same size in every direction, is a simple stand-in for minibatch noise, which in real networks is anisotropic (see <i>The shape of the noise</i>).
+
+Each [[particle|particle]] takes real optimizer steps on a gradient computed by central differences, with noise added: `g̃ = ∇L(θ) + σξ`, `ξ ~ N(0, I)`.
+This noise is isotropic, the same size in every direction.
+It is a simple stand-in for minibatch noise, which in real networks is anisotropic (see <i>The shape of the noise</i>).
 
 [[Critical points|crit]] are found by Newton’s method, started wherever the gradient changes sign on a grid over the sheet without its texture.
 Each is then refined on the full sheet and classified by the signs of the Hessian’s eigenvalues.
 Saddles are drawn as passes, such as the [[Saddle of Hesitation|@Saddle of Hesitation]].
-Among the minima that lie more than 0.08 below their lowest pass, the one whose smaller Hessian eigenvalue is largest, so sharp in every direction, is labelled the [[Sharp Minimum|@Sharp Minimum]].
-The one with the smallest λ<sub>max</sub>, so flat in every direction, is labelled the [[Flat Basin|@Flat Basin]].
+
+Among the minima more than 0.08 below their lowest pass, the [[Sharp Minimum|@Sharp Minimum]] is the one whose smaller Hessian eigenvalue is largest.
+So it is sharp in every direction.
+The [[Flat Basin|@Flat Basin]] is the one among them with the smallest λ<sub>max</sub>, so it is flat in every direction.
 The figure is a histogram of the loss at which particles came [[to rest|rest]].
 
 ## Caveat
 
 On this sheet a minimum is an isolated point and every feature is in view.
-In an overparameterized network, one with more parameters than training examples, the global minima form high-dimensional manifolds (Cooper 2018).
-Most Hessian eigenvalues there are near zero, and a two-dimensional slice shows only the directions it was cut along.
-The apparent sharpness of a slice also depends on the weights’ scale, so Li et al. (2018) normalize each direction filter by filter.
+In an overparameterized network, which has more parameters than training examples, the global minima form high-dimensional manifolds (Cooper 2018).
+Most Hessian eigenvalues there are near zero.
+
+A two-dimensional slice through such a network shows only the directions it was cut along, and its apparent sharpness depends on the weights’ scale.
 So the sheet shows kinds of feature, not any one network.
 
 ## At scale
 
-A random direction in a space of millions of dimensions sees roughly the average curvature, the Hessian’s trace divided by the dimension.
-This is because the curvature along a random direction averages all the eigenvalues with nearly equal weights.
-So a random slice through a saddle with a few downhill directions usually looks like a bowl.
+In millions of dimensions, the curvature along a random direction weights all the Hessian’s eigenvalues nearly equally.
+So it is roughly the average curvature, the Hessian’s trace divided by the dimension.
+A random slice through a saddle with only a few directions of negative curvature then usually looks like a bowl.
 Böttcher and Wheeler (2024) showed that slices along the top Hessian eigenvectors reveal what random ones hide.
 
 The monotonic fall from initialization to solution is common but not universal.
