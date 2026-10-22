@@ -1202,6 +1202,228 @@ plate({
   },
 });
 
+// --- same loss, different minima: pretraining minimizes the sum of two data sources' losses. The map is the total
+// L = L₁ + L₂, mirror-symmetric in θ₁, so its two minima on the floor of one valley have the same loss and the same
+// Hessian. The sources share the total's shape and differ by a tilt across the valley, L_k = L/2 ± p(θ₁)T(θ₂): slight at
+// the common minimum, strong at the compromise, where each source's own minimum lies well off the floor
+const COM = { x: 0.75, s: 1, beta: 0.04, kap: 4, sc: 0.45, bk: 0.1, p0: 0.06, p1: 1.1, xr: 0.1, w: 0.45, st: 0.4, T: 8000, delta: 0.006, hills: [] };
+const COM_INK = ['#4b3fa0', '#cf6d0c'];           // source 1, source 2
+const comP = (x) => COM.p0 + COM.p1 * 0.5 * (1 + Math.tanh((COM.s * x - COM.xr) / COM.w));
+const comDP = (x) => { const c = Math.cosh((COM.s * x - COM.xr) / COM.w); return COM.s * COM.p1 * 0.5 / (COM.w * c * c); };
+const comT = (y) => COM.st * Math.tanh(y / COM.st);
+const comDT = (y) => { const c = Math.cosh(y / COM.st); return 1 / (c * c); };
+const comLk = (k, x, y) => 0.5 * L(x, y) + (k ? -1 : 1) * comP(x) * comT(y);        // k = 0: source 1, k = 1: source 2
+// the downstream loss: the expected loss of a new source drawn like the two (tilt zp with E z² = 3, its own minimum as
+// low as theirs to second order), L/2 + 2p²/λ with λ the curvature across the valley
+const comD = (x, y) => 0.5 * L(x, y) + 2 * comP(x) * comP(x) / PL.st.lamY;
+const COMG = [0, 0], COMA = [0, 0], COMB = [0, 0], COMS = [0, 0];
+function comTilt(x, y) { COMG[0] = comDP(x) * comT(y); COMG[1] = comP(x) * comDT(y); return COMG; }      // ∇(pT)
+function comGrad(k, x, y, o) { grad(x, y); comTilt(x, y); const sg = k ? -1 : 1; o[0] = 0.5 * gX + sg * COMG[0]; o[1] = 0.5 * gY + sg * COMG[1]; return o; }
+function sheetCommon(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0.03 });
+  SYMM = 2;
+  COM.s = R() < 0.5 ? 1 : -1;
+  COM.beta = R.range(0.036, 0.044); COM.p1 = R.range(1.0, 1.2); COM.xr = R.range(0.05, 0.15);
+  COM.hills = [];
+  for (let k = 0; k < 5; k++) COM.hills.push([R.range(-1.3, 1.3), (k % 2 ? 1 : -1) * R.range(0.56, 0.7), R.range(0.3, 0.6), R.range(0.18, 0.32), R.range(0.11, 0.15)]);
+  EXTRA = (x, y) => {
+    const u = x / COM.x, ay = Math.abs(y), y2 = y * y;
+    EXCALM = (1 / 0.88) * (1 - sq5((ay - 0.22) / 0.2));          // no texture on the valley floor
+    let z = COM.beta * (u * u - 1) * (u * u - 1) + COM.kap * COM.sc * COM.sc * (1 - Math.exp(-y2 / (COM.sc * COM.sc))) + COM.bk * y2 + 0.9 * y2 * y2 * y2;
+    for (const [hx, hy, a, sx, sy] of COM.hills) { const dx = (x - hx) / sx, dy = (y - hy) / sy; z += a * Math.exp(-0.5 * (dx * dx + dy * dy)); }
+    return z;
+  };
+  sheetEnd(R, true);
+}
+// a source's own minimum near (x, y): descent, then Newton on its gradient
+function comMin(k, x, y) {
+  const g = COMS, h = 1e-4;
+  for (let it = 0; it < 120; it++) { comGrad(k, x, y, g); const n = Math.hypot(g[0], g[1]); if (n < 1e-3) break; const s = Math.min(0.01, 0.05 * n) / n; x -= s * g[0]; y -= s * g[1]; }
+  for (let it = 0; it < 40; it++) {
+    comGrad(k, x + h, y, COMA); comGrad(k, x, y + h, COMB); comGrad(k, x, y, g);
+    const a = (COMA[0] - g[0]) / h, b = 0.5 * ((COMA[1] - g[1]) / h + (COMB[0] - g[0]) / h), d = (COMB[1] - g[1]) / h, det = a * d - b * b;
+    if (!(det > 1e-9 && a > 0)) break;
+    let sx = (d * g[0] - b * g[1]) / det, sy = (a * g[1] - b * g[0]) / det; const sl = Math.hypot(sx, sy);
+    if (sl > 0.02) { sx *= 0.02 / sl; sy *= 0.02 / sl; }
+    x -= sx; y -= sy; if (sl < 1e-10) break;
+  }
+  return { x, y, L: comLk(k, x, y) };
+}
+// the region where source k is within δ of its own minimum m, flooded on the height grid; outlines in print units
+function comRegion(k, m) {
+  const sub = PHONE ? 1 : 2, dx = GDX * sub, dy = GDY * sub, nI = Math.floor((GW - 1) / sub), nJ = Math.floor((GH - 1) / sub), sg = k ? -1 : 1;
+  const i0 = clamp(Math.floor((m.x - 0.55 - X0) / dx), 0, nI), i1 = clamp(Math.ceil((m.x + 0.55 - X0) / dx), 0, nI);
+  const j0 = clamp(Math.floor((m.y - 0.34 - Y0) / dy), 0, nJ), j1 = clamp(Math.ceil((m.y + 0.34 - Y0) / dy), 0, nJ);
+  const W = i1 - i0 + 1, H = j1 - j0 + 1, V = new Float32Array(W * H), mask = new Float32Array(W * H), q = new Int32Array(W * H);
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const x = X0 + (i0 + i) * dx, y = Y0 + (j0 + j) * dy; V[j * W + i] = 0.5 * HG[(j0 + j) * sub * GW + (i0 + i) * sub] + sg * comP(x) * comT(y); }
+  const s0 = clamp(Math.round((m.y - Y0) / dy) - j0, 0, H - 1) * W + clamp(Math.round((m.x - X0) / dx) - i0, 0, W - 1);
+  for (let delta = COM.delta, tries = 0; tries < 5; tries++, delta *= 0.6) {
+    const lev = m.L + delta; mask.fill(0); let qh = 0, qt = 0, edge = false;
+    if (V[s0] >= lev) continue;
+    q[qt++] = s0; mask[s0] = 1;
+    while (qh < qt) {
+      const c = q[qh++], i = c % W, j = (c / W) | 0;
+      if (i === 0 || j === 0 || i === W - 1 || j === H - 1) { edge = true; break; }
+      for (const n of [c - 1, c + 1, c - W, c + W]) if (!mask[n] && V[n] < lev) { mask[n] = 1; q[qt++] = n; }
+    }
+    if (!edge) return { chains: isoChains(mask, W, H, X0 + i0 * dx, Y0 + j0 * dy, dx, dy, 0.5), delta };
+  }
+  return { chains: [], delta: 0 };
+}
+// the Nexus-style step: one inner step of γ on a source, one on the other from there (the order drawn at random), and an
+// SGD step of η on the displacement divided by γ, with the same gradient noise as SGD
+const COMD = [0, 0];
+function comNexus(i, x, y, eta, g1, g2) {
+  const n1 = g1 - gX, n2 = g2 - gY, gam = SIM.gam, a = NR() < 0.5 ? 0 : 1, sg = a ? -1 : 1;
+  comTilt(x, y);
+  const ax = 0.5 * gX + sg * COMG[0], ay = 0.5 * gY + sg * COMG[1];
+  comGrad(1 - a, x - gam * ax, y - gam * ay, COMB);
+  COMD[0] = -eta * (ax + COMB[0] + n1); COMD[1] = -eta * (ay + COMB[1] + n2);
+  return COMD;
+}
+// the Nexus-style step averaged over the two orders, without noise: to second order ∇(L − (γ/2)∇L₁·∇L₂)
+function comExpected(x, y) {
+  const gam = SIM.gam; let sx = 0, sy = 0;
+  for (const a of [0, 1]) { comGrad(a, x, y, COMA); const ax = COMA[0], ay = COMA[1]; comGrad(1 - a, x - gam * ax, y - gam * ay, COMB); sx += ax + COMB[0]; sy += ay + COMB[1]; }
+  return Math.hypot(sx, sy) / 2;
+}
+function comReset() { const st = PL.st; st.rest = TRIBES.map(() => [0, 0, 0]); st.dsum = TRIBES.map(() => 0); st.dn = TRIBES.map(() => 0); }
+function comFeatures() {
+  const st = PL.st = {}, s = COM.s;
+  comReset();
+  st.C = critAt(-s * COM.x, 0) || minNear(-s * COM.x, 0); st.M = critAt(s * COM.x, 0) || minNear(s * COM.x, 0); st.pass = critAt(0, 0);
+  hess(st.C.x, st.C.y); st.lamY = hYY;
+  st.own = [0, 1].map((k) => [comMin(k, st.C.x, st.C.y - 0.02 * (k ? -1 : 1)), comMin(k, st.M.x + 0.1 * s, st.M.y - 0.26 * (k ? -1 : 1))]);
+  st.reg = st.own.map((o, k) => o.map((m) => comRegion(k, m)));
+  const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y), ex = (m, j) => 0.5 * (comLk(0, m.x, m.y) - st.own[0][j].L + comLk(1, m.x, m.y) - st.own[1][j].L);
+  st.dC = d(st.own[0][0], st.own[1][0]); st.dM = d(st.own[0][1], st.own[1][1]);
+  st.exC = ex(st.C, 0); st.exM = ex(st.M, 1);
+  st.DC = comD(st.C.x, st.C.y); st.DM = comD(st.M.x, st.M.y);
+  // the valley floor, from beyond the common minimum to beyond the compromise, for the figure
+  const n = 150, pr = st.prof = { t: [], L: [], g2: [], p: [], D: [] };
+  for (let k = 0; k <= n; k++) {
+    const t = -1.15 + 2.3 * k / n, x = s * t; grad(x, 0);
+    pr.t.push(t); pr.L.push(L(x, 0)); pr.g2.push(gX * gX + gY * gY); pr.p.push(comP(x)); pr.D.push(comD(x, 0));
+  }
+}
+plate({
+  id: 'common', ch: 4, seed: 2417,
+  run: [
+    null,
+    (T) => { T.set('gam', PL.sim.gam); T.set('noise', PL.sim.noise); T.clear(); comReset(); T.release('Compromise minimum'); },
+    (T) => { T.set('noise', PL.sim.noise); T.set('gam', 0); },
+    (T) => { T.set('noise', PL.sim.noise); T.set('gam', 0.05); },
+    (T) => { T.set('gam', PL.sim.gam); T.set('noise', 0); },
+  ],
+  status: 'open',
+  get tribes() {            // a getter, read when the plate is built: K_FN is defined further down the file
+    return [{ k: 'sgd', maxAge: COM.T },
+      { k: 'sgd', name: 'Nexus-style', color: '#167a5b', kind: K_FN, fn: comNexus, nexus: true, maxAge: COM.T, rule: 'θ′ = θ − γ∇L₁(θ),  θ ← θ − η[∇L₁(θ) + ∇L₂(θ′) + ξ],  sources in random order' }];
+  },
+  sim: { lr: 0.008, noise: 0.3, gam: 0.2 },
+  ctl: ['noise', { key: 'gam', label: 'Inner step γ (Nexus-style)', min: 0, max: 0.3, step: 0.005, f: (v) => v.toFixed(3) }],
+  view: { yaw: -6, pitch: 52 },
+  speed: 5, figH: 270,
+  sheet: sheetCommon,
+  features: comFeatures,
+  names: (S) => {
+    const st = PL.st;
+    S.marks.push({ p: st.C, name: 'Common minimum', sub: `L ${st.C.L.toFixed(3)} · own minima ${st.dC.toFixed(2)} apart`, sym: 'min', pri: 9 });
+    S.marks.push({ p: st.M, name: 'Compromise minimum', sub: `L ${st.M.L.toFixed(3)} · own minima ${st.dM.toFixed(2)} apart`, sym: 'min', pri: 9 });
+    if (st.pass && st.pass.type === 'saddle') S.marks.push({ p: st.pass, name: '', sub: `${st.pass.L.toFixed(3)}`, sym: 'pass', pri: 4, pin: false });
+  },
+  print0: () => {
+    PL.st.reg.forEach((rs, k) => { for (const r of rs) hatchChains(r.chains, rgba(COM_INK[k], 0.5), 3.4, k ? 0.8 : -0.8, 0.6); });
+  },
+  print: () => {
+    const st = PL.st, c = sc;
+    st.reg.forEach((rs, k) => { for (const r of rs) strokeChains(r.chains, rgba(COM_INK[k], 0.9), 1.1); });
+    c.save(); c.setLineDash([3, 2.4]); c.strokeStyle = 'rgba(36,38,43,0.65)'; c.lineWidth = 0.8;
+    for (const j of [0, 1]) { const a = st.own[0][j], b = st.own[1][j]; c.beginPath(); c.moveTo(ox(a.x), oy(a.y)); c.lineTo(ox(b.x), oy(b.y)); c.stroke(); }
+    c.setLineDash([]);
+    st.own.forEach((o, k) => { for (const m of o) { c.fillStyle = COM_INK[k]; c.beginPath(); c.arc(ox(m.x), oy(m.y), 2.5, 0, TAU); c.fill(); } });
+    c.font = `italic 400 ${10.5 * FS}px ${SERIF}`; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    st.own.forEach((o, k) => {
+      const m = o[1], up = m.y > st.M.y, tx = ox(m.x) + 6 * COM.s, ty = oy(m.y) + (up ? -11 : 11);
+      c.textAlign = COM.s > 0 ? 'left' : 'right';
+      c.strokeStyle = 'rgba(236,238,232,0.9)'; c.lineWidth = 3; c.strokeText(`source ${k + 1}`, tx, ty);
+      c.fillStyle = COM_INK[k]; c.fillText(`source ${k + 1}`, tx, ty);
+    });
+    c.restore();
+  },
+  plan: () => { PL.st.pend = null; },
+  // cohorts are released in mirrored pairs, so the total loss gives neither minimum an advantage
+  release: () => {
+    const st = PL.st;
+    if (!F.params.auto || STAT.alive > maxAlive - 60) { nextRelease = STAT.steps + 45; return; }
+    let p;
+    if (st.pend) { p = st.pend; st.pend = null; } else { p = mitchellHigh(RPLAN, 0.15); st.pend = [-p[0], p[1]]; RELEASES.push(p, st.pend); }
+    releaseCaravan(p[0], p[1], PHONE ? 8 : 14);
+    nextRelease = STAT.steps + (st.pend ? 40 : 320);
+  },
+  restOK: (i) => !TRIBES[Tr[i]].nexus || comExpected(Ex[i], Ey[i]) < 0.02,
+  retire: (i, ring) => {
+    const st = PL.st, t = Tr[i];
+    if (!ring) { if (Age[i] > COM.T) st.rest[t][2]++; return; }
+    const k = Math.hypot(Ex[i] - st.C.x, Ey[i] - st.C.y) < 0.15 ? 0 : Math.hypot(Ex[i] - st.M.x, Ey[i] - st.M.y) < 0.15 ? 1 : 2;
+    st.rest[t][k]++; st.dsum[t] += comD(Ex[i], Ey[i]); st.dn[t]++;
+  },
+  onSim: (k) => { if (k === 'gam' || k === 'noise') comReset(); },
+  readouts: () => {
+    const st = PL.st, f = (t) => { const r = st.rest[t]; return `${r[0]} common · ${r[1]} compromise${r[2] ? ` · ${r[2]} neither` : ''}`; };
+    const e = (m) => `${m.l1.toFixed(2)}, ${m.l2.toFixed(2)}`;
+    return [['L, common · compromise', `${st.C.L.toFixed(3)} · ${st.M.L.toFixed(3)}`], ['Hessian eigenvalues', `${e(st.C)} · ${e(st.M)}`],
+      ['own minima apart', `${st.dC.toFixed(2)} · ${st.dM.toFixed(2)}`], ['downstream loss', `${st.DC.toFixed(3)} · ${st.DM.toFixed(3)}`],
+      ['SGD at rest', f(0)], ['Nexus-style at rest', f(1)]];
+  },
+  debug: () => {
+    const st = PL.st, r4 = (v) => +v.toFixed(4), pt = (m) => [r4(m.x), r4(m.y), r4(m.L)];
+    return { rest: st.rest, dsum: st.dsum.map(r4), C: pt(st.C), M: pt(st.M), pass: st.pass && pt(st.pass), HC: [r4(st.C.l1), r4(st.C.l2)], HM: [r4(st.M.l1), r4(st.M.l2)],
+      own: st.own.map((o) => o.map(pt)), dC: r4(st.dC), dM: r4(st.dM), exC: r4(st.exC), exM: r4(st.exM), DC: r4(st.DC), DM: r4(st.DM), lamY: r4(st.lamY),
+      delta: st.reg.map((o) => o.map((r) => r4(r.delta))), s: COM.s };
+  },
+  fig: (c, w, h) => {
+    const st = PL.st, pr = st.prof, n = pr.t.length, gam = SIM.gam, x0 = 32, x1 = w - 8, hh = Math.round((h - 10) * 0.6);
+    let y0 = 10, y1 = hh - 22;
+    // the floor as each optimizer sees it: L, and on average for Nexus-style L − (γ/2)∇L₁·∇L₂, with ∇L₁·∇L₂ = |∇L|²/4 − p² there
+    const J = pr.L.map((v, k) => v - 0.5 * gam * (pr.g2[k] / 4 - pr.p[k] * pr.p[k]));
+    const kC = Math.round((COM.s * st.C.x + 1.15) / 2.3 * (n - 1)), kM = Math.round((COM.s * st.M.x + 1.15) / 2.3 * (n - 1)), off = J[kC] - pr.L[kC];
+    for (let k = 0; k < n; k++) J[k] -= off;
+    FIG.axes(c, x0, y0, x1, y1, 'along θ₂ = 0', 'loss');
+    const ymax = Math.max(0.1, pr.D[kM], J[kM]) * 1.18, DINK = 'rgba(36,38,43,0.7)';
+    const r = figSeries(c, x0, y0, x1, y1, [{ ys: pr.D, color: DINK, w: 1.2, dash: [4, 2.5] }, { ys: J, color: '#167a5b', w: 1.5 }, { ys: pr.L, color: INK, w: 1.5 }], { xmax: n - 1, ymin: 0, ymax });
+    for (const v of [0, 0.1, 0.2, 0.3].filter((v) => v < ymax)) FIG.tick(c, x0 - 3, r.ty(v), v.toFixed(1), 'right', 'middle');
+    FIG.tick(c, r.tx(kC), y1 + 4, 'common'); FIG.tick(c, r.tx(kM), y1 + 4, 'compromise');
+    // the lift of the compromise, and the barrier between the minima
+    let top = 0; for (let k = Math.min(kC, kM); k <= Math.max(kC, kM); k++) top = Math.max(top, pr.L[k]);
+    const lift = J[kM] - pr.L[kM], kTop = (kC + kM) >> 1;
+    c.setLineDash([2, 2]); c.strokeStyle = 'rgba(22,122,91,0.8)'; c.lineWidth = 0.9;
+    c.beginPath(); c.moveTo(r.tx(kM), r.ty(pr.L[kM])); c.lineTo(r.tx(kM), r.ty(J[kM])); c.stroke(); c.setLineDash([]);
+    if (lift > 0.004) FIG.tick(c, r.tx(kM) - 4, (r.ty(pr.L[kM]) + r.ty(J[kM])) / 2, `lift ${lift.toFixed(2)}`, 'right', 'middle');
+    let hi = top; for (let k = Math.max(0, kTop - 24); k <= Math.min(n - 1, kTop + 24); k++) hi = Math.max(hi, J[k], pr.D[k]);
+    c.setLineDash([1, 2]); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.lineWidth = 0.8;
+    c.beginPath(); c.moveTo(r.tx(kTop), r.ty(top) - 2); c.lineTo(r.tx(kTop), r.ty(hi) - 3); c.stroke(); c.setLineDash([]);
+    FIG.tick(c, r.tx(kTop), r.ty(hi) - 13, `barrier ${(top - st.C.L).toFixed(3)}`);
+    // key, in the empty upper corner on the common side (the profile runs from the common minimum to the compromise)
+    const kx = x0 + 34;
+    [['L', INK, []], ['Nexus-style, on average', '#167a5b', []], ['downstream', DINK, [4, 2.5]]].forEach(([txt, col, dash], q) => {
+      const y = y0 + 6 + 12 * q; c.strokeStyle = col; c.lineWidth = 1.4; c.setLineDash(dash);
+      c.beginPath(); c.moveTo(kx, y); c.lineTo(kx + 14, y); c.stroke(); c.setLineDash([]); FIG.note(c, kx + 18, y, txt, col);
+    });
+    // where each optimizer's particles came to rest, and the mean downstream loss there
+    y0 = hh + 6; const rowH = (h - 6 - y0) / 2, bx0 = x0 + 66, bx1 = x1;
+    TRIBES.forEach((T, t) => {
+      const rr = st.rest[t], tot = rr[0] + rr[1], y = y0 + t * rowH + rowH * 0.4, bh = Math.min(12, rowH * 0.36);
+      FIG.note(c, 8, y, T.name, T.color);
+      if (st.dn[t]) FIG.tick(c, 8, y + 9, `downstream ${(st.dsum[t] / st.dn[t]).toFixed(3)}`, 'left');
+      c.strokeStyle = rgba(T.color, 0.9); c.lineWidth = 1; c.strokeRect(bx0 + 0.5, y - bh / 2 + 0.5, bx1 - bx0 - 1, bh - 1);
+      if (!tot) { FIG.tick(c, (bx0 + bx1) / 2, y + bh / 2 + 3, 'no particle at rest yet'); return; }
+      c.fillStyle = rgba(T.color, 0.8); c.fillRect(bx0, y - bh / 2, (bx1 - bx0) * rr[0] / tot, bh);
+      FIG.tick(c, bx0, y + bh / 2 + 3, `${rr[0]} common`, 'left'); FIG.tick(c, bx1, y + bh / 2 + 3, `${rr[1]} compromise`, 'right');
+    });
+  },
+});
+
 // --- saddles
 function sheetSaddle(R) {
   sheetBase(R, { bk: 0.1, bk4: 0.016, na: 0.03 });

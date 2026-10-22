@@ -673,6 +673,21 @@ The standard start sets B = 0 and draws A at random, so training begins at the p
 LoRA with a larger learning rate for B than for A, `η_B = λη_A` with a fixed ratio λ &gt; 1 (Hayou, Ghosh and Yu 2024).
 Their analysis of wide layers says the best ratio grows with the layer’s width.
 
+## datamix: Data mixture
+
+The combination of data sources a model is pretrained on, such as web text, code and mathematics, each sampled with its own weight.
+The pretraining loss is then the weighted sum of the sources’ losses, and a minimum of the sum need not be a minimum of any one source.
+
+## conflict: Conflicting gradients
+
+Gradients of two losses whose inner product is negative, so that a small step that lowers one loss raises the other.
+Yu et al. (2020) identified such conflicts between tasks as a cause of slow multi-task training.
+
+## closeness: Closeness of minima
+
+How near the trained weights lie to the minimizer of each data source’s or task’s own loss.
+Chen et al. (2026) measure it as the mean squared distance to those minimizers, and link a smaller one to lower downstream loss at the same pretraining loss.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.
