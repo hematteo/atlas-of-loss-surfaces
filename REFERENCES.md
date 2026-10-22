@@ -490,7 +490,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 
 ### IX · Beyond two dimensions
 
-**41. [What a slice hides](https://matteohe.com/atlas-of-loss-surfaces/?plate=slices)**
+**42. [What a slice hides](https://matteohe.com/atlas-of-loss-surfaces/?plate=slices)**
 
 - Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS. *Random two-dimensional slices; their curvatures are weighted averages of the Hessian’s eigenvalues, so a convex-looking slice need not be convex.*
 - Goodfellow, I. J., Vinyals, O. and Saxe, A. M. (2015). Qualitatively characterizing neural network optimization problems. ICLR. *The loss along the straight line from initialization to solution usually falls monotonically.*

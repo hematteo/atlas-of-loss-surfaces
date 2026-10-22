@@ -562,6 +562,18 @@ Shrinking the parameters toward zero at every step, `θ ← θ − ηλθ` on to
 
 In the account of grokking by Liu, Michaud and Tegmark (2023), the range of weight norms where the test loss is lowest. Larger norms still fit the training data but generalize worse, and smaller ones cannot fit it.
 
+## slice: Slice of a loss surface
+
+The loss restricted to a line or a plane through parameter space, `L(θ₀ + a·u + b·v)` for two chosen directions u and v.
+Almost every picture of a network’s loss surface is one.
+It shows the loss only along its own directions: a random slice sees about the mean curvature `tr(H)/d`, so it can show a bowl where the full loss still falls.
+
+## spectrum: Hessian spectrum
+
+The set of eigenvalues of the Hessian, the curvatures along its eigenvectors.
+In trained networks it has a bulk of eigenvalues near zero and a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019).
+The number of negative eigenvalues at a critical point is its index.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.
