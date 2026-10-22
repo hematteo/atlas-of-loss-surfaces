@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 309 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 320 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -543,6 +543,20 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754. *The gradient soon lies mostly in the span of the Hessian’s top eigenvectors, about one per class.*
 - Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR. *Updates projected onto that subspace barely lower the loss; removing them trains about as well.*
 
+**47. [Learning rates across widths](https://matteohe.com/atlas-of-loss-surfaces/?plate=mup)**
+
+- Yang, G. and Hu, E. J. (2021). Tensor Programs IV: Feature learning in infinite-width neural networks. ICML. *In SP, training stays stable at large width only with a learning rate of order 1/width, and the limit then learns no features; μP learns features.*
+- Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W. and Gao, J. (2021). Tensor Programs V: Tuning large neural networks via zero-shot hyperparameter transfer. NeurIPS. *μTransfer: under μP the best hyperparameters stay put as width grows; the per-layer rules, defined relative to a base width where μP equals SP.*
+- Vyas, N., Atanasov, A., Bordelon, B., Morwani, D., Sainathan, S. and Pehlevan, C. (2023). Feature-learning networks are consistent across widths at realistic scales. NeurIPS. *Under μP, representations and edge-of-stability dynamics agree across widths, with deviations that grow on harder tasks.*
+- Noci, L., Meterez, A., Hofmann, T. and Orvieto, A. (2024). Super consistency of neural network landscapes and learning rate transfer. NeurIPS. *Under μP the sharpness follows the same course at every width, near 2/η; under the NTK parametrization it falls with width.*
+- Bordelon, B., Noci, L., Li, M. B., Hanin, B. and Pehlevan, C. (2024). Depthwise hyperparameter transfer in residual networks: dynamics and scaling limit. ICLR. *μP alone does not transfer across depth; scaling residual branches by 1/√depth adds transfer in depth.*
+- Everett, K., Xiao, L., Wortsman, M., Alemi, A. A., Novak, R., Liu, P. J., Gur, I., Sohl-Dickstein, J., Kaelbling, L. P., Lee, J. and Pennington, J. (2024). Scaling exponents across parameterizations and optimizers. ICML. *With per-layer learning rates and tuned per-layer constants, every parametrization tested transfers, up to 26.8 billion parameters.*
+- Lingle, L. (2024). An empirical study of μP learning rate transfer. arXiv:2404.05728. *Transfer worked in most cases and failed with trainable normalization gains, the standard attention scale and coupled weight decay.*
+- Haas, M., Bordt, S., von Luxburg, U. and Vankadara, L. C. (2025). On the surprising effectiveness of large learning rates under standard width scaling. NeurIPS. *Under SP the largest stable learning rate falls like 1/width with the squared loss, but only like 1/√width with cross-entropy.*
+- Kosson, A., Welborn, J., Liu, Y., Jaggi, M. and Chen, X. (2026). Weight decay may matter more than muP for learning rate transfer in practice. ICLR. *μP’s assumptions hold only early in training; afterwards weight decay stabilizes the updates across widths.*
+- Ghosh, N., Wu, D. and Bietti, A. (2026). Understanding the mechanisms of fast hyperparameter transfer. ICLR. *Finds the link between spectral measures and the best learning rate unclear, and proposes a width-stable part of the trajectory that sets it.*
+- Hayou, S. (2026). A proof of learning rate transfer under μP. AISTATS. *For deep linear networks, the best learning rate tends to a nonzero constant with width under μP, but not under SP or the NTK parametrization.*
+
 ## All works, alphabetically
 
 - Abbe, E., Boix-Adserà, E. and Misiakiewicz, T. (2023). SGD learning on neural networks: leap complexity and saddle-to-saddle dynamics. COLT, PMLR 195.
@@ -581,6 +595,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Berthier, R. (2023). Incremental learning in diagonal linear networks. JMLR 24(171).
 - Blanc, G., Gupta, N., Valiant, G. and Valiant, P. (2020). Implicit regularization for deep neural networks driven by an Ornstein–Uhlenbeck like process. COLT.
 - Boix-Adserà, E., Littwin, E., Abbe, E., Bengio, S. and Susskind, J. (2023). Transformers learn through gradual rank increase. NeurIPS.
+- Bordelon, B., Noci, L., Li, M. B., Hanin, B. and Pehlevan, C. (2024). Depthwise hyperparameter transfer in residual networks: dynamics and scaling limit. ICLR.
 - Böttcher, L. and Wheeler, G. (2024). Visualizing high-dimensional loss landscapes with Hessian directions. Journal of Statistical Mechanics: Theory and Experiment 2024, 023401.
 - Bray, A. J. and Dean, D. S. (2007). Statistics of critical points of Gaussian fields on large-dimensional spaces. Physical Review Letters 98(15), 150201.
 - Cai, Y., Zhou, K., Wu, J., Mei, S., Lindsey, M. and Bartlett, P. (2025). Implicit bias of gradient descent for non-homogeneous deep networks. ICML.
@@ -617,6 +632,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Du, S. S., Jin, C., Lee, J. D., Jordan, M. I., Póczos, B. and Singh, A. (2017). Gradient descent can take exponential time to escape saddle points. NeurIPS.
 - Duchi, J., Hazan, E. and Singer, Y. (2011). Adaptive subgradient methods for online learning and stochastic optimization. JMLR 12.
 - Entezari, R., Sedghi, H., Saukh, O. and Neyshabur, B. (2022). The role of permutation invariance in linear mode connectivity of neural networks. ICLR.
+- Everett, K., Xiao, L., Wortsman, M., Alemi, A. A., Novak, R., Liu, P. J., Gur, I., Sohl-Dickstein, J., Kaelbling, L. P., Lee, J. and Pennington, J. (2024). Scaling exponents across parameterizations and optimizers. ICML.
 - Foret, P., Kleiner, A., Mobahi, H. and Neyshabur, B. (2021). Sharpness-aware minimization for efficiently improving generalization. ICLR.
 - Fort, S., Dziugaite, G. K., Paul, M., Kharaghani, S., Roy, D. M. and Ganguli, S. (2020). Deep learning versus kernel learning: an empirical study of loss landscape geometry and the time evolution of the neural tangent kernel. NeurIPS.
 - Frankle, J., Dziugaite, G. K., Roy, D. M. and Carbin, M. (2020). Linear mode connectivity and the lottery ticket hypothesis. ICML.
@@ -627,6 +643,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Garipov, T., Izmailov, P., Podoprikhin, D., Vetrov, D. and Wilson, A. G. (2018). Loss surfaces, mode connectivity, and fast ensembling of DNNs. NeurIPS.
 - Ge, R., Huang, F., Jin, C. and Yuan, Y. (2015). Escaping from saddle points: online stochastic gradient for tensor decomposition. COLT.
 - Ghorbani, B., Krishnan, S. and Xiao, Y. (2019). An investigation into neural net optimization via Hessian eigenvalue density. ICML.
+- Ghosh, N., Wu, D. and Bietti, A. (2026). Understanding the mechanisms of fast hyperparameter transfer. ICLR.
 - Gidel, G., Askari Hemmat, R., Pezeshki, M., Le Priol, R., Huang, G., Lacoste-Julien, S. and Mitliagkas, I. (2019). Negative momentum for improved game dynamics. AISTATS.
 - Gidel, G., Bach, F. and Lacoste-Julien, S. (2019). Implicit regularization of discrete gradient dynamics in linear neural networks. NeurIPS.
 - Gidel, G., Berard, H., Vignoud, G., Vincent, P. and Lacoste-Julien, S. (2019). A variational inequality perspective on generative adversarial networks. ICLR.
@@ -642,11 +659,13 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Gupta, V., Koren, T. and Singer, Y. (2018). Shampoo: preconditioned stochastic tensor optimization. ICML.
 - Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754.
 - Gürbüzbalaban, M., Şimşekli, U. and Zhu, L. (2021). The heavy-tail phenomenon in SGD. ICML.
+- Haas, M., Bordt, S., von Luxburg, U. and Vankadara, L. C. (2025). On the surprising effectiveness of large learning rates under standard width scaling. NeurIPS.
 - Hägele, A., Bakouch, E., Kosson, A., Ben Allal, L., Von Werra, L. and Jaggi, M. (2024). Scaling laws and compute-optimal training beyond fixed training durations. NeurIPS.
 - Hairer, E., Lubich, C. and Wanner, G. (2006). Geometric Numerical Integration, 2nd edition, chapter IX. Springer.
 - Hajek, B. (1988). Cooling schedules for optimal annealing. Mathematics of Operations Research 13(2).
 - Hao, Z., Wang, H., Liu, H., Luo, J., Yu, J., Dong, H., Lin, Q., Wang, C. and Chen, J. (2026). Rethinking entropy interventions in RLVR: an entropy change perspective. ACL.
 - HaoChen, J. Z., Wei, C., Lee, J. D. and Ma, T. (2021). Shape matters: understanding the implicit bias of the noise covariance. COLT.
+- Hayou, S. (2026). A proof of learning rate transfer under μP. AISTATS.
 - Hecht-Nielsen, R. (1990). On the algebraic structure of feedforward network weight spaces. In Eckmiller, R. (ed.), Advanced Neural Computers. Elsevier.
 - Himmelblau, D. M. (1972). Applied Nonlinear Programming. McGraw-Hill.
 - Hochreiter, S. (1991). Untersuchungen zu dynamischen neuronalen Netzen. Diploma thesis, Technische Universität München.
@@ -685,6 +704,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Korpelevich, G. M. (1976). The extragradient method for finding saddle points and other problems. Ekonomika i Matematicheskie Metody 12(4).
 - Kosson, A., Messmer, B. and Jaggi, M. (2024). Analyzing & reducing the need for learning rate warmup in GPT training. NeurIPS.
 - Kosson, A., Messmer, B. and Jaggi, M. (2024). Rotational equilibrium: how weight decay balances learning across neural networks. ICML.
+- Kosson, A., Welborn, J., Liu, Y., Jaggi, M. and Chen, X. (2026). Weight decay may matter more than muP for learning rate transfer in practice. ICLR.
 - Kramers, H. A. (1940). Brownian motion in a field of force and the diffusion model of chemical reactions. Physica 7(4).
 - Kumar, S., Marklund, H. and Van Roy, B. (2024). Maintaining plasticity in continual learning via regenerative regularization. CoLLAs, PMLR 274.
 - Kumar, T., Bordelon, B., Gershman, S. J. and Pehlevan, C. (2024). Grokking as the transition from lazy to rich training dynamics. ICLR.
@@ -709,6 +729,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Li, Z., Wang, T. and Arora, S. (2022). What happens after SGD reaches zero loss? A mathematical framework. ICLR.
 - Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
 - Liao, F., Kolomvaki, A. and Kyrillidis, A. (2026). SGD at the edge of stability: the stochastic sharpness gap. arXiv:2604.21016.
+- Lingle, L. (2024). An empirical study of μP learning rate transfer. arXiv:2404.05728.
 - Litman, E. (2026). The origin of edge of stability. arXiv:2604.20446.
 - Liu, H., Li, Z., Hall, D., Liang, P. and Ma, T. (2024). Sophia: a scalable stochastic second-order optimizer for language model pre-training. ICLR.
 - Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982.
@@ -756,6 +777,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Nguyen, T. H., Şimşekli, U., Gürbüzbalaban, M. and Richard, G. (2019). First exit time analysis of stochastic gradient descent under heavy-tailed gradient noise. NeurIPS.
 - Nikishin, E., Schwarzer, M., D’Oro, P., Bacon, P.-L. and Courville, A. (2022). The primacy bias in deep reinforcement learning. ICML.
 - Nocedal, J. and Wright, S. J. (2006). Numerical Optimization, 2nd edition, chapters 3 and 4. Springer.
+- Noci, L., Meterez, A., Hofmann, T. and Orvieto, A. (2024). Super consistency of neural network landscapes and learning rate transfer. NeurIPS.
 - Pagliardini, M., Ablin, P. and Grangier, D. (2025). The AdEMAMix optimizer: better, faster, older. ICLR.
 - Pang, R. Y., Yuan, W., Cho, K., He, H., Sukhbaatar, S. and Weston, J. (2024). Iterative reasoning preference optimization. NeurIPS.
 - Panigrahi, A., Somani, R., Goyal, N. and Netrapalli, P. (2019). Non-Gaussianity of stochastic gradient noise. arXiv:1910.09626.
@@ -810,6 +832,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł. and Polosukhin, I. (2017). Attention is all you need. NeurIPS.
 - Verma, N. and Elbayad, M. (2024). Merging text transformer models from different initializations. TMLR.
 - Vlaar, T. J. and Frankle, J. (2022). What can linear interpolation of neural network loss landscapes tell us? ICML.
+- Vyas, N., Atanasov, A., Bordelon, B., Morwani, D., Sainathan, S. and Pehlevan, C. (2023). Feature-learning networks are consistent across widths at realistic scales. NeurIPS.
 - Vyas, N., Morwani, D., Zhao, R., Kaplun, G., Kakade, S. and Barak, B. (2024). Beyond implicit bias: the insignificance of SGD noise in online learning. ICML.
 - Vyas, N., Morwani, D., Zhao, R., Shapira, I., Brandfonbrener, D., Janson, L. and Kakade, S. (2025). SOAP: improving and stabilizing Shampoo using Adam for language modeling. ICLR.
 - Walder, C. and Karkhanis, D. (2025). Pass@K policy optimization: solving harder reinforcement learning problems. NeurIPS.
@@ -838,6 +861,8 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Xie, Z., Sato, I. and Sugiyama, M. (2021). A diffusion theory for deep learning dynamics: stochastic gradient descent exponentially favors flat minima. ICLR.
 - Xu, Y. (2026a). Low-dimensional and transversely curved optimization dynamics in grokking. arXiv:2602.16746.
 - Xu, Y. (2026b). The geometry of multi-task grokking: transverse instability, superposition, and weight decay phase structure. arXiv:2602.18523.
+- Yang, G. and Hu, E. J. (2021). Tensor Programs IV: Feature learning in infinite-width neural networks. ICML.
+- Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W. and Gao, J. (2021). Tensor Programs V: Tuning large neural networks via zero-shot hyperparameter transfer. NeurIPS.
 - Yang, S., Zhang, Q., Liu, Y., Huang, Y., Jia, X., Ning, K., Yao, J., Wang, J., Dai, H., Song, Y. and Yuan, L. (2026). AsFT: anchoring safety during LLM fine-tuning within narrow safety basin. AAAI.
 - Yu, Q. et al. (2025). DAPO: an open-source LLM reinforcement learning system at scale. NeurIPS.
 - Yue, Y., Chen, Z., Lu, R., Zhao, A., Wang, Z., Yue, Y., Song, S. and Huang, G. (2025). Does reinforcement learning really incentivize reasoning capacity in LLMs beyond the base model? NeurIPS.

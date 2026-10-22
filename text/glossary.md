@@ -643,6 +643,25 @@ Its output barely changes with its input, so the gradient through it nearly vani
 Scaling the parameters towards zero and adding a little noise, `θ ← αθ + ε` with α &lt; 1, before training continues on new data (Ash and Adams 2020).
 It restores some of the plasticity of a fresh initialization while keeping much of what was learned.
 
+## sp: Standard parametrization (SP)
+
+The usual way to initialize a network and set its learning rate: each layer’s weights start with variance 1/fan-in, and one learning rate serves every layer.
+As the network widens, its readout sums more features of order one, so the [[sharpness|sharpness]] grows with width and the largest stable learning rate shrinks.
+
+## mup: μP (maximal update parametrization)
+
+A rule for scaling each layer’s initialization and learning rate with width, derived by Yang and Hu (2021) so that every layer keeps learning features as width grows.
+Relative to [[SP|sp]] with SGD, it divides the readout’s initial variance and learning rate by the width and multiplies the input layer’s learning rate by it.
+
+## transfer: Learning-rate transfer (μTransfer)
+
+Tuning hyperparameters such as the learning rate on a narrow model and reusing them unchanged on a wider one.
+It works when the best values do not move with width, as Yang et al. (2021) found under [[μP|mup]].
+
+## supercons: Super consistency
+
+The finding of Noci et al. (2024) that under [[μP|mup]] the [[sharpness|sharpness]] follows nearly the same course during training at every width, while under other parametrizations it changes with width.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.
