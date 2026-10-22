@@ -20,8 +20,8 @@ So we can see the barrier and its removal exactly.
 ## In practice
 
 Align the hidden units before averaging independently trained networks, because permutations explain much of the barrier.
-Then check the barrier anyway: matching removed it for widened ResNets on CIFAR-10, but not at standard width or on ImageNet.
-At standard width, rescaling the averaged network’s activations removes much of what remains (see At scale).
+Then check the barrier anyway, since matching removes it only in wide networks.
+At standard width, rescaling the averaged network’s activations removes much of what remains (see Limits).
 
 ## Figure caption
 
@@ -50,12 +50,11 @@ The count combines the n! orderings of the units with a sign flip of each unit�
 The flip works because tanh is odd: tanh(−x) = −tanh(x).
 So every minimum has that many copies, and two training runs can find the same function at different points.
 
-Two independently trained networks usually have a large [[barrier|barrier]] on the straight segment between them.
-Entezari et al. (2022) conjectured that most SGD solutions can be permuted so that the barrier vanishes.
-They proved a version for wide one-hidden-layer networks at random initialization.
+Two independently trained networks usually have a large [[barrier|barrier]] on the straight segment between them (see <i>Mode connectivity</i>).
+Entezari et al. proved a version of their conjecture for wide one-hidden-layer networks at random initialization.
 Their [[simulated-annealing|anneal]] search for permutations lowered the barrier for small MLPs but not for VGG or ResNet.
 
-Ainsworth, Hayase and Srinivasa (2023) matched units by their activations, by their weights, or by learning the permutation with a straight-through estimator.
+Ainsworth et al. matched units by their activations, by their weights, or by learning the permutation with a straight-through estimator.
 For widened ResNets on CIFAR-10, they reported the first zero-barrier connection between independently trained networks.
 The barrier after matching fell as width grew and stayed large at standard width.
 ResNet-50 on ImageNet kept a barrier, though matching cut it by about two-thirds.
@@ -73,32 +72,26 @@ With the noise, the best fit is at w ≈ 1.50, a ≈ 1.08.
 The axes are `w = 1.65θ₁` and `a = 1.85θ₂`.
 The loss is rescaled like every sheet, and no texture is added.
 
-Because tanh is odd, the flip `(w, a) → (−w, −a)` leaves f unchanged.
+The flip `(w, a) → (−w, −a)` leaves f unchanged.
 On the sheet this flip is a half-turn about the centre.
 The sheet has two minima, the [[Solution|@Solution]] and [[Its twin|@Its twin]].
-At the centre is a [[saddle|saddle]], where f is zero for every input.
 
 Particles take true minibatch steps with η = 0.5.
 Each step uses the gradient on 4 of the 16 points, drawn with replacement, so the noise comes from sampling the data.
 The newest particle at rest with w &gt; 0 and the newest with w &lt; 0 form the pair, one in each basin.
 
-The readouts give two barriers, each the largest loss on the segment minus the mean end loss.
-One is between the two particles of the pair.
-The other is between the first particle and the flipped image of the second.
+Each barrier in the readouts is the largest loss on its segment minus the mean end loss.
 
-## Caveat
+## Limits
 
 One unit has a single symmetry, so the right alignment is known in advance.
-With n units per layer, re-basin methods must pick one of n! orderings per layer.
-They find it with a linear assignment solver, in time polynomial in n, rather than by search.
-
 The sign flip exists only for odd activations such as tanh.
 ReLU units have a positive rescaling symmetry instead (see <i>Sharp and flat minima</i>).
 
-## At scale
+A real network has n units per layer, so re-basin methods must pick one of n! orderings per layer.
+They find it with a linear assignment solver, in time polynomial in n, rather than by search.
 
-After matching, much of the barrier left at ordinary width has a second cause.
-The activations of the averaged network shrink in variance.
+After matching, much of the barrier left at ordinary width has a second cause: the activations of the averaged network shrink in variance.
 Jordan et al. (2023) rescaled them after averaging.
 This cut the barrier by 90% for ResNet-18 on CIFAR-10 and by 74% for ResNet-50 on ImageNet.
 

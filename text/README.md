@@ -52,10 +52,10 @@ The caption under the plate's figure.
 
 ## Background
 ## Method
-## Caveat
 
-## At scale
-What is different in networks with millions or billions of parameters, or what later work has changed.
+## Limits
+What the sheet simplifies, then what is different in networks with millions or billions of parameters, or what
+later work has changed.
 
 ## References
 - Hochreiter, S. and Schmidhuber, J. (1997). Flat minima. Neural Computation 9(1).
@@ -63,8 +63,10 @@ What is different in networks with millions or billions of parameters, or what l
 ```
 
 *Subtitle*, *Lead*, *Try*, *Method* and *References* are required; the rest are optional.
-Use *At scale* when the two-parameter picture works differently in large networks, or when later results have
-superseded part of the plate; give each paper it cites an entry in *References*.
+Use *Limits* for what the sheet leaves out, and for where the two-parameter picture works differently in large
+networks or later results have superseded part of the plate. Say each thing once per card: the collapsed sections
+(*Background*, *Method*, *Limits*) should not repeat the visible ones. Give each paper a plate cites an entry in
+*References*.
 
 ## Writing
 

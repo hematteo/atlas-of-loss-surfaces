@@ -17,7 +17,7 @@ This plate builds the one case in which the theory is exact, to see what it pred
 
 ## In practice
 
-For SGD, η/B sets the noise scale, so scale η in proportion to the batch size.
+For SGD, η/B sets the noise scale, so scale η in proportion to the batch size (the linear scaling rule).
 With warmup this worked up to batches of 8,192 for ResNet-50 on ImageNet (Goyal et al. 2017).
 Larger batches lost accuracy.
 
@@ -33,7 +33,6 @@ Where a filled bar matches its outline, that ensemble is sampling the Boltzmann 
    These two ensembles run at the same T.
    The third takes larger steps with less noise, yet ends in the same distribution, because only T enters the Boltzmann distribution.
 2. Compare the wells → in those two ensembles the wide, shallow well [[B|@B]] holds more than the narrow, deeper [[A|@A]].
-   A well’s Boltzmann weight counts its width as well as its depth.
    At this temperature B’s extra width outweighs A’s extra depth.
 3. Watch the cold ensemble → it keeps its starting shares.
    At T/4 even the lowest barrier, the one out of B, is about 10 times the temperature.
@@ -44,21 +43,19 @@ Where a filled bar matches its outline, that ensemble is sampling the Boltzmann 
 
 ## Background
 
-Li, Tai and E (2017) proved that for small η, SGD is a weak first-order approximation of an [[SDE|sde]].
+Li, Tai and E proved that for small η, SGD is a weak first-order approximation of an [[SDE|sde]].
 A weak approximation matches averages over many runs rather than individual paths.
 The SDE is `dθ = −∇L dt + √(ηΣ/B) dW`, where Σ is the covariance of single-example gradients.
 
 Mandt, Hoffman and Blei (2017) studied it near one minimum, where the loss is quadratic and the stationary distribution is Gaussian.
 They chose η and B so that this distribution approximates a Bayesian posterior.
 
-Jastrzębski et al. (2017) assumed isotropic noise and obtained the Boltzmann distribution `p(θ) ∝ exp(−L(θ)/T)` with T ∝ η/B.
-They found that η/B sets the width of the minima SGD reaches.
+The Boltzmann distribution of Jastrzębski et al. is `p(θ) ∝ exp(−L(θ)/T)`.
+They also found that η/B sets the width of the minima SGD reaches.
 Smith and Le (2018) reached the same scaling through the noise scale `ηN/B`, for a training set of size N.
-
-This scaling implies the linear scaling rule: multiply η by k when B is multiplied by k.
 Li, Malladi and Arora (2021) gave a testable necessary condition for the SDE approximation and the linear scaling rule.
 
-Minibatch noise is neither isotropic nor constant.
+Besides being anisotropic, minibatch noise is not constant.
 Near a minimum its covariance is close to the Hessian divided by B (see <i>The shape of the noise</i>).
 Chaudhari and Soatto (2018) showed that SGD then has a Boltzmann-like stationary distribution, but for a different potential.
 That potential equals L only when the noise is isotropic.
@@ -87,26 +84,19 @@ Each ensemble has 110 particles (50 on phones), released uniformly and never ret
 A particle that leaves the sheet is put back at a uniform random point.
 
 A well’s catchment is the region that gradient flow carries into it, drawn dash-dotted on the map.
-The outlined bars give the Boltzmann share of each catchment, summed over the height grid.
-The filled bars give the share of the ensemble’s particles in each catchment.
-They are counted every frame, with exponential forgetting over about 670 frames (about 11 s).
+The outlined Boltzmann shares are summed over the height grid.
+The filled shares are counted every frame, with exponential forgetting over about 670 frames.
 The haze is `exp(−(L − L*)/T)` at T (rose) and at T/4 (violet).
 
-## Caveat
+## Limits
 
 The discrete update samples a slightly hotter distribution than the Boltzmann one it is compared with.
 On a quadratic with curvature λ, its variance is larger by the factor `1/(1 − ηλ/2)`.
 That is about 1.06 for the first ensemble in A, and 1.13 for the third.
 
-The noise here is isotropic and constant by construction.
-That is the one case in which the stationary distribution is Boltzmann in L itself.
-So with real minibatch noise, only the η/B scaling should carry over.
-
-## At scale
-
-A large network never reaches its [[stationary distribution|stationary]].
+The two warmer ensembles here do equilibrate, but a large network never reaches its [[stationary distribution|stationary]].
 Language models are pretrained for about one pass over their data, far too short to equilibrate.
-The cold ensemble, stuck in its starting shares, is perhaps the better picture of that regime.
+The cold ensemble is perhaps the better picture of that regime.
 In that single-epoch regime, Vyas et al. (2024) found that small-batch noise brings no measurable gain in generalization, only cheaper steps.
 
 The linear scaling rule holds only below a [[critical batch size|cbs]].

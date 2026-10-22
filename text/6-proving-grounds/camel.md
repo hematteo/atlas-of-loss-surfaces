@@ -35,18 +35,15 @@ Benchmark from many starts and report the distribution of outcomes, i.e. how oft
 
 ## Background
 
-The function is one of the small test problems used since the 1970s to compare global optimization methods.
+Small problems like it have been used since the 1970s to compare global optimization methods.
 On its usual window, u ∈ [−3, 3] and v ∈ [−2, 2], it has 15 [[critical points|crit]]: six minima, seven [[saddles|saddle]] and two maxima.
 It is symmetric under `(u, v) → (−u, −v)`, so every feature has a twin through the origin.
-The saddle at the origin separates the two global minima.
 
 [[Gradient flow|gflow]] is gradient descent with vanishingly small steps.
 The [[basin of attraction|basin]] of a minimum is the set of starts from which gradient flow ends there.
 For a method that follows the gradient, these basins set the outcome.
 
-On this sheet gradient descent reproduces the basins.
-Over 600 races it divided its particles among the three pairs of minima as 52%, 27% and 21%.
-These shares are within 0.2 percentage points of gradient flow from the same 600 starts.
+Over 600 races, gradient descent’s shares of the three pairs of minima came within 0.2 percentage points of gradient flow’s from the same starts.
 <i>Basins of attraction</i> shows the same division on a designed sheet.
 
 Momentum and Adam change the paths, and near basin boundaries they can end elsewhere.
@@ -55,7 +52,6 @@ For Adam it differed in 3%.
 
 Adam’s share of each pair stayed within half a percentage point of gradient descent’s.
 The heavy ball’s shares moved about nine percentage points from E and F to C and D.
-Momentum carries it out of the shallow outer minima.
 
 ## Method
 
@@ -64,24 +60,17 @@ All fifteen critical points lie inside it, although it is smaller than the usual
 Minima are lettered by height: A and B global, C and D with f = −0.2155, E and F with f = 2.1043.
 Saddles and maxima are marked with their value of f.
 
-Races start at random points of high loss, one every 900 steps.
-A particle retires when it comes to rest or after 1,600 steps.
+Races start every 900 steps, and particles retire after 1,600.
 
-The figure shows how each optimizer’s particles that came to rest divide among the minima, counted over all races since the plate opened.
-The readouts give the counts.
-
-## Caveat
+## Limits
 
 The cap compresses high minima more than low ones.
-The factor `AH/(H + f − f*)²` is 0.30 at A and B, 0.23 at C and D and 0.13 at E and F.
+Its factor `AH/(H + f − f*)²` is 0.30 at A and B, 0.23 at C and D and 0.13 at E and F.
 So E and F are flatter on this sheet, relative to A and B, than on f, and the barriers around them are lower in L.
 This may let the heavy ball escape E and F more easily here than it would on f.
 
-## At scale
-
-Here the minima differ in height, so which one a run reaches decides its loss.
-In networks, different starts usually reach different minima of nearly the same loss.
-Those minima are joined by paths along which the loss stays low (see <i>Mode connectivity</i>).
+Here the minima also differ in height, so which one a run reaches decides its loss.
+In networks, different starts usually reach different minima of nearly the same loss, joined by paths of low loss (see <i>Mode connectivity</i>).
 So the distribution of outcomes worth reporting there is mostly over the functions the runs compute, not over their losses.
 
 ## References

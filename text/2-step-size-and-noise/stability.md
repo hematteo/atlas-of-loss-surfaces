@@ -20,7 +20,7 @@ A well whose ηλ is far above 2 should throw them out.
 ## In practice
 
 An early loss spike at high η need not be a bug.
-Just above 2/λ<sub>max</sub>, wide networks can spike, lower their curvature and converge somewhere flatter, often with better test accuracy (Lewkowycz et al. 2020).
+In a wide network it may be a catapult, which often ends with better test accuracy (Lewkowycz et al. 2020).
 So before lowering η, check whether the loss comes back down and λ<sub>max</sub> ends below 2/η.
 
 ## Figure caption
@@ -33,7 +33,6 @@ Below: for each well, sharpest first and labelled by ηλ, SGD particles that se
 
 1. Watch the fans in the [[Central well|@Central well]] → particles with c &lt; 1 converge, and those with c &gt; 1 keep moving.
    ‘Largest c that settled’ reads 0.97.
-   Near the bottom each step multiplies the distance by 1 − 2c, which is smaller than 1 in size only when c &lt; 1.
 2. Read the upper figure → above c = 1 the particles bounce between two points instead of diverging.
    They stay bounded because the Gaussian walls soften.
    The bounce has half-width `s√(2 ln c)`, where s = 0.14 is the width of the well.
@@ -59,17 +58,16 @@ With [[heavy-ball momentum|hb]] of coefficient β, the bound becomes `ηλ < 2(1
 So momentum lets the same η settle in sharper minima.
 
 LeCun, Simard and Pearlmutter (1993) used the condition to set η from an online estimate of λ<sub>max</sub>.
-Wu, Ma and E (2018) read it as a selection rule: gradient descent can converge only to minima with `λ_max < 2/η`.
-SGD must also satisfy a further condition, set by its noise.
+Wu, Ma and E (2018) read it as a rule that selects minima, and added a further condition for SGD, set by its noise.
 
 Above the threshold, the higher-order shape of the loss decides what happens.
-Lewkowycz et al. (2020) solved the dynamics of a wide two-layer linear network and found three phases, set by the curvature λ₀ at initialization:
+Lewkowycz et al. solved the dynamics of a wide two-layer linear network and found three phases, set by the curvature λ₀ at initialization:
 
 1. For `η < 2/λ₀` the curvature stays nearly constant.
-2. For `2/λ₀ < η < 4/λ₀` the loss grows exponentially while the curvature falls, and training converges once λ has dropped below 2/η.
+2. For `2/λ₀ < η < 4/λ₀` the loss grows exponentially, and training converges once λ has dropped below 2/η.
 3. Above 4/λ₀ training diverges.
 
-In ReLU networks they measured the upper limit near 12/λ₀ and often found the best test accuracy inside the catapult phase.
+In ReLU networks they measured the upper limit near 12/λ₀.
 Jastrzębski et al. (2020) found that a larger learning rate or a smaller batch keeps λ<sub>max</sub> lower from early in training onward.
 
 ## Method
@@ -81,26 +79,22 @@ The central well is labelled with λ<sub>max</sub> and 2/λ, and each ring well 
 
 Fans of nine [[gradient descent|gd]] particles start 0.035 from the central minimum and run 360 steps.
 Each particle in a fan has its own step `η = c · 2/λ`, with c from 0.4 to 2.
-The upper figure plots each particle’s root-mean-square distance from the minimum over its last 40 steps.
-‘Largest c that settled’ is the largest c whose distance is below 10⁻³.
+‘Largest c that settled’ is the largest c whose distance in the upper figure is below 10⁻³.
 
 [[SGD|sgd]] cohorts with noise σ = 0.05 run at the slider’s η and are released next to the ring wells.
 An SGD particle counts as settled when it comes [[to rest|rest]] with steps shorter than 0.004.
 This test is stricter than the glossary’s, so a bouncing particle never counts.
 A particle counts as thrown out when a step longer than 0.02 carries it out of a well it had occupied for more than three steps.
 
-## Caveat
-
-A fixed two-parameter well cannot lower its own curvature.
-So this sheet shows the instability that starts a catapult, but not the fall in curvature that ends it.
-Instead, a thrown particle lands in another, flatter well.
+## Limits
 
 How far ηλ can rise above 2 before a particle leaves a well depends on the well’s surroundings.
 Across two seeds of the sheet it ranged from 3.4 to 7, so the 7 in the Try is specific to this layout.
 
-## At scale
+A fixed two-parameter well also cannot lower its own curvature.
+So this sheet shows the instability that starts a catapult, but not the fall in curvature that ends it.
+A deep network can lower its curvature, and there the phases depend on depth and width as well as on η.
 
-In deep networks the phases depend on depth and width as well as on η.
 Kalra and Barkeshli (2023) found that as depth grows and width shrinks, the loss catapult moves to larger η.
 That opens a phase in which η is above 2/λ₀ and yet the loss falls steadily while the curvature drops.
 Later they found that learning-rate [[warmup|warmup]] works largely by moving training to better-conditioned regions that tolerate a larger η (Kalra and Barkeshli 2024; see <i>Warmup</i>).

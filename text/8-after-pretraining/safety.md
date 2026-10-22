@@ -18,8 +18,7 @@ Here we can watch three kinds of fine-tuning leave the basin, or stay in it.
 
 ## In practice
 
-Re-evaluate safety after any fine-tuning.
-Benign data can weaken refusals too, so the check is needed after ordinary fine-tuning as well as after adversarial data.
+Re-evaluate safety after any fine-tuning, since benign data can weaken refusals too.
 Robustness along random directions says little about robustness to fine-tuning, which moves the weights along directions set by the data, not at random.
 
 ## Figure caption
@@ -42,12 +41,9 @@ A jump from low to high marks the step at which a cohort crossed the cliff.
 
 ## Background
 
-Qi et al. (2024) showed that fine-tuning GPT-3.5 Turbo on ten harmful training examples, at a cost under $0.20, removes its safety guardrails.
-They also showed that fine-tuning on common benign instruction data degrades safety.
+Qi et al.’s harmful fine-tuning cost under $0.20, and their benign fine-tuning used common instruction data.
 
-Peng et al. (2024) measured the safety of aligned open models along random directions in weight space.
-They found a step-like shape and called it the safety basin.
-From this landscape they computed a safety metric, VISAGE.
+Peng et al. studied aligned open models and computed a safety metric, VISAGE, from this landscape.
 They also showed that fine-tuning compromises safety by pulling the model out of the basin.
 
 Later work looked beyond random directions.
@@ -62,7 +58,7 @@ They argue that the size of the basin bounds how much any fine-tuning can degrad
 Yang et al. (2026) found the safety basin to be narrow.
 The alignment direction is the weight difference between the aligned model and the one before safety training.
 Updates along that direction preserve safety, while orthogonal updates erode it quickly.
-Their method, AsFT, penalizes the orthogonal component of the update and anchors the plate’s third cohort.
+Their method, AsFT, anchors the plate’s third cohort.
 
 ## Method
 
@@ -87,10 +83,9 @@ Each cohort minimizes its own loss:
 3. The anchored cohort adds the AsFT penalty `(λ/2)θ₂²`, with λ = 6, to the benign loss.
    The optimum of that sum, (0.8, 0.033), is inside the basin.
 
-The figure averages attack success over each cohort.
-“Left at step” is the first step at which any of its particles exceeds 50%.
+“Left at step” is the first step at which any of a cohort’s particles exceeds 50%.
 
-## Caveat
+## Limits
 
 The basin here is an ellipse with a known worst-case direction.
 A real model differs in three ways:
@@ -98,10 +93,6 @@ A real model differs in three ways:
 1. The worst-case direction depends on the data.
 2. Attack success is measured on a benchmark of harmful prompts.
 3. A two-direction slice shows nothing of the other directions.
-
-The sheet illustrates the published geometry; it does not test it.
-
-## At scale
 
 In d dimensions a random unit direction has an overlap of about 1/√d with any fixed direction.
 For a model with a billion weights that is about 3 × 10⁻⁵.
@@ -111,8 +102,6 @@ Safety does rest on few directions.
 Wei et al. (2024) found that weights making up about 3% of the parameters and 2.5% of the ranks carry it.
 Removing them broke safety while leaving utility largely intact.
 In output space, Qi et al. (2025) found that alignment often changes mainly the first few tokens of a response.
-
-So safety may be lost along a few sharp directions that random probes almost never meet.
 
 ## References
 

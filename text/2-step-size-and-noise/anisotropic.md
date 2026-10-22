@@ -46,18 +46,17 @@ Two approximations link it to the Hessian, both valid when the model’s predict
 1. The empirical Fisher is close to the Fisher information.
 2. The Fisher is close to the Hessian.
 
-Xie, Sato and Sugiyama (2021) measured `C ≈ H/B` near minima of small networks, with C the noise covariance.
+Xie et al. measured `C ≈ H/B` near minima of small networks, with C the noise covariance.
 The relation is approximate, and it weakens away from minima.
 When the model does not match its data, the empirical Fisher can differ from both the Fisher and the Hessian (Kunstner, Balles and Hennig 2019).
 
 At a minimum, noise of covariance Σ raises the loss at the rate `Tr(HΣ)`.
-Zhu et al. (2019) took this rate as an indicator of escape.
+Zhu et al. took this rate as an indicator of escape.
 It is large when the noise pushes along directions of high curvature.
 
 They compared noise of covariance Σ with isotropic noise of the same trace.
 When the Hessian is ill-conditioned and Σ is aligned with its top eigenvectors, the aligned noise has the larger indicator.
 Its advantage grows with the dimension.
-In their experiments, SGD and gradient descent with Hessian-shaped noise both escaped from sharp minima in which isotropic noise of the same size stayed.
 
 Xie et al. (2021) derived the mean time for SGD to escape a minimum over a saddle whose loss is ΔL higher.
 Its logarithm is `2BΔL/η` times a weighted sum of the inverse curvatures at the minimum and at the saddle along the escape direction.
@@ -85,21 +84,17 @@ The shaped noise has 0.086 across the well and 0.004 along it.
 
 Thirty particles per ensemble (16 on phones) start at the bottom.
 A particle that leaves the ellipse three widths out counts as escaped and is replaced.
-The figure is the [[Kaplan–Meier estimate|km]] of the fraction still inside, with particles still in the well as censored times.
-The readouts are its medians.
+The readouts are the medians of the figure’s [[Kaplan–Meier estimate|km]].
 Changing σ starts a new experiment.
 
-## Caveat
+## Limits
 
-The shaped noise here has the same total variance as the isotropic noise, as in Zhu et al.’s comparison.
-Real minibatch noise is not normalized this way.
+Unlike the shaped noise here, real minibatch noise is not normalized to a fixed total variance.
 With `C ≈ H/B`, its size also grows with the curvature, so at a sharper minimum it is both better aligned and larger.
 The sheet isolates the first effect.
 Both effects speed escape from sharp minima, so real noise may separate sharp from flat minima more strongly than this sheet does.
 
-## At scale
-
-With the squared loss the noise also shrinks with the loss itself, and it vanishes at a minimum that fits the data exactly.
+With the squared loss, real noise also shrinks with the loss itself, and it vanishes at a minimum that fits the data exactly.
 Mori et al. (2022) showed that escape then depends on the logarithm of the ratio of the saddle’s loss to the minimum’s, not on their difference.
 So the escape rate is a power law in that ratio, not an exponential in the barrier height.
 

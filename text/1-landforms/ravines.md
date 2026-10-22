@@ -12,7 +12,7 @@ The steep walls set [[λ<sub>max</sub>|sharpness]], the largest curvature.
 Gradient descent is [[stable|stab]] only if `η < 2/λ_max`, so it moves slowly along the floor (LeCun et al. 1998).
 
 The condition number κ is the ratio of the largest curvature to the smallest.
-On a quadratic with tuned hyperparameters, momentum cuts the number of steps from order κ to order √κ (Polyak 1964).
+On a quadratic with tuned hyperparameters, momentum cuts the number of steps from order κ to order √κ (Polyak 1964; see <i>Momentum</i>).
 This plate measures that gain on a curved ravine.
 
 ## In practice
@@ -43,20 +43,14 @@ Mean loss above the mouth of the ravine for the latest cohort, on a logarithmic 
 Near a minimum the loss is close to a quadratic with Hessian H.
 Along an eigenvector with eigenvalue λ, gradient descent multiplies the error by `1 − ηλ` per step.
 So it converges only if `η < 2/λ_max`.
-With the best fixed η, the slowest direction shrinks by `(κ − 1)/(κ + 1)` per step, where `κ = λ_max/λ_min`.
-So the number of steps grows in proportion to κ (LeCun et al. 1998).
 
 When `1 < ηλ < 2`, the iterate overshoots the floor at every step and crosses the valley.
 This is the zigzag.
 The factor 1 − ηλ is negative, so the error changes sign at each step while it shrinks.
 
-The [[heavy ball|hb]] (Polyak 1964) adds β times the previous step to each new one.
-Along the floor, successive gradients point the same way and add up.
+For the [[heavy ball|hb]], successive gradients along the floor point the same way and add up.
 Across it, they alternate in sign and largely cancel.
 So the heavy ball accumulates the steady component along the floor and cancels the zigzag.
-
-With η and β tuned to λ<sub>max</sub> and λ<sub>min</sub>, the heavy ball needs order √κ steps on a quadratic.
-It is stable for `ηλ < 2(1 + β)`.
 
 Nesterov’s method (1983) evaluates the gradient after the momentum step.
 On a quadratic it acts along each eigenvector like the heavy ball with momentum `β(1 − ηλ)` (Sutskever et al. 2013).
@@ -78,25 +72,20 @@ At the mouth λ<sub>max</sub> is 388.
 
 The plate sets η = 1.8/λ, where λ is the curvature across the floor at the middle of the arc.
 That λ is printed on the floor mark, with the floor’s slope.
-So gradient descent is in the zigzag range, 1 < ηλ < 2, at the middle of the arc, where the readout ηλ is measured.
+So gradient descent zigzags at the middle of the arc, where the readout ηλ is measured.
 
 Noise is off.
 Each [[cohort|cohort]] of 12 particles per optimizer starts on the wall near the head, and only the mouth counts as a rest point.
 The readouts give the mean number of steps until a particle first comes within 0.05 of the mouth, over the latest 200 arrivals per optimizer.
-The figure is the cohort’s mean `L − L_mouth`.
 
-## Caveat
+## Limits
 
 The curvature across this ravine varies threefold along it, so no single η gives the same ηλ everywhere.
 The tuning behind the √κ result can then fit only one stretch of this ravine at a time.
 In a network the steep directions also change during training (see <i>The edge of stability</i>).
 
-## At scale
-
-In many networks the Hessian’s spectrum is a bulk of eigenvalues near zero plus a few large outliers (see <i>Survey of a loss surface</i>).
-Some of the bulk eigenvalues are negative.
-Papyan (2020) tied the outliers to the classes, and Ghorbani, Krishnan and Xiao (2019) found that batch normalization largely removes them.
-
+In many networks the Hessian’s spectrum is a bulk near zero, some of it negative, plus a few large outliers (see <i>Survey of a loss surface</i>).
+Papyan (2020) tied the outliers to the classes.
 A ravine in such a network has a handful of steep walls and millions of nearly flat directions along its floor.
 There κ says little, because it divides by the smallest curvature, which is near zero or negative.
 What matters is how many steep directions there are and how far their curvatures spread.

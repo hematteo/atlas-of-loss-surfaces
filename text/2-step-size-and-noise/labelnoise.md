@@ -20,7 +20,7 @@ On this sheet we can watch which of the two optimizers moves along the manifold.
 ## In practice
 
 Training past zero loss can still change the solution.
-Label-noise SGD drifts slowly toward a local minimum of tr H, over a number of steps of order 1/η², while gradient descent stops.
+Label-noise SGD drifts slowly toward a local minimum of tr H, over a number of steps of order 1/η².
 So halving η should make the drift take about four times as many steps.
 
 ## Figure caption
@@ -43,11 +43,10 @@ A curve falling toward it belongs to particles moving toward the flattest minimi
 
 ## Background
 
-When a model can fit its training data in many ways, its minimizers form a manifold.
-Which point on it training reaches is set by the optimizer’s [[implicit bias|implicit]].
+The optimizer’s [[implicit bias|implicit]] decides which point on the manifold training reaches.
 
-Blanc et al. (2020) studied SGD with fresh label noise at every step, near a zero-loss point.
-They showed that it fluctuates across the manifold like an Ornstein–Uhlenbeck process, a random walk pulled back toward a centre.
+Blanc et al. showed that near a zero-loss point, label-noise SGD fluctuates across the manifold like an Ornstein–Uhlenbeck process.
+That is a random walk pulled back toward a centre.
 These fluctuations make it decrease `Σᵢ ‖∇_θ f(xᵢ; θ)‖²`, where f is the model’s output.
 For the squared loss at a global minimum this sum is `tr H`.
 
@@ -72,24 +71,20 @@ So a step η = 0.15 on the sheet is a step `η′ = 0.083` on `½(wa − y)²`.
 
 Its Hessian has trace `w² + a²` everywhere.
 On the floor `wa = 1` this trace is λ<sub>max</sub>, since the other eigenvalue, along the floor, is zero.
-It is smallest, 2, at the balanced points `w = a = ±1`.
 
 Each run starts three noiseless [[gradient descent|gd]] particles and three label-noise SGD particles at each of six points on the floor.
 These points have `w² + a²` from 2.5 to 4.9, with mean 3.67.
 At every step a label-noise particle draws a new target `y = 1 + εξ`, with `ξ ~ N(0, 1)`.
 This adds `η′εξ(a, w)` to its step, along the normal to the floor.
-The readouts and the figure give the mean `w² + a²` of each optimizer over the run of 5,000 steps.
+Each run lasts 5,000 steps.
 
-## Caveat
+## Limits
 
-Above about ε = 1 the noise is no longer small.
-Particles are thrown across the hyperbola or off the sheet, and the small-noise theory no longer describes their motion.
+Above about ε = 1 the noise here is no longer small.
+Particles are thrown across the hyperbola, and the small-noise theory no longer describes their motion.
+With one data point and one flat direction, the drift also has a single destination on each branch of the hyperbola.
 
-With one data point and one flat direction, the drift has a single destination on each branch of the hyperbola.
-
-## At scale
-
-The drift needs a manifold of exact minimizers and on the order of η<sup>−2</sup> steps.
+In a network the drift needs a manifold of exact minimizers.
 Language-model pretraining never fits its data exactly, so the result applies to models trained past zero loss, not to pretraining.
 
 Andriushchenko et al. (2023) studied the large step sizes used in practice.

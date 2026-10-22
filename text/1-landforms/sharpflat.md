@@ -31,21 +31,17 @@ The width of each well at its dashed line is one way to read its flatness.
 
 1. Stretch θ₁ to α = 2 → between the two minima the figure shows the same curve, only drawn wider.
    The stretch moves both minima and every point between them together.
-   No loss value has changed, only where it sits.
 2. Now read the map and readouts → both hatched areas double, the curvature along θ₁ falls fourfold and λ<sub>max</sub> hardly moves.
    At the sharp minimum λ<sub>max</sub> goes from 346 to 311.
    The area scales by α and the curvature along θ₁ by 1/α².
    λ<sub>max</sub> now comes from θ₂, which the stretch leaves alone.
    So one [[reparametrization|reparam]] has changed these three quantities by three different factors.
    The question "how sharp is this minimum?" has no answer until we say which measure, in which coordinates.
-3. Reset α to 1 and raise the [[learning rate|lr]] η to about 1.3 times the 2/λ printed at the [[Sharp minimum|@Sharp minimum]] → particles there bounce.
-   Above 2/λ each step lands further from the floor than the last, so they bounce between the walls instead of converging.
-   This is the stability limit from the Background at work.
-   Just above 2/λ they bounce too, but in a cycle so small that they are still counted [[at rest|rest]].
-4. Raise η to about 7.5 times that value, near the top of the slider → many particles are thrown into the [[Flat Basin|@Flat Basin]].
+3. Reset α to 1, then raise η to about 7.5 times the 2/λ at the [[Sharp minimum|@Sharp minimum]] → many particles are thrown into the [[Flat Basin|@Flat Basin]].
+   That η is near the top of the slider.
    Most of SGD’s particles, and about half of gradient descent’s, come [[to rest|rest]] there.
    Between 1.3 and about 6.5 times, they keep bouncing in and around the narrow well.
-   So the large learning rate has selected the flat minimum, without any reference to generalization.
+   So the large [[learning rate|lr]] has selected the flat minimum, without any reference to generalization.
 
 ## Background
 
@@ -56,16 +52,14 @@ Three measures of sharpness are in common use, and they do not always agree:
    Keskar et al. used it, and sharpness-aware minimization (Foret et al. 2021) minimizes the worst loss within such a neighbourhood.
 3. The [[sublevel set|sublevel]] `{θ : L(θ) < L* + δ}` contains all the weights whose loss is within δ of the minimum.
    Its volume is closest to Hochreiter and Schmidhuber’s definition.
-   They argued that a minimum in a large flat region can be specified with low precision.
-   By a minimum-description-length argument, it should then generalize better.
 
 The evidence for the link is mostly correlational.
 Keskar et al. (2017) found that large-batch training reaches minima with higher ε-sharpness and a larger [[generalization gap|gengap]].
 Jiang et al. (2020) trained over 10,000 convolutional networks.
 Of more than 40 predictors of generalization, sharpness-based measures were among the best.
 
-The evidence against it starts from a construction.
-Dinh et al. (2017) multiplied one layer’s weights in a ReLU network by α and divided the next layer’s by α.
+The evidence against it starts from Dinh et al.’s construction.
+They multiplied one layer’s weights in a ReLU network by α and divided the next layer’s by α.
 They showed that this leaves the function unchanged but changes the curvature.
 So a minimum can be made arbitrarily sharp without changing a single prediction the network makes.
 
@@ -73,8 +67,7 @@ Andriushchenko et al. (2023) then asked whether sharpness measures built to be i
 They found that these still correlate poorly with generalization, sometimes negatively, in settings such as transformers and fine-tuning.
 
 There is also a simpler reason flat minima turn up: the learning rate filters out sharp ones.
-Gradient descent cannot converge to a minimum with `λ_max > 2/η`, and SGD’s noise narrows the set further (Wu, Ma and E 2018).
-So a large learning rate selects flatter minima, whether or not flatness is what helps generalization.
+Gradient descent cannot converge to a minimum with `λ_max > 2/η`, and SGD’s noise narrows the set further (Wu, Ma and E 2018; see <i>Stability and catapults</i>).
 
 In Wu, Ma and E’s analysis, the noise comes from sampling the minibatch and vanishes at a minimum that fits every example.
 On this sheet the noise is added at a constant level instead.
@@ -91,45 +84,38 @@ In two dimensions that volume is an area, and it is hatched on the map.
 The readouts show both Hessian eigenvalues at each minimum and count where each optimizer comes [[to rest|rest]].
 
 The stretch instrument replaces the surface by `L(θ₁/α, θ₂)`.
-This is a [[reparametrization|reparam]] of the plane: every loss value is still attained, only at a moved point.
-It is a two-dimensional analogue of the rescaling in Dinh et al.
+This [[reparametrization|reparam]] of the plane is a two-dimensional analogue of the rescaling in Dinh et al.
 The sheet itself does not grow, so at α = 2 it shows only the middle half of the original θ₁ range.
 
 Under the stretch, the Hessian at the corresponding point becomes `DHD` with `D = diag(1/α, 1)`.
-Every sublevel area is multiplied by α.
-Because every area changes by the same factor, the stretch cannot change which minimum has the larger volume.
+Every sublevel area changes by the same factor, so the stretch cannot change which minimum has the larger volume.
 
 The stretch can, however, reorder λ<sub>max</sub>.
 A minimum curved mostly along θ₁ flattens under a strong stretch, while one curved along θ₂ does not.
 Here both minima are curved about equally in every direction, so on the slider’s range the sharp one stays sharper.
 Non-linear reparametrizations can reorder any of the three measures.
 
-## Caveat
+## Limits
 
 Here the sharp minimum is sharp in every direction, which is not what minima in real networks look like.
-At the minima reached in training, the Hessian has a few large eigenvalues and very many near zero (Sagun et al. 2018).
+At the minima reached in training, the Hessian has a few large eigenvalues and very many near zero (Sagun et al. 2018; see <i>Survey of a loss surface</i>).
 So a minimum can be sharp along a handful of directions and flat along nearly all the others.
+
 λ<sub>max</sub>, ε-sharpness and volume can then rank the same minima differently.
 λ<sub>max</sub> sees only the steepest direction, while the volume is set mostly by the many flat ones.
+The volume is also set by the directions in which the minimum is not isolated at all.
+The [[learning coefficient|llc]] is a measure built for that case (see <i>Singular minima and the learning coefficient</i>).
 
-## At scale
-
-In a network trained by full-batch gradient descent with a fixed η, λ<sub>max</sub> rises to 2/η and stays there.
-The loss’s higher-order terms hold it at that edge, instead of letting gradient descent bounce out as it does here.
-So the final λ<sub>max</sub> mostly records the learning rate we chose (see <i>The edge of stability</i>).
+In full-batch training with a fixed η, λ<sub>max</sub> rises to 2/η and stays there (see <i>The edge of stability</i>).
+So the final λ<sub>max</sub> mostly records the learning rate we chose.
 
 Hoffer, Hubara and Soudry (2017) and Shallue et al. (2019) retuned the learning rate and the number of steps for the larger batch.
 Much of the large-batch gap that Keskar et al. reported then closed.
 Wen, Li and Ma (2023) showed that in two-layer ReLU networks some of the flattest minima generalize poorly.
 They also showed that sharpness-aware minimization can generalize well for reasons other than flatness.
 
-With millions of parameters, the volume of a minimum is set by its many near-zero eigenvalues.
-It is also set by the directions in which the minimum is not isolated at all.
-The [[learning coefficient|llc]] is a measure built for that case (see <i>Singular minima and the learning coefficient</i>).
-
 The claim that survives at scale is narrower than the original argument.
 Flat minima and good generalization often appear together, but the learning rate and batch size can produce both.
-Flatness on its own does not guarantee generalization.
 
 ## References
 

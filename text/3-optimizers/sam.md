@@ -18,8 +18,7 @@ On this plate we can see whether SAM skips such pits, and where it stops instead
 
 ## In practice
 
-SAM often improves test accuracy, but whether lower sharpness is the reason is disputed.
-At large ρ it can stop where the gradient of L itself is not zero, so check that gradient at the end.
+At large ρ, SAM can stop where the gradient of L itself is not zero, so check that gradient at the end.
 
 ## Figure caption
 
@@ -39,21 +38,19 @@ SAM particles that stall beside a pit never come to rest and are not counted.
 
 ## Background
 
-Foret et al. (2021) defined the SAM objective as `max_{‖ε‖≤ρ} L(θ + ε)`.
-They approximated the inner maximum by one normalized gradient step, `ε = ρ∇L/‖∇L‖`.
-The update uses `∇L(θ + ε)`, with ε treated as a constant.
+Foret et al. defined the objective as `max_{‖ε‖≤ρ} L(θ + ε)`.
+Their update uses `∇L(θ + ε)`, with the one-step ascent `ε = ρ∇L/‖∇L‖` treated as a constant.
 They reported gains on CIFAR, ImageNet and fine-tuning, and motivated the method by a PAC-Bayes bound.
 
-Why SAM helps is contested.
-Andriushchenko and Flammarion (2022) argued that neither that bound nor convergence to flat minima fully explains the gains.
+Andriushchenko and Flammarion argued that neither that bound nor convergence to flat minima fully explains the gains.
 Nor do they fully explain why computing ε on small sub-batches (m-sharpness) matters.
 Andriushchenko et al. (2023) found that sharpness correlates poorly with generalization in modern settings (see <i>Sharp and flat minima</i>).
 
-Wen, Ma and Li (2023) showed that each of SAM’s two approximations above, taken alone, predicts the wrong effect.
+Wen, Ma and Li showed that each of these two approximations, taken alone, predicts the wrong effect.
 They also proved that full-batch SAM reduces λ<sub>max</sub>, the Hessian’s largest eigenvalue.
 SAM with batch size 1, they proved, reduces the trace of the Hessian instead.
 
-Because SAM evaluates the gradient at θ + ε, it stops wherever `∇L(θ + ε(θ)) = 0`.
+Because the gradient is taken at θ + ε, SAM stops wherever `∇L(θ + ε(θ)) = 0`.
 Such points need not be critical points of L.
 Park et al. (2026) proved that such hallucinated minimizers exist under simple conditions.
 They also gave conditions under which SAM converges to them, and reported them in network training at large ρ.
@@ -71,29 +68,22 @@ Particles are released high on the slope, at θ₁ &gt; 0.9.
 
 The green dashed lines are contours computed on a grid.
 At each grid point they take the largest loss over 24 points on the circle of radius ρ around it.
-The readouts and the figure count rings within 0.06 of a pit’s floor, within 0.3 of the basin’s floor, or elsewhere.
+A ring counts as in a pit within 0.06 of its floor, and in the basin within 0.3 of the basin’s floor.
 The counts restart, and the particles in flight are retired, whenever ρ, η or σ changes.
 
-## Caveat
+## Limits
 
 The green contours show the objective SAM approximates, not where SAM stops.
 The two part ways beside the pits, where the one-step ascent lands on a pit’s floor rather than on the highest point of the circle.
-Stalled particles never come to rest, so the rest counts and the figure leave them out.
+A two-parameter surface with one noise source also cannot show m-sharpness.
 
-## At scale
-
-Andriushchenko and Flammarion (2022) found that much of SAM’s gain in networks depends on computing ε on small sub-batches (m-sharpness).
-A two-parameter surface with one noise source cannot show this.
-In high dimensions, full-batch SAM and SAM with batch size 1 reduce different quantities: λ<sub>max</sub> and the trace of the Hessian (Wen, Ma and Li 2023).
-
+Yet in networks, Andriushchenko and Flammarion found that much of SAM’s gain depends on it.
 Each SAM step costs a second gradient.
 Its clearest gains at scale are in two settings (Bahri, Mobahi and Tay 2022):
 
 1. Vision transformers and MLP-Mixers trained without large-scale pretraining.
    There, Chen, Hsieh and Gong (2022) found that SAM raised ViT-B/16’s ImageNet top-1 accuracy by 5.3 points.
 2. Fine-tuning language models.
-
-What survives at scale is the gain in these settings, while the reason for it is still disputed.
 
 ## References
 

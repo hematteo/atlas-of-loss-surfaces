@@ -37,7 +37,7 @@ Particles that never came to rest are not counted.
    Minima are the only points where these two methods can rest.
    Along negative curvature the Newton step moves toward the critical point, and |H| reverses that component.
 3. Watch Newton’s particles → on this seed about two in three never come to rest.
-   Some of them chatter near a curve where det H = 0, as the Caveat describes.
+   Some of them chatter near a curve where det H = 0 (see Limits).
 4. Raise α to 1 → saddles still take most of Newton’s rings.
    The shares shift only a little toward minima and summits.
    Over four minutes on this seed, about 27% are at minima, 60% at saddles and 13% at summits, against 20%, 70% and 10% at α = 0.1.
@@ -46,26 +46,18 @@ Particles that never came to rest are not counted.
 
 ## Background
 
-Newton’s method solves `H s = −∇L` and steps to θ + s.
-Near a critical point with nonsingular Hessian, full steps converge quadratically, whatever the signs of the eigenvalues.
-
+From close enough, full Newton steps converge quadratically, whatever the signs of the eigenvalues.
 In the eigenbasis of H, the step along eigenvector i is `−g_i/λ_i`.
 On a quadratic, g<sub>i</sub> is λ<sub>i</sub> times the distance to the critical point along that eigenvector.
 So this step cancels the distance, whatever the sign of λ<sub>i</sub>.
 When λ<sub>i</sub> &lt; 0 it moves toward the critical point, which is uphill.
 
-So for minimization the method is used with a safeguard (Nocedal and Wright 2006, chapters 3 and 4).
+So for minimization the method is used with a safeguard (Nocedal and Wright, chapters 3 and 4).
 Either a modified Hessian keeps the model convex, or a trust region bounds the step.
 For deep networks, Martens (2010) used a Hessian-free method built on the Gauss–Newton matrix, which is positive semidefinite.
 
-Dauphin et al. (2014) argued that in high dimensions most critical points of high loss are saddles.
-Their evidence came from results on random Gaussian fields and from experiments.
-They also argued that the neighbourhoods of these saddles slow down first-order methods.
-
-Their remedy, the saddle-free Newton method, replaces H by |H|.
-This matrix has the same eigenvectors as H, with the absolute values of its eigenvalues.
-Each direction is rescaled by 1/|λ<sub>i</sub>|, and the step always descends.
-In effect it keeps Newton’s step length in every direction but turns the uphill components around.
+Dauphin et al. also argued that in high dimensions most critical points of high loss are saddles (see <i>Saddle points</i>).
+With |H|, each direction is rescaled by 1/|λ<sub>i</sub>|, and the step always descends.
 Using a Krylov-subspace approximation, they reported faster escape from saddles than SGD in deep and recurrent networks.
 
 Gradient descent with a small enough step converges to a [[strict saddle|strictsaddle]] only from a set of starting points of measure zero (Lee et al. 2016).
@@ -78,36 +70,32 @@ Its critical points are found by Newton’s method from a grid.
 Each is classified by the signs of the Hessian’s eigenvalues: both positive at a minimum, both negative at a summit, mixed at a saddle.
 
 Newton and saddle-free Newton take damped steps `θ ← θ − αH⁻¹∇L`, with |H| in place of H for saddle-free Newton.
-The Hessian comes from finite differences, there is no noise, and each step is capped at length 0.02.
+The Hessian comes from finite differences, and there is no noise.
 Where |det H| &lt; 10⁻⁹ they take a small gradient step instead.
 Saddle-free Newton floors each |λ<sub>i</sub>| at 0.5.
 Gradient descent uses η = 0.004.
 
-A Newton particle can come [[to rest|rest]] at any critical point, the others only at a minimum.
+A Newton particle can come [[to rest|rest]] at any critical point.
 The kind of point is read from the Hessian at the particle’s position averaged exponentially over about its last 60 steps.
 Particles that never come to rest are retired after 2475 steps without a ring.
 
-The readouts count Newton’s rings by kind, and the figure shows the shares for all three optimizers.
+The readouts count Newton’s rings by kind.
 The counts restart, and particles in flight are retired, whenever α or η changes.
 
-## Caveat
+## Limits
 
 Where det H = 0 the Newton step is undefined.
 Near such a curve the step is very long, since it divides by an eigenvalue close to zero.
-With the cap at 0.02, Newton particles near it chatter back and forth across the curve until they are retired.
+With steps capped, Newton particles near it chatter back and forth across the curve until they are retired.
 Saddle-free Newton avoids this only through its floor on |λ<sub>i</sub>|.
 
-## At scale
-
-A network with millions of weights has a Hessian with millions of rows, which no one forms, let alone inverts.
+In a real network, with millions of weights, the Hessian has millions of rows, which no one forms, let alone inverts.
 Its spectrum is mostly a bulk near zero with a few large outliers (see <i>Survey of a loss surface</i>).
 
 At that scale, second-order methods act as [[preconditioners|precond]].
 They use positive-semidefinite or clipped approximations to the curvature, either layer by layer or diagonal.
 Examples are K-FAC (Martens and Grosse 2015), Shampoo (Gupta, Koren and Singer 2018) and Sophia (Liu et al. 2024).
-
-Because their curvature is never negative, none of them is drawn to saddles the way raw Newton is.
-Escaping saddles is then left to gradient noise, as for SGD (see <i>Saddle points</i>).
+Because their curvature is never negative, none of them is drawn to saddles, and escape is left to gradient noise, as for SGD (see <i>Saddle points</i>).
 
 ## References
 

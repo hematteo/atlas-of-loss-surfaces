@@ -11,7 +11,6 @@ On the straight segment between those minima, the loss is high.
 Yet a simple curve can usually join them while the training loss along it stays close to its value at the ends.
 
 This is [[mode connectivity|modeconn]] (Garipov et al. 2018; Draxler et al. 2018).
-Two minima are connected when some path between them stays low, even if the straight one does not.
 So the minima SGD finds may not be isolated basins.
 
 Here a curve learns to bend around the hill, and we watch the barrier fall.
@@ -26,7 +25,7 @@ A low-loss curve does not help, since it may pass far from the midpoint.
 
 Above: the loss along the straight segment from A to B (dashed) and along the trained curve.
 Below: the loss along the straight line from each recent particle’s start to its resting point.
-A line is blue if the loss falls all the way and orange if it rises.
+A line is blue if the loss falls [[monotonically|mli]] along it and orange if it rises.
 The drop between the two peaks is what the bend has removed.
 
 ## Try
@@ -35,7 +34,6 @@ The drop between the two peaks is what the bend has removed.
    The control point descends the loss averaged along the curve, and most of that curve sits on the hill.
    So its gradient steps push the bend off the hill and into the trench.
 2. Watch the lower figure → most lines from a particle’s start to its [[rest point|rest]] are blue.
-   Blue means that the loss falls [[monotonically|mli]] along the line.
 3. Look at the orange lines → most start inside the trench.
    A particle there follows the trench’s curved floor.
    The straight line back to its start then cuts through the trench wall.
@@ -47,12 +45,11 @@ Low-loss paths were first proved to exist in a simple case, then found by traini
 Freeman and Bruna (2017) studied networks with one hidden layer of rectified units.
 They proved that the [[sublevel sets|sublevel]] of the loss become connected as the layer widens, up to a gap that shrinks with width.
 
-Garipov et al. (2018) trained a polygonal chain with one bend, or a quadratic Bézier curve, between two independently trained networks.
+Garipov et al. trained a polygonal chain with one bend, or a quadratic Bézier curve, between two independently trained networks.
 They minimized the loss averaged over the curve, and the plate’s green curve is such a Bézier curve.
 For VGG, ResNets and wide ResNets on CIFAR-10 and CIFAR-100, training loss and test error stayed nearly constant along the curve.
-The straight segment crossed a large [[barrier|barrier]].
 
-Draxler et al. (2018) found paths with essentially no barrier using the nudged elastic band method.
+Draxler et al. found paths with essentially no barrier using the nudged elastic band method.
 They proposed that the minima found by SGD are points on one connected low-loss set.
 Straight segments between minima are the subject of <i>Forks in the road</i> and <i>Twins and re-basin</i>.
 
@@ -80,24 +77,21 @@ Each gradient is estimated from 12 stratified samples of t and clipped to norm 3
 
 Each barrier readout is the largest loss on 101 points of the path minus the larger of L(A) and L(B).
 Particles run [[SGD|sgd]] with η = 0.004 and σ = 0.3, and every third [[cohort|cohort]] starts in the trench.
-For each distinct run, the loss is checked at 61 points on the line from its start to its rest point.
+For each distinct run, the loss on its start-to-rest line is checked at 61 points.
 The line counts as monotone if that loss never rises more than 0.002 above its lowest earlier value.
 
-## Caveat
+## Limits
 
 The low road was built into this sheet, so the plate shows what such a curve looks like, not why one exists.
 In two dimensions, two minima are usually separated by a ridge that every path between them must cross.
-In networks, low-loss curves are found by training in millions of dimensions.
+In networks, by contrast, low-loss curves are found by training in millions of dimensions.
 Their existence has been attributed to overparameterization (Freeman and Bruna 2017; Draxler et al. 2018).
-
-## At scale
 
 In large networks the low-loss set is more than a curve.
 Benton et al. (2021) trained whole low-loss simplices, the higher-dimensional analogue of a filled triangle.
 Each simplex joins several independently trained networks at once.
 
-Averaging weights still needs a low straight segment.
-At scale that holds mainly in two cases:
+At scale, the straight segment between minima is low mainly in two cases:
 
 1. Between fine-tunes of one pretrained model (Wortsman et al. 2022; see <i>Weight averaging</i>).
 2. Between some independently trained networks once their hidden units are matched (see <i>Twins and re-basin</i>).

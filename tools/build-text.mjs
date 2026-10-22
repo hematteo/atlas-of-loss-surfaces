@@ -20,8 +20,7 @@ const SECTIONS = {
   'Try': ['try', 'blocks'],
   'Background': ['bg', 'blocks'],
   'Method': ['method', 'blocks'],
-  'Caveat': ['caveat', 'blocks'],
-  'At scale': ['scale', 'blocks'],
+  'Limits': ['limits', 'blocks'],
   'References': ['refs', 'refs'],
 };
 const REQUIRED = ['Subtitle', 'Lead', 'Try', 'Method', 'References'];

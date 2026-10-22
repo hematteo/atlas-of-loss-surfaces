@@ -41,7 +41,7 @@ The black line is the mean; the dotted line is the threshold of 0.05, and forks 
 
 ## Background
 
-Frankle et al. (2020) called this test instability analysis.
+Frankle et al. called this test instability analysis.
 They measured the error [[barrier|barrier]] on the straight segment between the two copies.
 That barrier is the largest error along the segment minus the mean of the two endpoint errors.
 A network counts as stable at k if this barrier is below 2%.
@@ -55,7 +55,7 @@ Such subnetworks were found by iterative magnitude pruning and then rewound, i.e
 They reached full accuracy only when rewound to a step at which they were stable.
 For large networks that step is early in training rather than at initialization.
 
-Fort et al. (2020) found a short chaotic phase in the first two to three epochs.
+Fort et al. found a short chaotic phase in the first two to three epochs.
 The neural tangent kernel governs how gradient steps change the outputs, and during this phase it changes quickly.
 The phase decides the linearly connected basin in which training ends.
 
@@ -69,7 +69,7 @@ The sheet is a dome on a gentle bowl.
 A Gaussian hill sits at the centre, with four Gaussian wells of different depths around it and four lower ridges between the wells.
 
 Each experiment releases one particle at the [[Dome|@Dome]] with a jitter of 0.003.
-The Dome is a local maximum, so the gradient there is zero, and at first only the noise decides which way the particle rolls.
+The Dome is a local maximum, so the gradient there is zero.
 It runs [[SGD|sgd]] with η = 0.004 and σ = 1.
 
 At step k the particle splits: a copy starts at the same point, marked with a cross.
@@ -78,32 +78,26 @@ Both copies continue with independent noise until each has taken 1,100 steps.
 That independent noise plays the part of a different minibatch order.
 
 The barrier is the largest loss on 61 points of the segment between the two final iterates, minus the mean of their losses.
-Frankle et al. used error rather than loss.
-A pair counts as connected if the barrier is at most 0.05.
-
 On the seeds measured, pairs in the same basin had barriers below 0.03 and pairs in different basins above 0.85.
 So the threshold separates them cleanly.
 The readouts give the share of connected pairs among the latest 420 experiments at k = 0, 50 and 400.
 
-## Caveat
+## Limits
 
 Here the outcome is decided while the particle rolls off a single local maximum.
 Early training of a network does not start from a maximum.
-The two copies of an unstable network end at different points of a high-dimensional set of low loss.
-A barrier on the segment between them separates them.
 So the plate shows how the test works, not what makes a real network unstable.
 
-## At scale
+The two copies of an unstable network end at different points of a high-dimensional set of low loss.
+A barrier on the segment between them separates them.
 
-The measurements above are on image classifiers.
+The measurements in the Background are on image classifiers.
 The step at which a language model becomes [[stable to SGD noise|sgdstab]] has not been mapped the same way.
 
 Some training methods for language models depend on that stability all the same:
 
 1. Branch-Train-Merge (Li et al. 2022) branches expert copies from one shared seed model and later averages or ensembles them.
 2. DiLoCo (Douillard et al. 2023) lets copies on separate machines train for hundreds of steps on their own before averaging their updates.
-
-Averaging works only if copies split from a model that has already trained for a while stay in one basin.
 
 ## References
 

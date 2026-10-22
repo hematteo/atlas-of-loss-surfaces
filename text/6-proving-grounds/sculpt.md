@@ -22,7 +22,7 @@ Columns are tinted by optimizer and stacked.
 
 1. Dig one spot three times with brush width r = 0.06, and a wide well nearby at r = 0.3 → the narrow one is named Sharp Minimum.
    Its label reads 2/λ ≈ 0.008.
-   Each stroke adds about 0.3/r² of curvature, so three narrow strokes make λ large and 2/λ small.
+   Three narrow strokes make λ large and 2/λ small.
 2. Release a [[cohort|cohort]] into it and raise η past 0.008 → [[SGD|sgd]] bounces across the well.
    SGD here is gradient descent plus noise, so it inherits gradient descent’s limit: [[stable|stab]] at a minimum only if `η < 2/λ_max`.
 3. Raise η to about 0.03, near four times 2/λ → SGD leaves the narrow well and comes [[to rest|rest]] in the wide one.
@@ -39,26 +39,22 @@ So halving r makes a well about four times as sharp.
 A sheet holds up to 45 strokes.
 Undo removes the last stroke and Smooth removes them all.
 
-After each stroke, [[critical points|crit]] are found by Newton’s method and classified by the Hessian.
+Critical points are found by Newton’s method and classified by the Hessian.
 The prominence of a minimum is its depth below its lowest pass.
 Among minima with prominence above 0.08, the one whose smaller Hessian eigenvalue is largest is named Sharp Minimum.
 Of the rest, the one with the smallest λ<sub>max</sub> is the Flat Basin.
 
 [[SGD|sgd]], the [[heavy ball|hb]] and [[Adam|adam]] are released automatically, or at any point clicked with the release tool.
-The figure is a histogram of the loss at which particles came to rest.
 
-## Caveat
+## Limits
 
 The names are assigned by curvature alone.
 Here the Saddle of Hesitation is the saddle whose descending direction is least curved, so the one that particles leave most slowly.
 The Col of Symmetry Breaking is the most sharply curved downward of the saddles more than 0.5 away from it.
 Neither involves a plateau or a symmetry.
 
-## At scale
-
-A random two-dimensional slice of a network’s loss almost never contains the directions that dominate the gradient.
-Gur-Ari, Roberts and Dyer (2018) found that the gradient soon lies mostly in the span of the Hessian’s top eigenvectors.
-There are about as many of these as there are classes.
+A two-dimensional slice of a network’s loss has limits of its own: a random one almost never contains the directions that dominate the gradient.
+Gur-Ari, Roberts and Dyer (2018) found that the gradient soon lies mostly in the span of the Hessian’s top eigenvectors, about one per class.
 Even so, most of the decrease in loss comes from the small part of the step outside that span (see <i>The edge of stability</i>).
 
 Sharpness also depends on the parametrization: the same function can sit at minima of very different curvature (see <i>Sharp and flat minima</i>).

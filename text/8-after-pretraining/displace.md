@@ -50,14 +50,12 @@ The margin m is the chosen answer’s log-probability ratio to a frozen referenc
 The loss depends only on m, so it can fall while both log-probabilities fall.
 
 Each answer token has an unembedding, the vector that maps the hidden state to its logit.
-For single-token answers, Razin et al. (2025) proved that a token’s log-probability change follows the alignment of its unembedding with `w₊ − w₋`.
+Razin et al.’s single-token proof shows that a token’s log-probability change follows the alignment of its unembedding with `w₊ − w₋`.
 That vector is the difference of the two answers’ unembeddings.
 They also proved that displacement is likely when those two unembeddings are similar.
 
-Their analysis of whole responses shows that displacement is likely when the two responses have similar hidden embeddings.
-They measure this similarity with the CHES score.
-Removing high-CHES pairs reduced unintended unalignment more than adding an SFT term did.
-They found the same with IPO.
+The CHES filtering (see In practice) comes from their analysis of whole responses.
+It reduced unintended unalignment more than an added SFT term did, under IPO as well as DPO.
 
 Ren and Sutherland (2025) gave a complementary account from learning dynamics.
 A negative gradient on an unlikely response squeezes probability into the response that is already most likely.
@@ -65,8 +63,8 @@ Luo et al. (2026) linked this squeezing effect to curvature in logit space and r
 
 The two fixes on this sheet change the DPO loss:
 
-1. IPO (Azar et al. 2024) replaces the logistic loss by `(m − 1/2τ)²`, which has a minimum at a finite margin.
-2. Iterative reasoning preference optimization (Pang et al. 2024) adds the chosen answer’s negative log-likelihood to the DPO loss.
+1. IPO (Azar et al. 2024) replaces the logistic loss by `(m − 1/2τ)²`.
+2. DPO + NLL comes from iterative reasoning preference optimization (Pang et al. 2024).
 
 ## Method
 
@@ -89,22 +87,19 @@ Here `w̄ = Σπₖwₖ` is the probability-weighted average unembedding.
 So No gains while it is better aligned with d than that average is.
 This predicts the sign of every change in π(No) except 4 of 15,000 steps, all at the peak.
 
-## Caveat
+## Limits
 
-In a network the hidden state is computed from the prompt by weights that every prompt and token share.
 Here h moves freely and the unembedding is frozen.
 So the sheet shows the single-token mechanism, not how large the effect is in a trained model.
 
-## At scale
-
-Razin et al. found the effect in OLMo-1B and in Llama-3-8B-Instruct.
+In trained models, Razin et al. found the effect in OLMo-1B and in Llama-3-8B-Instruct.
 In the Llama model, DPO on safety data lowered the refusal rate from 74.4% to 33.4%.
 
 A real vocabulary has about 10⁵ tokens, far more than the hidden size of 10³ to 10⁴.
 So many unembeddings point in similar directions.
 
-What the sheet leaves out is how h moves.
-Fine-tuning changes h for every prompt at once, through shared weights.
+In a network the hidden state is computed from the prompt by weights that every prompt and token share.
+So fine-tuning changes h for every prompt at once.
 Aghajanyan, Gupta and Zettlemoyer (2021) found that the weight changes made by fine-tuning have low intrinsic dimension.
 That means they fit in a small random subspace.
 

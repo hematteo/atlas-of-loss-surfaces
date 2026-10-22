@@ -39,25 +39,17 @@ And no fixed linear change of coordinates straightens a curved valley.
 
 ## Background
 
-Rosenbrock (1960) introduced the function to test his method of rotating coordinates, a search that turns its directions to follow a valley.
+The method Rosenbrock tested with it was his own: rotating coordinates, a search that turns its directions to follow a valley.
 Moré, Garbow and Hillstrom (1981) made it the first problem of their test set, started from (−1.2, 1).
 
-Reaching the floor is easy.
-Following it is hard, because the floor bends along the parabola v = u².
-So no fixed linear change of coordinates straightens it.
+Reaching the floor is easy, but following it is hard, because the floor bends along the parabola v = u².
 Lining the floor up with an axis at one point leaves it askew farther along.
 
 Near the minimum f is close to a quadratic whose Hessian has eigenvalues 1,001.6 and 0.40, so κ = 2,508.
-Polyak (1964) proved the heavy ball’s rate near a minimum.
-With tuned η and β, it shrinks the error by a factor of about (√κ − 1)/(√κ + 1) per step.
-Gradient descent with its best fixed step shrinks it by (κ − 1)/(κ + 1).
-
-For κ = 2,508 these factors are 0.961 and 0.9992.
-So the heavy ball shrinks the error in about √κ steps by as much as gradient descent does in about κ steps.
+For this κ, Polyak’s tuning gives the heavy ball an error factor of 0.961 per step, against 0.9992 for gradient descent at its best step (see <i>Momentum</i>).
 The tuned β is 0.92, close to the β = 0.9 used here.
 
-Adam divides each coordinate’s step by a running root mean square of that coordinate’s recent gradients.
-This preconditioner is diagonal, so it removes ill-conditioning only when the valley’s long axis lies along a coordinate axis (see <i>Adam, sign descent and the axes</i>).
+Adam divides each coordinate’s step by a running root mean square of that coordinate’s recent gradients (see <i>Adam, sign descent and the axes</i>).
 At the minimum the floor runs at 63° to the u axis, along neither axis, so there Adam’s rescaling cannot fully remove the ill-conditioning.
 
 ## Method
@@ -70,23 +62,16 @@ The step size is η = 0.003 = 1.4/λ<sub>max</sub>.
 This lies inside the [[stability threshold|stab]] of gradient descent (2/λ<sub>max</sub>) and of the heavy ball (2(1 + β)/λ<sub>max</sub>).
 
 The first four races start at (−1.2, 1), (1.5, 2.2), (−1.6, 2) and (0.4, −0.2).
-Later races start at random points of high loss, one every 3,100 steps.
-A particle retires when it comes to rest or after 3,000 steps.
+Races start every 3,100 steps, and particles retire after 3,000.
 
-The figure plots log₁₀(L − L*) against step, averaged over each optimizer’s particles still moving.
-A line ends when all of them have come to rest.
-The readouts give the lowest L − L* each optimizer reached in the latest race.
-
-## Caveat
+## Limits
 
 The cap slows descent on the walls.
 At the classic start f = 24.2, and the gradient of L there is 0.012 times the gradient of f, against 0.3 near the minimum.
 This slows gradient descent and the heavy ball, whose steps scale with the gradient, more than Adam, whose step does not.
 Comparisons run on f itself spend relatively fewer steps on the walls, so the step counts here apply only to this sheet.
 
-## At scale
-
-In more dimensions the valley is not the only trap.
+Beyond this sheet’s two dimensions, the valley is not the only trap.
 The n-dimensional form is a sum of n − 1 such terms.
 From n = 4 on, it has a second local minimum near (−1, 1, …, 1), with f between 3.7 and 4.0.
 Kok and Sandrock (2009) found only these two minima up to n = 100, but many saddles.

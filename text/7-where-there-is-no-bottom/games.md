@@ -44,7 +44,6 @@ On a log scale a constant factor per step is a straight line.
 
 ## Background
 
-In a zero-sum game θ₁ minimizes f while θ₂ maximizes it.
 A local equilibrium is a minimum of f in θ₁ and a maximum in θ₂, so it is a [[saddle point|saddle]] of f.
 Near it a smooth game is approximately quadratic.
 The bilinear interaction term of that quadratic makes the gradient field rotate around the equilibrium instead of pointing at it.
@@ -54,14 +53,13 @@ It shows up as eigenvalues of the gradient field’s Jacobian with large imagina
 Mescheder, Geiger and Nowozin (2018) reduced a GAN to one generator and one discriminator parameter, the Dirac-GAN.
 Its linearization at the equilibrium is this bilinear game, and they showed that unregularized GAN training need not converge on it.
 
-On bilinear games the behaviour of each rule has been proved:
+The behaviour of the other rules on bilinear games has also been proved:
 
-1. Simultaneous gradient descent–ascent diverges for every constant step.
-2. Alternating updates stay bounded and cycle (Gidel, Askari Hemmat et al. 2019; Bailey, Gidel and Piliouras 2020).
-3. Extragradient (Korpelevich 1976) converges on monotone problems, which include bilinear games.
+1. Alternating updates stay bounded and cycle (Gidel, Askari Hemmat et al. 2019; Bailey, Gidel and Piliouras 2020).
+2. Korpelevich’s extragradient converges on monotone problems, which include bilinear games.
    Gidel, Berard et al. (2019) carried it over to GAN training.
-4. Optimistic gradient descent–ascent goes back to Popov (1980).
-   Daskalakis et al. (2018) proved its last-iterate convergence on bilinear games.
+3. Optimistic gradient descent–ascent goes back to Popov (1980).
+   Daskalakis et al. proved its last-iterate convergence on bilinear games.
 
 Mokhtari, Ozdaglar and Pattathil (2020) showed that both methods approximate the proximal point method and converge linearly on bilinear problems.
 The proximal point method steps with the gradient at its own landing point.
@@ -76,41 +74,33 @@ Central differences are exact on a bilinear function, so the gradients are exact
 Each race releases five particles per rule at one point 0.28 to 0.42 from the origin, without noise.
 Particles within 0.006 of the equilibrium retire.
 
-With e = ηa, a simultaneous step multiplies the distance by `√(1 + e²)`.
-An extragradient step multiplies it by `√(1 − e² + e⁴)`.
-For small e these are close to 1 ± e²/2, so the dashed lines rise and fall at nearly equal slopes.
+With e = ηa, the simultaneous rate of Try 1 is `√(1 + e²)`, and an extragradient step multiplies the distance by `√(1 − e² + e⁴)`.
+For small e both are close to 1 ± e²/2, so the dashed lines rise and fall at nearly equal slopes.
 
 An optimistic step contracts the slow mode by `√((1 + √(1 − 4e²))/2)`.
 The first optimistic step is a simultaneous one.
-An alternating step has determinant 1.
-For e &lt; 2 its eigenvalues lie on the unit circle, so the iterates stay on a closed curve.
+For e &lt; 2 an alternating step’s eigenvalues lie on the unit circle, so the iterates stay on a closed curve.
 
-The figure averages log₁₀ distance per rule.
-The dashed lines are the first two rates, drawn from the race’s nominal start.
+Each curve averages log₁₀ distance over the rule’s particles, and the dashed lines are drawn from the race’s nominal start.
 Measured slopes agree with all three rates to four significant digits.
 
-## Caveat
+## Limits
 
-A bilinear game has no curvature in either player’s own variable.
+On this sheet neither player has curvature in its own variable.
 With θ₂ held fixed, f is a straight line in θ₁, with no bottom to fall into.
+So the sheet isolates the rotation that makes simultaneous gradient descent–ascent fail.
 
-Near a strict local equilibrium of a real game, each player’s own curvature adds contraction.
+In a real game, each player’s own curvature adds contraction near a strict local equilibrium.
 With it, simultaneous gradient descent–ascent converges there for small enough steps.
-The bilinear case isolates the rotation that makes it fail.
-
-## At scale
-
 In any number of dimensions, the Jacobian of the game’s gradient field splits into two parts (Balduzzi et al. 2018):
 
 1. A symmetric part, which behaves like descent on a loss.
 2. An antisymmetric part, the rotation drawn on this sheet.
 
-A real GAN, with millions of parameters per player, has both parts.
-So its training mixes descent with the cycling seen here.
+A real GAN, with millions of parameters per player, has both parts, so its training mixes descent with the cycling seen here.
 
 Recent GANs get convergent dynamics from the loss rather than from the update rule.
-R3GAN (Huang et al. 2024) pairs a relativistic loss with gradient penalties on real and generated data.
-Its authors prove that it converges locally.
+R3GAN (Huang et al. 2024) pairs a relativistic loss with gradient penalties on real and generated data, and its authors prove that it converges locally.
 
 ## References
 

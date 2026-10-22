@@ -50,9 +50,8 @@ For a softmax policy its gradient is `∂J/∂θ_a = π_a(r_a − J)`, the exact
 So each logit’s step is scaled by its action’s probability π_a.
 
 Agarwal et al. (2021) proved that exact softmax policy gradient converges to an optimal policy.
-Mei et al. (2020a) proved that the suboptimality `J* − J` falls as O(1/t), matched by an Ω(1/t) lower bound.
-The constant is set by the smallest probability the policy gives the optimal action along its path.
-That probability can be exponentially small when the start favours another action.
+Mei et al. (2020a) matched their O(1/t) rate for the suboptimality `J* − J` with an Ω(1/t) lower bound.
+The probability that sets its constant can be exponentially small when the start favours another action.
 
 Write p<sub>min</sub> for the smallest π₁ on policy gradient’s path.
 On this sheet, for depths 2 to 4, its escape time is close to `5/(η p_min)`.
@@ -68,7 +67,6 @@ Two changes remove the trap:
    It converges at a rate independent of the number of states and actions (Agarwal et al. 2021).
 2. Adding τ times the policy’s [[entropy|entropy]] to J makes policy gradient converge linearly (Mei et al. 2020a).
    The entropy term pulls the policy towards uniform, which keeps π₁ away from zero.
-   The limit is the regularized optimum `π ∝ exp(r/τ)`, not the best arm.
 
 ## Method
 
@@ -84,16 +82,14 @@ Particles step in logit space with η = 0.4 and no noise.
 Policy gradient and entropy-regularized policy gradient (τ = 0.25) update all three logits, then subtract θ₃ from each.
 Natural policy gradient adds `η(r₁ − r₃, r₂ − r₃)`.
 
-Races start at seven points on the terrace of arm 2, at depths `θ₂ − θ₁` from 1 to 6, five particles per optimizer.
-A particle escapes when π₁ exceeds both other probabilities.
-
-The figure plots log₁₀ of the escape step against depth.
-A hollow ring marks an optimizer still trapped when the race ends at 3,200 steps.
+Races start at seven depths on the terrace of arm 2, from 1 to 6, five particles per optimizer.
+A race ends at 3,200 steps.
 Each natural-gradient step closes η(r₁ − r₂) of the gap, so the dashed line is `depth/(η(r₁ − r₂))`.
 
-## At scale
+## Limits
 
-With sampled rewards instead of exact gradients, softmax policy gradient on a bandit still reaches the best arm.
+The particles here follow exact gradients.
+With sampled rewards instead, softmax policy gradient on a bandit still reaches the best arm.
 Mei et al. (2023) proved a rate of O(1/t) with a constant step.
 Mei et al. (2024) proved almost sure convergence for any constant learning rate.
 

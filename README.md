@@ -45,9 +45,9 @@ on. Critical points are found by Newton's method and curvatures come from the He
 equilibria are measured from the particles. So each number on a card is something you can check on its plate.
 
 Each plate card states the finding and cites the papers it comes from. For most plates it also says how settled the
-result is. It then gives experiments to try, with predictions that were checked in the page. Where the result works
-differently in networks with millions or billions of parameters, a section of the card, *At scale*, says how. The
-about panel (**I**) explains what a two-parameter map cannot show.
+result is. It then gives experiments to try, with predictions that were checked in the page. A section of the card,
+*Limits*, says what the two-parameter sheet simplifies and how the result changes in networks with millions or
+billions of parameters. The about panel (**I**) explains what a two-parameter map cannot show.
 
 Come close and the particles become stick men, which makes each optimizer's state visible at a glance. Their gait,
 poses and reactions are read from that state: they scratch their heads at saddles, cartwheel when catapulted, and sit

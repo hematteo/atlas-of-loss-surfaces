@@ -22,7 +22,6 @@ On this plate we can turn the valley against the axes and count what Adam loses.
 
 ## In practice
 
-Adam exploits the coordinate axes.
 After a random rotation of the loss, Adam trained worse, while rotation-invariant SGD was unaffected (Xie, Mohamadi and Li 2025).
 So retest Adam after any reparametrization that mixes coordinates.
 
@@ -60,14 +59,12 @@ So when the noise is small, Adam approaches sign descent.
 Sign descent is steepest descent in the ℓ∞ norm, and it moves every coordinate by the same amount.
 Balles, Pedregosa and Le Roux (2020) found it favourable when the Hessian is concentrated on its diagonal and its largest eigenvalue is much larger than the average.
 Lion (Chen et al. 2023), found by program search, takes the sign of an interpolation between momentum and the current gradient.
-All these methods are diagonal, so unlike gradient descent they change under a rotation of parameter space.
 
-Several studies have probed the gap between SGD and Adam on transformers:
+The Lead’s two explanations rest on these findings about the gap between SGD and Adam, and a third study adds another:
 
-1. Kunstner et al. (2023) found that the gap persists with full batches, where Adam behaves like sign descent with momentum.
-2. Zhang et al. (2024) related the gap to Hessian spectra that differ between parameter blocks.
-3. Xie, Mohamadi and Li (2025) proved convergence under ℓ∞ smoothness.
-   They also found that after a random rotation of the training loss, rotation-invariant variants of SGD can outperform Adam.
+1. Kunstner et al. found that the gap persists with full batches, where Adam behaves like sign descent with momentum.
+2. Xie, Mohamadi and Li proved convergence under ℓ∞ smoothness.
+3. Zhang et al. (2024) related the gap to Hessian spectra that differ between parameter blocks.
 
 ## Method
 
@@ -83,28 +80,24 @@ Gradient noise is σ = 0.005.
 
 Cohorts start at u = ±0.4, v = ±0.04.
 The step counts come from separate noise-free runs from that point, one for each α in steps of 7.5°.
-Each run counts the steps until `L − L* < 0.005`.
 
 The last readout, λ<sub>max</sub>η², sets the loss at which sign descent stops in an axis-aligned valley.
 There it ends in a two-step cycle across the floor, with mean loss between λη²/8 and λη²/4.
 Each sign step moves the steep coordinate by η, so the cycle alternates between two points η apart.
 When those points straddle the floor evenly, the mean loss is λη²/8.
 
-## Caveat
+## Limits
 
 In two dimensions a sign step can point only along the four diagonals, so the axes matter as much as they can.
-At 45° every sign step goes either along the valley or straight across it.
-In higher dimensions the effect is a matter of degree, which Balles, Pedregosa and Le Roux (2020) relate to how much of the Hessian lies on its diagonal.
+In higher dimensions the effect is a matter of degree, tied to how much of the Hessian lies on its diagonal (see the Background).
 
-## At scale
-
-In language models, Kunstner et al. (2024) traced much of the gap between SGD and Adam to heavy-tailed class imbalance.
+Studies of real networks point to other causes of the gap between SGD and Adam as well.
+In language models, Kunstner et al. (2024) traced much of the gap to heavy-tailed class imbalance.
 Gradient descent makes slow progress on the many rare tokens, while Adam and sign descent do not.
 Zhao et al. (2025) found that Adam, Lion and signed momentum train language models about equally well.
 In their comparison, what matters most is adaptivity on the last layer and the normalization parameters.
 
-In large networks the natural unit is often a whole weight matrix rather than a coordinate.
-Shampoo (Gupta, Koren and Singer 2018) and SOAP (Vyas et al. 2025) precondition each matrix from both sides.
+In large networks, Shampoo (Gupta, Koren and Singer 2018) and SOAP (Vyas et al. 2025) precondition each weight matrix from both sides.
 Muon replaces each matrix’s momentum by the nearest orthogonal matrix.
 This is a steepest-descent step in the spectral norm (Bernstein and Newhouse 2024).
 Liu et al. (2025) trained large language models with Muon on about half of AdamW’s compute.

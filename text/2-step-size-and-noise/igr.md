@@ -28,7 +28,6 @@ To leading order, larger steps add a penalty on the squared gradient norm that b
 Each release gives two points, each plotting gradient descent’s final w² − a² against a prediction.
 Black rings use the prediction of gradient flow, and green dots that of the flow of L̃.
 A perfect prediction lies on the diagonal.
-The green dots lie nearer the diagonal, but gradient descent goes further toward balance than either flow predicts.
 
 ## Try
 
@@ -49,9 +48,8 @@ The green dots lie nearer the diagonal, but gradient descent goes further toward
 
 Backward error analysis comes from numerical integration (Hairer, Lubich and Wanner 2006).
 Instead of measuring how far a discrete method strays from an ODE, it finds a modified ODE that the method follows more closely.
-For gradient descent with step η, that ODE is the gradient flow of L̃ (Barrett and Dherin 2021).
-Its error per step is of order η³, instead of η².
-The added term, implicit gradient regularization, penalizes large gradients, so it steers descent toward regions where the gradient is small.
+For gradient descent that ODE is the flow of L̃, whose error per step is of order η³ instead of η².
+The added term in L̃ is called implicit gradient regularization.
 
 Barrett and Dherin used this same model: `f(x) = wax`, fitted to one point.
 They found that larger steps end at minima of smaller norm, nearer the flattest point.
@@ -79,18 +77,15 @@ The formulas on this card use η′.
 
 The minima form the hyperbola `wa = 1` (blue), with balanced points `w = a = ±1`.
 The dotted lines are hyperbolas of constant `w² − a²`, the paths of gradient flow.
-From starts where `η′λ_max` stays above 1, gradient descent overshoots the floor on every step.
 
 Each release starts one noiseless gradient-descent particle at one of eight fixed points.
 From the same point, fourth-order Runge–Kutta integrates the gradient flow of L (black path and ring) and of L̃ (green path and ring).
 The readouts give `w² − a²` at the end of all three paths for the latest release.
-The figure plots gradient descent’s final value against each prediction, one pair per release.
 
-## At scale
+## Limits
 
-The expansion assumes ηλ well below 1.
-But gradient descent on networks usually reaches the [[edge of stability|eos]], where ηλ<sub>max</sub> ≈ 2 and the expansion breaks down.
-The factor of 3.6 to 3.8 on this sheet already shows it failing.
+The expansion behind L̃ assumes ηλ well below 1.
+But gradient descent on networks usually reaches the [[edge of stability|eos]], where ηλ<sub>max</sub> ≈ 2 and the expansion breaks down (see <i>The edge of stability</i>).
 
 Two models are built for that regime:
 
@@ -99,9 +94,6 @@ Two models are built for that regime:
 
 For full-batch [[Adam|adam]], Cattaneo, Klusowski and Shigida (2024) used backward error analysis to find a different bias.
 It typically rewards, rather than penalizes, a perturbed 1-norm of the gradient.
-
-What survives at scale is that the step size biases where training ends.
-The penalty in L̃ is a small-step result.
 
 ## References
 

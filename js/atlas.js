@@ -7177,7 +7177,7 @@ cardEntry.addEventListener('pointerout', (e) => { const g = e.target.closest('[d
 cardEntry.addEventListener('focusin', (e) => { const g = e.target.closest('[data-g], [data-m]'); if (g) tipShow(g); });
 cardEntry.addEventListener('focusout', tipHide);
 cardScroll.addEventListener('scroll', tipHide, { passive: true });
-const OPENSEC = new Set(['refs']);      // which card sections are open; kept from plate to plate
+const OPENSEC = new Set();      // which card sections are open; kept from plate to plate
 function renderCard() {
   const p = PL;
   tipHide();
@@ -7194,7 +7194,7 @@ function renderCard() {
     <h2 class="pl-title">${p.title}</h2>${p.deck ? `<div class="pl-deck">${gloss(p.deck)}</div>` : ''}
     <div class="pl-body pl-lead">${gloss(p.lead)}</div>${p.take ? `<div class="pl-body pl-take"><div class="pl-h">In practice</div>${gloss(p.take)}</div>` : ''}
     ${fig}${p.try ? `<div class="pl-h">Try</div><div class="pl-body">${gloss(p.try)}</div>` : ''}
-    <div class="pl-secs">${sec('bg', 'Background', p.bg)}${sec('method', 'Method', p.method)}${sec('caveat', 'Caveat', p.caveat)}${sec('scale', 'At scale', p.scale)}${sec('refs', 'References', refs)}</div>`
+    <div class="pl-secs">${sec('bg', 'Background', p.bg)}${sec('method', 'Method', p.method)}${sec('limits', 'Limits', p.limits)}${sec('refs', 'References', refs)}</div>`
     : `<div class="pl-no">Plate ${p.index + 1}</div><h2 class="pl-title">${p.title}</h2>
     <div class="pl-body">${gloss(p.text)}${p.how ? `<div class="pl-h">How it works</div>${gloss(p.how)}` : ''}${p.look ? `<div class="pl-h">Try</div><p>${gloss(p.look)}</p>` : ''}</div>
     ${fig}

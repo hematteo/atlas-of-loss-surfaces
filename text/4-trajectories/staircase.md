@@ -11,7 +11,6 @@ Their loss falls in steps separated by [[plateaus|plateau]], while their paramet
 
 Saxe, McClelland and Ganguli (2014) solved these dynamics exactly for deep linear networks started from aligned (decoupled) initial conditions.
 Pesme and Flammarion (2023) proved the same for diagonal linear networks.
-For nonlinear networks the evidence is partial.
 
 On this sheet each plateau is a saddle on the map, and we can time how long the network waits there.
 
@@ -20,7 +19,6 @@ On this sheet each plateau is a saddle on the map, and we can time how long the 
 When training starts from a small initialization, a loss that has stalled on a plateau may not have converged.
 The network may still be waiting to learn its next component.
 This is proved for linear networks and only partly supported for nonlinear ones.
-Here a smaller start means a longer stall.
 
 ## Figure caption
 
@@ -42,8 +40,8 @@ Dashed lines mark the two plateaus and the predicted escape times of the strong 
 
 ## Background
 
-Saxe, McClelland and Ganguli (2014) solved the [[gradient flow|gflow]] of deep linear networks trained on whitened inputs from a small initialization.
-Their solution splits the input–output map into singular modes, each a rank-one piece of the map.
+Saxe et al.’s exact solution is for the [[gradient flow|gflow]] on whitened inputs, from a small initialization.
+It splits the input–output map into singular modes, each a rank-one piece of the map.
 A mode’s strength is its singular value.
 Each mode is learned on its own sigmoidal curve, after a time inversely proportional to its strength.
 So strong modes come first.
@@ -58,7 +56,7 @@ In diagonal linear networks, the kind on this sheet, the scale of the initializa
 
 As the initialization vanishes, gradient flow jumps from saddle to saddle until it reaches the minimum ℓ₁-norm solution.
 Each saddle minimizes the loss over an active set of coordinates, and the set can lose coordinates as well as gain them.
-Berthier (2023) proved this in a restricted setting, and Pesme and Flammarion (2023) under negligible assumptions on the data.
+Berthier (2023) proved this in a restricted setting, and Pesme and Flammarion under negligible assumptions on the data.
 
 Beyond diagonal networks, the results so far are partial:
 
@@ -81,33 +79,24 @@ Each axis carries a saddle where one mode is learned, and the four minima have `
 Gradient descent on the slice equals gradient descent on the full network with step 2η.
 Here η = 0.02, and there is no noise.
 Each cohort of ten particles starts at (±δ, ±δ) with 10% jitter.
-Near zero each coordinate grows only by the factor `1 + 2ηs_i` per step.
 
 A mode counts as learned when `θ_i²` first exceeds `s_i/2`.
 The readouts give the mean step of that crossing and its prediction, `ln(s/δ² − 1) / (2 ln(1 + 2ηs))`.
-This prediction is the logistic solution of the flow at gradient descent’s growth rate per step.
-For small ηs the denominator is nearly proportional to s.
-So the wait is roughly inversely proportional to the mode’s strength, as Saxe et al. found.
+This prediction is the logistic solution of the flow, run at gradient descent’s growth factor near zero, `1 + 2ηs_i` per step.
+For small ηs the denominator is nearly proportional to s, so the wait is roughly inversely proportional to s, as Saxe et al. found.
 
-## Caveat
+## Limits
 
-The two modes are decoupled: each coordinate evolves on its own.
-So the staircase comes only from their different time scales.
+On this sheet the two modes are decoupled, so the staircase comes only from their different time scales.
+The two layers also start balanced, and the slider stops at δ = 0.5, short of the kernel regime.
 
-With correlated inputs, or in deep linear networks, the coordinates interact.
+In real networks the coordinates interact, as they do with correlated inputs or in deep linear networks.
 Which saddle comes next then depends on what has already been learned.
 So the sheet shows when each step comes, but not how a network chooses the next one.
 
-The slider stops at δ = 0.5, which rounds the corner but does not reach the kernel regime.
-
-## At scale
-
-A wide network in the NTK parametrization, at its usual initialization, trains in the [[kernel regime|lazy]].
-Its loss shows no staircase.
-The steps need a small initialization, or a parametrization such as μP that keeps the features learning.
-
+A wide network in the NTK parametrization, at its usual initialization, trains in the [[kernel regime|lazy]] and shows no staircase.
+Without a small initialization, the steps need a parametrization such as μP that keeps the features learning.
 Kunin et al. (2024) showed that how unbalanced the layers start also changes how fast features are learned.
-This sheet keeps the two layers balanced.
 
 Abbe, Boix-Adserà and Misiakiewicz (2023) studied two-layer networks trained by SGD on high-dimensional inputs.
 For a class of targets and a modified SGD, they proved that the network picks up the relevant coordinates in stages, from saddle to saddle.

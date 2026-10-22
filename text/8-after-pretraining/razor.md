@@ -42,10 +42,8 @@ So the lower a curve, the less its optimizer has moved to reach a given error.
 
 ## Background
 
-Shenfeld et al. (2026) fine-tuned language models and a robotic foundation model with RL and with supervised fine-tuning (SFT).
-They compared how much prior capability each method kept at a given accuracy on the new task, and RL kept more.
-
-Across methods and hyperparameters, forgetting was best predicted by the forward KL divergence `E_x[KL(π₀ ‖ π)]` measured on new-task prompts.
+Shenfeld et al. ran their comparison on language models and on a robotic foundation model.
+Across methods and hyperparameters, the forward KL was the best predictor of forgetting.
 In their toy task the reverse divergence, with π and π₀ swapped, predicted it almost as well (R² 0.93 against 0.96).
 
 SFT on an oracle distribution forgot even less than RL.
@@ -70,7 +68,7 @@ A and B are right and C is wrong, and the sheet is the error, `1.5π(C)`.
 Races cycle through four base models, starting with π₀ = (0.3, 0.1, 0.6).
 
 The dashed purple lines are `KL(π₀ ‖ π)`, the forgetting predictor.
-The [[π₀ given success|@π₀ given success]] mark is the I-projection, labelled with `KL(π ‖ π₀) = −log π₀(right)`.
+The [[π₀ given success|@π₀ given success]] mark is labelled with `KL(π ‖ π₀) = −log π₀(right)`.
 
 Updates use η = 0.05 and exact gradients, and all of them move θ₁ and θ₂ only.
 Each optimizer has its own update:
@@ -78,24 +76,21 @@ Each optimizer has its own update:
 1. Policy gradient follows `∇J`.
 2. Natural policy gradient adds `η(1, 1)` to the logits, so `π ∝ π₀ exp(ηt r)`.
    After t steps, every right answer’s probability has been multiplied by the same factor.
-3. SFT follows `∇log π(y)` for a teacher who always gives the right answer the base model finds less likely.
+3. SFT follows `∇log π(y)` for the teacher’s answer y.
 4. The oracle follows the cross-entropy gradient towards the I-projection.
 
 Every solution has infinite `KL(π₀ ‖ π)`, because π₀ gives the wrong answer probability and a solution gives it none.
-So the figure compares optimizers at equal error, plotting `KL(π₀ ‖ π)` against −log₁₀ error.
+So the figure compares optimizers at equal error.
 Particles retire when the error falls below 10<sup>−7</sup>.
 
-## Caveat
+## Limits
 
-The theorem of Shenfeld et al. covers exponential families, and this softmax is one.
-But it treats each step as a full refit of the policy.
+Shenfeld et al.’s theorem covers this softmax, an exponential family, but treats each step as a full refit of the policy.
 Plain small-step gradient ascent on the logits does not reach the I-projection.
 So on this sheet the razor holds exactly only for natural policy gradient.
 Like a full refit, natural policy gradient keeps the ratio between the right answers fixed (Try 3).
 
-## At scale
-
-Chen, Razin, Narasimhan and Chen (2026) confirmed with Llama and Qwen models that RL forgets less than SFT at comparable accuracy on the new task.
+In Llama and Qwen models, Chen, Razin, Narasimhan and Chen (2026) confirmed that RL forgets less than SFT at comparable accuracy on the new task.
 They traced the difference to on-policy data, sampled from the model being trained, rather than to the algorithm.
 
 In their runs REINFORCE, which has no advantage estimate, forgot about as little as GRPO.

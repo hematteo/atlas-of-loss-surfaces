@@ -40,7 +40,7 @@ Below: λ for each basin (outline) and the particles’ estimate ⟨L − L*⟩/
    The ends of the level valley add volume that grows as `ε^¾`, which lifts its slope over this range of ε.
    Nearer the floor that extra volume matters less, so with smaller ε the slope would approach ½.
 3. Read ‘λ̂ from particles’ → at the default [[temperature|temp]] T each lies within 0.05 of λ.
-   The particles sample `exp(−L/T)`, and the mean excess loss under that distribution is λT here (see the Method).
+   The particles’ mean excess loss is λT here (see the Method).
 4. Raise T to 0.02 → each λ̂ stays within 0.07 of λ, and the regular well reads about 1.05.
    Its curvature falls slightly further from the minimum, and the finite step adds bias.
 
@@ -54,7 +54,7 @@ Symmetries and redundant units make whole sets of parameters compute the same fu
 For example, if a unit’s outgoing weight is zero, its incoming weights can be anything.
 So the Fisher information is degenerate, and the Gaussian approximation fails (Wei et al. 2023).
 
-Watanabe (2009) proved that the free energy of a singular model grows as `nL* + λ log n − (m − 1) log log n`.
+Watanabe proved that the free energy of a singular model grows as `nL* + λ log n − (m − 1) log log n`.
 The exponent λ is the real log canonical threshold, also called the learning coefficient.
 The multiplicity of λ is m.
 Equivalently, the volume of parameters within ε of the minimum scales as `ε^λ (−log ε)^(m−1)`.
@@ -66,7 +66,7 @@ Between basins of equal loss, the posterior favours the one with smaller λ by a
 
 Watanabe (2013) estimated the free energy by sampling at inverse temperature 1/log n.
 This estimate is WBIC, the widely applicable BIC.
-Lau et al. (2025) defined a local learning coefficient for a trained network and estimated it with SGLD.
+Lau et al. defined a local learning coefficient for a trained network and estimated it with SGLD.
 
 Hoogland et al. (2025) tracked that coefficient through transformer training and found that its changes mark developmental stages.
 Grokking is generalization that arrives long after memorization.
@@ -97,24 +97,17 @@ A particle 1.6 local units out is replaced, which keeps each sample in its own b
 After 400 steps, `λ̂ = ⟨L − L*⟩/T`.
 For a volume growing as `ε^λ`, the mean excess loss ⟨L − L*⟩ is exactly λT.
 
-## Caveat
+## Limits
 
 Here the estimate uses exact gradients at an exact minimum, and its bias comes only from the finite step and the temperature.
 On a network, SGLD uses minibatch gradients, the localization term and an inverse temperature near 1/log n.
 The trained weights are not exactly at a minimum, and the estimate depends on these choices (Lau et al. 2025).
-So the sheet shows a best case.
+So the sheet shows a best case, and in networks these estimates are used mainly to compare checkpoints or parts of one model.
 
-## At scale
-
-The volumes on this sheet can be counted on a grid.
 A grid’s size grows exponentially with the dimension, so in a network with millions of parameters the volumes can only be estimated by sampling.
-
-Lau et al. (2025) applied their SGLD estimator to deep linear networks of up to 100 million parameters, to ResNets and to transformer language models.
+Lau et al. applied their SGLD estimator to deep linear networks of up to 100 million parameters, to ResNets and to transformer language models.
 Wang et al. (2025) refined it to single attention heads of a small transformer.
 They found that heads with different jobs develop different coefficients.
-
-Absolute values still depend on the sampler’s settings.
-So these estimates are used mainly to compare checkpoints or parts of one model.
 
 ## References
 

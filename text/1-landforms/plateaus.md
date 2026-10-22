@@ -42,65 +42,54 @@ Ticks are single particles; bars are the means of the latest 300 exits.
 
 ## Background
 
-Two mechanisms produce plateaus in networks.
-The first is symmetry between hidden units.
-Units with identical incoming weights compute the same function and receive the same gradient, so training cannot separate them.
+Hidden units with identical incoming weights compute the same function and receive the same gradient, so training cannot separate them.
 Units that are only nearly identical receive nearly identical gradients, so they separate slowly.
 
-Saad and Solla (1995) derived exact equations for online learning in soft committee machines, a kind of two-layer network.
+Saad and Solla derived exact equations for online learning in soft committee machines, a kind of two-layer network.
 They found a long symmetric phase, in which the hidden units are unspecialized and the error stays nearly constant.
 The units specialize only after it.
 
-Fukumizu and Amari (2000) compared networks with H − 1 and H hidden units.
+Fukumizu and Amari compared networks with H − 1 and H hidden units.
 They proved that each critical point of the smaller network gives lines of critical points in the larger one.
 These can be saddles or local minima and cause plateaus.
 
-The second mechanism is small initialization.
-Saxe, McClelland and Ganguli (2014) solved the dynamics of deep linear networks started from small random weights.
-Learning shows long plateaus followed by rapid transitions, one for each singular mode of the input–output map, strongest first.
-Each layer’s gradient is scaled by the weights of the other layers, so when all of them are small, learning starts slowly.
-With random orthogonal initialization the learning time can be independent of depth.
+Small initialization works differently.
+In Saxe et al.’s deep linear networks, each layer’s gradient is scaled by the weights of the other layers.
+So when all of them are small, learning starts slowly.
+They also found that with random orthogonal initialization the learning time can be independent of depth.
 
 A related effect is [[vanishing gradients|vanish]]: the gradient shrinks as it is propagated back through many layers or time steps (Hochreiter 1991; Bengio, Simard and Frasconi 1994).
 
-Adaptive methods change how fast a plateau is crossed.
 RMSprop (Tieleman and Hinton 2012) and Adam (Kingma and Ba 2015) divide each coordinate by a running root mean square of its gradient.
-So their steps do not change when the gradient is rescaled.
 
 ## Method
 
 The plateau is a terrace cut into a tilted bowl, with an edge warped by smooth noise.
 Inside it the loss is replaced by a plane, so the Hessian is zero and the gradient is the same everywhere.
 That gradient is given in the readout, 0.035 on the default sheet.
-So the plateau isolates the small gradient, with no curvature to help or hinder.
 
 Every 405 steps a [[cohort|cohort]] of 14 particles per optimizer is released about 0.09 inside the uphill edge and 0.63 from the downhill rim.
 A particle that starts on the plateau is timed until it leaves, over any edge.
-The figure and readouts give the mean over the latest 300 exits per optimizer.
+The readouts give the same means as the figure’s bars.
 
 The noise is `g̃ = ∇L + σξ`.
 RMSprop uses β = 0.99 (Tieleman and Hinton suggested 0.9, without the correction).
 Adam uses β₁ = 0.9 and β₂ = 0.999.
 Both correct their averages for starting at zero and use ε = 10⁻⁸.
 
-## Caveat
+## Limits
 
-This plateau is a tilted plane, so it reproduces only the small gradient.
+This plateau is a tilted plane, so it reproduces only the simplest case: a steady small gradient, with no curvature to help or hinder.
 Plateaus caused by symmetry instead surround saddles or lines of critical points.
 There the gradient also vanishes along the way out.
 The time to leave then depends on how far the symmetry is broken, as on <i>Saddle points</i>.
-
-The adaptive methods’ advantage here relies on a gradient whose sign stays the same from step to step.
-So the timings here describe the simplest case, a steady small gradient.
-
-## At scale
+Small initializations in deeper models give a sequence of plateaus, one at each saddle the run passes (see <i>Saddle to saddle</i>).
 
 In d dimensions a random initialization is nearly orthogonal to what must be learned.
 Its overlap with the target is of order `1/√d`, so in high dimensions training generally starts on a plateau.
 Ben Arous, Gheissari and Jagannath (2021) showed that in simple high-dimensional models, online SGD spends almost all of its samples in this initial search.
 The search grows longer as d grows.
 
-Small initializations in deeper models give a sequence of plateaus, one at each saddle the run passes (see <i>Saddle to saddle</i>).
 In language models gradient descent also makes slow progress on the loss of rare tokens, which Adam avoids (see <i>Adam, sign descent and the axes</i>).
 
 ## References

@@ -43,27 +43,23 @@ The dotted line marks the start of the decay, where warmup–stable–decay leav
 
 ## Background
 
-Hu et al. (2024) introduced warmup–stable–decay for MiniCPM.
-Hägele et al. (2024) showed that a constant rate with a short cooldown matches cosine and lets one run serve many training lengths.
+Hu et al. introduced warmup–stable–decay for MiniCPM.
+Hägele et al. showed that a constant rate with a short cooldown matches cosine and lets one run serve many training lengths.
 
-Accounts of the drop differ:
+In Wen et al.’s account, the high η of the stable phase moves the iterate quickly along the river.
+It also makes the iterate oscillate across the valley.
+The decay damps that oscillation and reveals the progress made along the river.
+They also showed that such a landscape arises even for a bigram model.
 
-1. In the river valley of Wen et al. (2025), the high η of the stable phase moves the iterate quickly along the river.
-   It also makes the iterate oscillate across the valley.
-   The decay damps that oscillation and reveals the progress made along the river.
-   Wen et al. also showed that such a landscape arises even for a bigram model.
-2. Schaipp et al. (2025) give another account, with no valley in it.
-   A bound from non-smooth convex optimization already predicts the benefit of the cooldown.
-
-So the drop alone does not prove a river valley.
+Schaipp et al. (2025) give another account, with no valley in it.
+A bound from non-smooth convex optimization already predicts the benefit of the cooldown.
 
 Two other methods get down from the walls without decaying η:
 
 1. [[Schedule-free SGD|sf]] (Defazio et al. 2024) has no schedule.
    It evaluates a running average of its iterates, and takes gradients at a point between that average and the latest iterate.
    Song et al. (2025) found that schedule-free AdamW follows the river without a decay phase or an extra averaged copy of the weights.
-2. A larger [[batch|batch]] lowers the noise.
-   Smith et al. (2018) showed that multiplying the batch size B by k can replace dividing η by k.
+2. Smith et al. (2018) showed that multiplying the [[batch|batch]] size B by k can replace dividing η by k.
    The cost in samples depends on the [[critical batch size|cbs]] (McCandlish et al. 2018).
 
 In OLMo pretraining, Merrill et al. (2025) found that the critical batch size starts near zero, rises quickly and levels off.
@@ -78,8 +74,7 @@ So λ = 140 is the curvature across the floor, and H = 0.9 is the height of the 
 Along the river the loss falls by 0.08 per unit of θ₁, to the minimum at a wall at the far end.
 
 Twelve particles per schedule run 1,800 steps from the head at η = 0.0125, so ηλ = 1.75 across.
-With ηλ between 1 and 2, each step overshoots the floor.
-The overshoot shrinks, so without noise the bouncing dies out.
+With ηλ between 1 and 2, each step overshoots the floor, and the overshoot shrinks.
 The noise covariance is proportional to |H|, with H here the Hessian.
 So the noise falls almost entirely across the river.
 
@@ -91,25 +86,22 @@ A batch of B divides the noise by √B, and the ramp uses 2.3 times the samples.
 Schedule-free SGD steps `z ← z − γg̃(y)`, `x ← (1−c)x + cz`, `y = (1−β)z + βx`.
 Its averaging weight c is proportional to γ², which makes the average uniform after its 100-step warmup.
 With β = 0.9 and γ = 10η, (1−β)γ = η.
-So the z step moves y as far as an SGD step at η would, and the loss is read at x.
+So the z step moves y as far as an SGD step at η would.
 
 Final L averages each schedule’s last 64 finishers.
 
-## Caveat
+## Limits
 
-Along this river the loss falls linearly with distance, so every unit of summed learning rate is worth the same.
-A schedule that gives some up never recovers it, which is why cosine ends so far behind here.
-In pretraining the loss falls ever more slowly, and cosine and warmup–stable–decay end close together (Hägele et al. 2024).
+On this sheet the loss falls linearly along the river, so every unit of summed learning rate is worth the same.
+In pretraining it falls ever more slowly, as a power law of the summed learning rate.
+So there cosine and warmup–stable–decay end close together (Hägele et al. 2024).
 
-## At scale
-
+The split this sheet draws still survives at scale.
 In language-model pretraining, the loss curve under a schedule can be predicted from two quantities (Tissue, Wang and Wang 2025; Luo et al. 2025):
 
 1. The summed learning rate, which corresponds to the distance along the river.
 2. The area of the decay, which corresponds to the drop from the walls.
 
-So the split this sheet draws survives at scale.
-Unlike on this sheet, the loss falls as a power law of the summed learning rate, not linearly.
 Bergsma et al. (2025) also found that decaying linearly all the way to zero beats the common cosine decay to 10% of the peak.
 
 ## References

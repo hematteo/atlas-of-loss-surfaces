@@ -43,17 +43,16 @@ Columns are tinted by optimizer.
    But a step small enough to be stable across the ravine makes little progress along it.
 2. Watch the [[heavy ball|hb]] in the same cohort → it runs down the floor far ahead of SGD.
    Along the floor the gradient keeps its direction, so the heavy ball’s velocity builds up there (see <i>Ravines</i> and <i>Momentum</i>).
-3. Raise η to about 1.3 times the 2/λ printed at the [[Sharp Minimum|@Sharp Minimum]] → SGD’s particles there no longer come [[to rest|rest]].
-   Gradient descent is [[stable|stab]] only if `η < 2/λ_max`, and above 2/λ each step overshoots the minimum by more than the last.
-   The heavy ball is stable up to `2(1 + β)/λ_max`, so it still settles there, and so does Adam (see <i>Stability and catapults</i>).
+3. Raise η to about 1.3 times the [[stability limit|stab]] 2/λ printed at the [[Sharp Minimum|@Sharp Minimum]] → SGD’s particles there no longer come [[to rest|rest]].
+   The heavy ball and Adam still settle there (see <i>Stability and catapults</i>).
 
 ## Background
 
-Real loss surfaces are studied in two indirect ways:
+So real loss surfaces are studied in two indirect ways:
 
 1. Slices plot the loss along a line or a plane through parameter space.
    Along the straight line from initialization to the trained solution, the loss falls monotonically for a range of standard networks (Goodfellow, Vinyals and Saxe 2015).
-   Two-dimensional slices by Li et al. (2018) are nearly convex for networks with skip connections and chaotic for deep networks without them.
+   Li et al.’s two-dimensional slices are nearly convex for networks with skip connections and chaotic for deep networks without them.
 2. The [[Hessian|hessian]], the matrix of second derivatives of the loss, measures curvature.
    At the end of training its spectrum is a bulk of eigenvalues near zero plus a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019).
 
@@ -61,8 +60,7 @@ Each feature also has its own literature:
 
 1. Minima differ in sharpness, which has been linked to generalization (Keskar et al. 2017; see <i>Sharp and flat minima</i>).
 2. Ill-conditioning limits the step size to `η < 2/λ_max`, so gradient descent moves slowly along directions of low curvature (LeCun et al. 1998).
-3. [[Critical points|crit]] are points where the gradient is zero.
-   Dauphin et al. (2014) argued that in high dimensions, those with high loss are mostly saddles, not local minima.
+3. Dauphin et al. (2014) argued that in high dimensions, [[critical points|crit]] with high loss are mostly saddles, not local minima (see <i>Saddle points</i>).
 4. Plateaus appear when hidden units start nearly identical and training must break the symmetry between them (Saad and Solla 1995).
 
 ## Method
@@ -81,18 +79,14 @@ Saddles are drawn as passes, such as the [[Saddle of Hesitation|@Saddle of Hesit
 Among the minima more than 0.08 below their lowest pass, the [[Sharp Minimum|@Sharp Minimum]] is the one whose smaller Hessian eigenvalue is largest.
 So it is sharp in every direction.
 The [[Flat Basin|@Flat Basin]] is the one among them with the smallest λ<sub>max</sub>, so it is flat in every direction.
-The figure is a histogram of the loss at which particles came [[to rest|rest]].
 
-## Caveat
+## Limits
 
 On this sheet a minimum is an isolated point and every feature is in view.
+Neither holds in a real network.
 In an overparameterized network, which has more parameters than training examples, the global minima form high-dimensional manifolds (Cooper 2018).
-Most Hessian eigenvalues there are near zero.
-
-A two-dimensional slice through such a network shows only the directions it was cut along, and its apparent sharpness depends on the weights’ scale.
+A slice through such a network also has an apparent sharpness that depends on the weights’ scale.
 So the sheet shows kinds of feature, not any one network.
-
-## At scale
 
 In millions of dimensions, the curvature along a random direction weights all the Hessian’s eigenvalues nearly equally.
 So it is roughly the average curvature, the Hessian’s trace divided by the dimension.
@@ -102,8 +96,7 @@ Böttcher and Wheeler (2024) showed that slices along the top Hessian eigenvecto
 The monotonic fall from initialization to solution is common but not universal.
 Lucas et al. (2021) found that it fails systematically when training carries the weights far from their initialization.
 
-In full-batch training λ<sub>max</sub> also climbs to 2/η and stays there while the loss keeps falling (see <i>The edge of stability</i>).
-So training runs at the edge of the bound `η < 2/λ_max`, rather than safely inside it.
+In full-batch training λ<sub>max</sub> climbs to the bound 2/η and stays there (see <i>The edge of stability</i>).
 
 ## References
 

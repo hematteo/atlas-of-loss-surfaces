@@ -133,7 +133,7 @@ So the many local minima of the proving grounds are a low-dimensional picture.
 Real gradient noise differs too.
 It is anisotropic and concentrated in the sharp directions.
 Most plates instead add the same noise in every direction (see <i>The shape of the noise</i>).
-Plates whose result changes at scale say how in a section of their own, <i>At scale</i>.
+Each plate's <i>Limits</i> section says what its sheet simplifies and how the result changes at scale.
 
 Some optimizers have no two-dimensional version either.
 Shampoo and Muon treat each weight matrix as a matrix, preconditioning or orthogonalizing it as a whole.

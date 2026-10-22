@@ -25,7 +25,6 @@ Pooling parameters can make Gaussian noise look heavy-tailed (see Background).
 
 Fraction of particles still inside each crater after a given number of steps (Kaplan–Meier, log scale).
 Solid lines show the narrow crater and dashed lines the wide one.
-The Gaussian ensemble keeps the narrow crater longest; the heavy-tailed ensemble leaves it first.
 
 ## Try
 
@@ -38,22 +37,20 @@ The Gaussian ensemble keeps the narrow crater longest; the heavy-tailed ensemble
 3. Compare the wide-crater medians → heavy tails shorten the stay in the wide crater too, about 15-fold (about 210 steps against 3,100).
 4. Set the depth of the narrow crater to 0.3, then 1.2 → its Gaussian median rises from about 340 steps to over a million.
    The heavy-tailed median stays at about 30–45.
-   The heavy-tailed exit is set by the distance to the rim, which the depth does not change.
 
 ## Background
 
-Şimşekli, Sagun and Gürbüzbalaban (2019) argued from the generalized central limit theorem that a sum of gradients with infinite variance tends to an α-stable law.
+Şimşekli et al. argued from the generalized central limit theorem that a sum of gradients with infinite variance tends to an α-stable law.
 They estimated tail indices well below 2 in several networks and modelled SGD as an SDE driven by Lévy motion.
 
 For such an SDE, the exit time from a basin grows only polynomially as the noise shrinks.
 It is set by the distance from the minimum to the edge of the basin, not by the height of the barrier (Imkeller and Pavlyukevich 2006).
 Nguyen et al. (2019) gave step-size conditions under which discrete SGD keeps this behaviour.
-Heavy-tailed SGD would then prefer wide minima, since it leaves narrow ones quickly whatever their depth.
+Heavy-tailed SGD would then prefer wide minima.
 
-The measurement is disputed.
-Panigrahi et al. (2019) found the noise best described as Gaussian at batch sizes of 256 and above, at least early in training.
+Panigrahi et al. found the noise best described as Gaussian at batch sizes of 256 and above, at least early in training.
 
-Xie, Sato and Sugiyama (2021) pointed out that the tail index had been estimated by pooling the noise of all parameters as samples of one distribution.
+Xie et al. pointed out that the tail index had been estimated by pooling the noise of all parameters as samples of one distribution.
 That pooling assumes the noise is isotropic and identically distributed.
 A pool of Gaussians with different variances is itself heavier-tailed than a single Gaussian, so pooling can make Gaussian noise look heavy-tailed.
 They found the noise close to Gaussian for B &gt; 16.
@@ -84,20 +81,17 @@ Steps longer than 0.16 are drawn as arcs, so the single-jump exits show on the m
 The readouts are [[Kaplan–Meier|km]] medians, with particles still inside as censored times.
 Changing σ or α starts a new experiment.
 
-## Caveat
+## Limits
 
 The noise here is isotropic, the case the pooled tail-index estimates assumed.
 So the sheet shows what heavy tails would do if those estimates were right, and cannot tell us whether they are.
+In many dimensions this isotropic noise also differs from independent stable noise in each parameter.
+That second kind makes its large jumps along the coordinate axes.
 
-## At scale
-
-Zhang et al. (2020) found that the gradient noise in transformers does look heavy-tailed, unlike in ResNets on ImageNet.
+In real networks, Zhang et al. (2020) found that the gradient noise in transformers does look heavy-tailed, unlike in ResNets on ImageNet.
 They took this as an argument for [[gradient clipping|clip]] and adaptive methods.
 But [[Adam|adam]] still beats SGD on these models at full batch, where there is no noise.
 So the tails are not the main cause of its advantage (Kunstner et al. 2023).
-
-In many dimensions, isotropic stable noise like this sheet’s differs from independent stable noise in each parameter.
-The second kind makes its large jumps along the coordinate axes.
 
 ## References
 

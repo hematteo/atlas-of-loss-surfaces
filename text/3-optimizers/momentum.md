@@ -16,10 +16,10 @@ On this plate we can see how much of that speed-up depends on choosing β well.
 
 ## In practice
 
-The heavy ball’s √κ speed-up needs tuned η and β, and it is proved only for quadratics.
+The heavy ball’s √κ speed-up is proved only for quadratics.
 Goujaud, Taylor and Dieuleveut (2025) showed that no choice of η and β that accelerates it on quadratics also converges on every smooth strongly convex loss.
 [[Nesterov’s method|nag]] keeps its √κ rate on all smooth strongly convex losses (Nesterov 2004).
-With an untuned β or noisy gradients, momentum need not beat [[SGD|sgd]].
+With an untuned β, or with noisy gradients (Kidambi et al. 2018), momentum need not beat [[SGD|sgd]].
 
 ## Figure caption
 
@@ -41,14 +41,13 @@ A curve oscillates when its particles overshoot the floor and swing back.
 
 ## Background
 
-Polyak (1964) introduced the heavy ball, `v ← βv − η∇L`, `θ ← θ + v`.
+As an update, Polyak’s heavy ball is `v ← βv − η∇L`, `θ ← θ + v`.
 On a quadratic each eigendirection of the [[Hessian|hessian]] evolves separately, as a damped oscillator.
 For curvature λ the error is multiplied each step by a root of `z² − (1 + β − ηλ)z + β = 0`.
 
 The two roots multiply to β.
 When they are complex they are equal in size, so each has size √β.
-The roots are complex above `β* = (1 − √(ηλ))²`.
-There the iterate overshoots and swings back, and the error shrinks by √β per step.
+The roots are complex above `β* = (1 − √(ηλ))²`, and there the iterate overshoots and swings back.
 At β* the direction is [[critically damped|critdamp]] and shrinks by `1 − √(ηλ)`, the fastest rate at that η (Qian 1999).
 
 Polyak’s tuning sets `η = 4/(√λ_max + √λ_min)²` and `β = ((√κ − 1)/(√κ + 1))²`.
@@ -61,10 +60,9 @@ Intuitively, the look-ahead gradient already sees part of the coming overshoot a
 Sutskever et al. (2013) wrote the method in this look-ahead form.
 They showed that momentum, with a good initialization, trains deep and recurrent networks as well as Hessian-free optimization had.
 
-Outside quadratics, and with noise, these guarantees weaken.
+Outside quadratics these guarantees weaken.
 Lessard, Recht and Packard (2016) gave a one-dimensional strongly convex function with condition number 25.
 From some starting points, the heavy ball with Polyak’s parameters falls into a limit cycle on it.
-With stochastic gradients neither method need improve on SGD (Kidambi et al. 2018).
 
 ## Method
 
@@ -74,15 +72,14 @@ So κ = 2.7, and the crater is well conditioned.
 
 There is no gradient noise, so each [[cohort|cohort]] moves almost as one.
 Cohorts start on an ellipse about 0.4 from the floor, outside the region where the well is quadratic.
-The learning rate is η = 0.01.
-The figure plots log₁₀ of the cohort’s mean `L − L*` against steps since release.
+The learning rate is η = 0.01, and the figure counts time in steps since release.
 
-The readouts give `β* = (1 − √(ηλ))²` for each eigenvalue, κ = λ<sub>max</sub>/λ<sub>min</sub>, and Polyak’s β for that κ.
-That β is optimal only together with Polyak’s η, `4/(√λ_max + √λ_min)²` ≈ 0.07 here.
+The readouts give β* for each eigenvalue, κ, and Polyak’s β for that κ.
+That β is optimal only together with Polyak’s η, about 0.07 here.
 At the sheet’s η the fastest β is close to β* for λ<sub>min</sub>.
 β* falls as the curvature rises, so at that β the steeper direction is already underdamped and shrinks just as fast.
 
-## At scale
+## Limits
 
 The √κ picture is for exact gradients.
 High-dimensional random least-squares problems serve as a model of training with many parameters.

@@ -41,11 +41,9 @@ Each cell is a [[basin of attraction|basin]] of [[gradient flow|gflow]].
 The ridges around the cell at integer coordinate k are 20 ± k high in f.
 From one cell to the next one out, the bowl rises by only 2k + 1.
 Say k = 3: the ridges are about 20 high, but the next cell out is only 7 higher.
-
 So the gradient points to the bottom of the current cell almost everywhere.
-At their default settings, [[gradient descent|gd]], the [[heavy ball|hb]] and [[Adam|adam]] stop in the cell where they start.
-The function is used to test global methods, such as the genetic algorithms of Mühlenbein et al. (1991), and methods that cross barriers by noise.
 
+Besides evolutionary algorithms, the function is used to test methods that cross barriers by noise.
 Noise helps, but at a price.
 SGD with Gaussian gradient noise is a discretized [[Langevin process|langevin]] at temperature `T = ησ²/2` (see <i>Noise as temperature</i>).
 Its [[stationary distribution|stationary]] describes where its particles would settle if the race ran forever.
@@ -67,26 +65,21 @@ The sheet has 273 [[critical points|crit]]: 77 minima, 136 saddles and 60 maxima
 The cap is gentle here: L/f falls only from 0.030 at the bottom to 0.023 at the highest point.
 Because of the cap, λ<sub>max</sub> at the minima falls from 122 at the centre to 89 in the corners.
 
-Gradient descent, the heavy ball and Adam use the exact gradient.
+[[Gradient descent|gd]], the heavy ball and [[Adam|adam]] use the exact gradient.
 SGD uses `∇L + σξ`, with fresh Gaussian noise `ξ ~ N(0, I)` at every step.
-It is never counted as at rest and runs for 2,400 steps.
-At the default σ = 6 its temperature is `T = ησ²/2 = 0.072`.
-Races start at random points of high loss, one every 2,500 steps.
+At the default σ = 6 its temperature is T = 0.072.
+Races start every 2,500 steps, and particles retire after 2,400.
+SGD is never counted as at rest, so its particles always run that long.
 
-The figure plots log₁₀(L − L*) against step, averaged over each optimizer’s particles still moving.
-The readouts give the lowest L − L* each reached in the latest race.
-
-## Caveat
+## Limits
 
 Particles that leave the window are removed.
-The window is narrower in v than the usual ±5.12, and the cap weakens the bowl’s pull near the edges by up to 44%.
+The window is narrower in v than usual, and the cap weakens the bowl’s pull near the edges by up to 44%.
 So at large σ more SGD particles are lost here than would be on f over the usual square.
 
-## At scale
-
+Adding dimensions changes the balance of critical points.
 In n dimensions the function is a sum of n one-dimensional terms, so its critical points are products of one-dimensional ones.
-A critical point is a minimum only if every coordinate sits at a minimum.
-A mix of minima and maxima makes it a saddle.
+A critical point is a minimum only if every coordinate sits at a minimum, and a saddle if they mix minima and maxima.
 On the usual square each coordinate has 11 minima and 10 maxima, so there are 21ⁿ critical points.
 Only 11ⁿ of them are minima, a fraction (11/21)ⁿ that is about 10⁻²⁸ at n = 100.
 

@@ -47,8 +47,8 @@ Below: Adam’s preconditioned sharpness η<sub>A</sub>·λ<sub>max</sub>(P⁻¹
 
 ## Background
 
-Cohen et al. (2021) trained many architectures with full-batch [[gradient descent|gd]].
-Once λ<sub>max</sub> reached 2/η it hovered just above that value, and the loss rose and fell from step to step.
+Cohen et al. (2021) found the edge in many architectures trained with full-batch [[gradient descent|gd]].
+There λ<sub>max</sub> stayed just above 2/η, and the loss rose and fell from step to step.
 Classical analysis instead assumes `λ_max < 2/η` throughout.
 
 Damian, Nichani and Lee (2023) explained why the iterate does not diverge.
@@ -61,16 +61,15 @@ This self-stabilization makes gradient descent follow projected gradient descent
 Cohen, Damian et al. (2025) wrote an ODE for the time-averaged trajectory, called the [[central flow|centralflow]].
 It accurately predicts the smoothed loss curves of real networks.
 
-Adaptive methods have their own edge.
-For [[Adam|adam]] the preconditioner is `P = diag(√v̂ + ε)`, and the relevant quantity is the [[preconditioned sharpness|psharp]] `λ_max(P⁻¹H)`.
+For [[Adam|adam]] the preconditioner is `P = diag(√v̂ + ε)`, so its [[preconditioned sharpness|psharp]] is `λ_max(P⁻¹H)`.
 Its threshold is `(2 + 2β₁)/((1 − β₁)η) = 38/η` for β₁ = 0.9.
 This is the heavy-ball bound 2(1 + β) from <i>Stability and catapults</i>, divided by 1 − β₁.
 The division is there because Adam’s momentum is an average rather than a sum.
 
-Cohen et al. (2022) found that full-batch Adam holds the preconditioned sharpness at that threshold while moving into regions where λ<sub>max</sub> keeps rising.
+Cohen et al. (2022) found that full-batch Adam holds the preconditioned sharpness at that threshold while λ<sub>max</sub> keeps rising.
 Bai et al. (2026) traced loss spikes in Adam to a v̂ that lags behind the gradient.
 
-With minibatches, the quantity at the edge is the batch sharpness, the curvature of each minibatch loss along its own gradient.
+The batch sharpness of SGD is the curvature of each minibatch loss along its own gradient.
 Andreyev and Beneventano (2024) found that it settles at 2/η, while λ<sub>max</sub> stays below it.
 
 ## Method
@@ -86,23 +85,20 @@ It is ticked along the [[Valley of Rising Sharpness|@Valley of Rising Sharpness]
 Each cohort has 8 gradient-descent particles, released 0.12 off the floor with noise σ = 0.01 to seed the oscillation.
 It also has 5 full-batch Adam particles on the floor, with step `η_A = 0.15η`, β₁ = 0.9 and a trace of noise, σ = 10⁻⁴.
 
-The upper figure and the λ readouts give the floor’s curvature λ(θ₁) at each particle’s position along the valley.
-At the oscillating iterate, which sits on the softer walls, the Hessian’s λ<sub>max</sub> averaged 174 at η = 0.01, 13% below 2/η.
+The λ readouts, like the upper figure, give the floor’s curvature λ(θ₁) at each particle’s position.
+At the oscillating iterate the Hessian’s λ<sub>max</sub> averaged 174 at η = 0.01, 13% below 2/η.
 The black line is the central flow: gradient descent along the floor, stopped where λ = 2/η.
-The lower figure and last readout give `η_A λ_max(P⁻¹H)`, from the Hessian and each Adam particle’s v̂, so the edge is 38.
+The lower figure and the last readout compute Adam’s preconditioned sharpness from the Hessian and each Adam particle’s v̂.
 
-## Caveat
+## Limits
 
 On this sheet every point downstream of the red line is sharper still.
 So the central flow ends there, the particles stop, and the loss stops falling.
-In a network, the stable set still leaves other directions to descend along.
-That is why the loss there can keep falling at the edge.
 
-## At scale
-
-In a network several of the largest Hessian eigenvalues reach 2/η together, and the oscillation fills the subspace of their eigenvectors.
+In a network the stable set still leaves other directions to descend along.
+Several of the largest Hessian eigenvalues reach 2/η together, and the oscillation fills the subspace of their eigenvectors.
 The [[central flow|centralflow]] holds all of them at the edge at once (Cohen, Damian et al. 2025).
-Progress then comes from the many other directions.
+
 Song, Ahn and Yun (2025) found that updates projected onto the sharp subspace barely reduce the loss.
 Updates with that subspace removed train about as well as the full ones.
 

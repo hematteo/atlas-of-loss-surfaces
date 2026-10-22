@@ -2,7 +2,7 @@
 
 ## Method
 
-<!-- added to the end of every plate's Method -->
+<!-- added to the end of the Method of every plate in this chapter except sculpt; rosenbrock, rastrigin and ackley show the race figure, himmelblau and camel the arrivals figure -->
 Each sheet shows a window of the (u, v) plane at equal scale on both axes.
 The optimizers move the parameters θ, which map to the plane by u = u₀ + sθ₁ and v = v₀ + sθ₂.
 Curvatures λ and step sizes η are given in the units of θ.
@@ -16,8 +16,12 @@ So [[gradient flow|gflow]] follows the same paths and has the same basins.
 The gradient, and the Hessian at a critical point, are multiplied by `AH/(H + f)²`.
 This factor is smallest where f is large.
 
+After any fixed starts a plate lists, races start at random points of high loss, at the interval the plate gives.
 Each race releases six particles per optimizer from one point, scattered by about 0.006.
 So a start on a basin boundary shows up as a split race.
+A particle retires when it comes to rest or after the number of steps the plate gives.
+
+The readouts give each optimizer’s lowest L − L* in the latest race or, where the figure shows bars by minimum, the counts behind them.
 
 ## Figure caption: race
 

@@ -39,13 +39,13 @@ Above the dashed line, ηλ > 2 and the step is unstable across the gorge, so th
    Up on a wall the loss is lower where the gorge is wider, so the gradient there also points downstream.
 3. Watch the 700-step ramp → ηλ peaks near 1.6, below the [[stability threshold|stab]], and the loss falls monotonically.
    Even so, the run without warmup reaches the shared minimum first.
-   Perhaps the ramp’s small early steps move slowly downstream, while thrown particles land further down (see the Caveat).
+   Perhaps the ramp’s small early steps move slowly downstream, while thrown particles land further down (see Limits).
 4. Raise η to 0.04 → the 100-step ramp is thrown too, and the 700-step ramp’s ηλ briefly passes 2.
    Doubling the peak doubles η at every step of the ramp.
 
 ## Background
 
-Goyal et al. (2017) introduced gradual warmup as a fix for large-batch training.
+Goyal et al. introduced gradual warmup as a fix for large-batch training.
 They trained ResNet-50 on ImageNet with minibatches of 8,192 images, scaling the learning rate in proportion to the batch.
 At that learning rate, optimization failed early in training.
 Raising η linearly over the first five epochs fixed it.
@@ -53,13 +53,10 @@ Raising η linearly over the first five epochs fixed it.
 Vaswani et al. (2017) warmed up the Transformer linearly over its first 4,000 steps.
 Warmup is now standard, especially for transformers.
 
-Why it helps is debated.
-Gilmer et al. (2022) tracked the [[Hessian|hessian]] through training.
+Gilmer et al. tracked the [[Hessian|hessian]] through training.
 They found that warmup lets the early trajectory avoid or leave regions of high curvature, as do normalization layers and careful initialization.
-The trajectory moves instead to flatter regions, which tolerate a larger learning rate.
 
-For SGD and Adam, Kalra and Barkeshli (2024) found that warmup’s main benefit is a larger tolerable target η.
-They traced this to warmup moving the network to better-conditioned regions.
+Kalra and Barkeshli, studying SGD and Adam, traced warmup’s main benefit, a larger tolerable target η, to moving the network to better-conditioned regions.
 They also found that whether [[sharpness|sharpness]] falls or rises during warmup depends on the initialization and parametrization.
 Zhou et al. (2026, a preprint) report that sharpness starts high in language-model pretraining and falls early.
 They argue that a larger peak η needs a proportionally longer warmup.
@@ -85,34 +82,27 @@ At η = 0.02, a full step is stable across the gorge only past the bar at 100, w
 Every 1,900 steps six particles per schedule start together at the head, with isotropic noise σ = 0.01.
 The ramps are `η(t) = η·min(1, (t+1)/W)` with W = 100 and 700.
 
-The figure plots the cohort mean of `log₁₀ ηλ`, with λ the curvature of the floor at the particle’s position along the gorge.
-Peak ηλ is the largest such value in the latest cohort, among particles not yet thrown.
+Peak ηλ is the largest ηλ in the latest cohort, among particles not yet thrown.
 Thrown is the percentage of particles that move more than 0.1 from the floor before θ₁ = 0.6, or leave the sheet.
 
-## Caveat
+## Limits
 
-The walls have a finite height, so a thrown particle cannot diverge.
+On this sheet the walls have a finite height, so a thrown particle cannot diverge.
 It lands beside the gorge and slides back in further downstream.
+The curvature also falls only as the particles travel downstream.
 
-In a network a large enough step can make the loss diverge.
-So the sheet shows the instability that warmup avoids, but not what that instability costs in a network.
+A network differs on both counts.
+There a large enough step can make the loss diverge, so the sheet shows the instability that warmup avoids but not its cost.
 The lead of the run without warmup in Try 3 may not carry over either.
 
-## At scale
-
-With Adam the threshold applies to the [[preconditioned sharpness|psharp]] instead.
-This is the curvature after Adam’s per-coordinate rescaling.
-Full-batch Adam raises it to 38/η at β₁ = 0.9 and holds it there (see <i>The edge of stability</i>).
-
 A network also need not travel to flatter regions.
-Instead, a step that is too large can set off a short loss spike, after which the sharpness itself drops.
-Lewkowycz et al. (2020) called this the [[catapult|catapult]].
-This sheet cannot show it, because here the curvature falls only as the particles travel downstream (see <i>Stability and catapults</i>).
+A step that is too large can instead set off a short loss spike, after which the sharpness itself drops.
+Lewkowycz et al. (2020) called this the [[catapult|catapult]] (see <i>Stability and catapults</i>).
 
+With Adam the threshold applies to the [[preconditioned sharpness|psharp]], the curvature after Adam’s per-coordinate rescaling.
+Full-batch Adam raises it to 38/η at β₁ = 0.9 and holds it there (see <i>The edge of stability</i>).
 Behind normalization layers, what matters is the size of the step relative to the size of the weights (see <i>Weight decay and scale invariance</i>).
-Kosson, Messmer and Jaggi tie warmup to that relative update size, which a fixed gorge cannot show.
-
-What survives at scale is the outcome: warmup lets training tolerate a larger peak η, whichever way the network gets there.
+A fixed gorge cannot show that relative update size.
 
 ## References
 

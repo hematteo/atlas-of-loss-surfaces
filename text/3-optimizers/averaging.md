@@ -45,20 +45,16 @@ The vertical gap between the curves shows how many times lower the average sits.
 On a quadratic, SGD with constant η and gradient noise of variance σ² reaches a [[stationary distribution|stationary]].
 Along an eigendirection of curvature λ, the variance of that distribution is `ησ²/(λ(2 − ηλ))`.
 The excess loss is ½λ times that variance.
-When ηλ is small this is about ησ²/4 per direction, and it grows with η.
+When ηλ is small this is about ησ²/4 per direction.
 
-Averaging removes much of this excess.
-Ruppert (1988) and Polyak and Juditsky (1992) studied stochastic approximation run with slowly decreasing steps.
-They showed that averaging its iterates attains the optimal asymptotic covariance.
+Polyak and Juditsky, and independently Ruppert (1988), showed that with slowly decreasing steps the averaged iterates attain the optimal asymptotic covariance.
 With a constant step, Bach and Moulines (2013) proved an O(1/n) rate for averaged SGD on least squares, where n is the number of steps.
 
-Izmailov et al. (2018) averaged SGD iterates taken late in training with a constant or cyclical learning rate.
-This stochastic weight averaging (SWA) improved test accuracy on CIFAR and ImageNet.
+Izmailov et al. averaged SGD iterates taken late in training, and their stochastic weight averaging (SWA) improved test accuracy on CIFAR and ImageNet.
 They argued that SGD’s iterates lie near the edges of a wide low-loss region, and their average nearer its centre, where the loss is flatter.
-Averaging is also used in pretraining: Sanyal et al. (2023) found that averaging checkpoints of language models helps more at high learning rates.
 
-Averaging separately trained networks works only when the straight line between them has no loss barrier ([[linear mode connectivity|lmc]]).
-This usually holds for networks fine-tuned from one pretrained model (Neyshabur, Sedghi and Zhang 2020; Wortsman et al. 2022).
+Linear mode connectivity means no loss barrier on the straight line between two networks.
+It usually holds for networks fine-tuned from one pretrained model (Neyshabur, Sedghi and Zhang 2020; Wortsman et al. 2022).
 It often fails for networks trained from scratch with different minibatch orders, even from the same initialization (Frankle et al. 2020).
 The exception is runs that share the first part of training.
 
@@ -71,36 +67,29 @@ So gradient descent is [[stable|stab]] in both basins for η below about 0.045.
 
 Every 315 steps a [[cohort|cohort]] of eight [[SGD|sgd]] particles is released on a wall of one basin, alternately.
 Each particle runs with η = 0.02 and σ = 2 for 1,600 steps.
-From step 121 it keeps the uniform running average `θ̄ ← θ̄ + (θ − θ̄)/n`, drawn as a ring.
+From step 121 it keeps the uniform running average `θ̄ ← θ̄ + (θ − θ̄)/n`.
 Starting late keeps the descent from the wall out of the average.
 
-The figure shows the mean of `L − L*` by age, for the particles and for their averages.
-It covers all cohorts released since η or σ last changed.
-Each particle and each average is measured from the floor of whichever basin, West or East, it is currently nearer.
-The readouts are the last values.
-
+The readouts are the last values of the figure’s curves.
 The dashed line joins one particle’s average in each basin, and its midpoint is printed with its loss.
 
-## Caveat
+## Limits
 
 The basins here are close to quadratic, so the averages land close to the minima.
-On a non-quadratic loss, the average of constant-step SGD does not converge to the minimum itself.
-It converges to a point at a distance of order η from the minimum (Dieuleveut, Durmus and Bach 2020).
+On a non-quadratic loss, averaged constant-step SGD converges instead to a point at a distance of order η from the minimum (Dieuleveut, Durmus and Bach 2020).
 Intuitively, where one wall rises more gently than the other, the iterates spread further on that side and pull the average with them.
 Decaying η, or extrapolating from runs at two step sizes, removes most of this bias.
-
-## At scale
-
-Kaddour (2022) found that averaging the latest checkpoints also speeds up language-model pretraining.
-Li et al. (2025) merged checkpoints taken at a constant learning rate, in models from millions to more than 100B parameters.
-They found that merging improves these models and predicts the effect of the final learning-rate decay.
-Schedule-free methods build the average into the update itself (see <i>The river valley</i>).
-Schedule-Free AdamW was the core of a winning entry in the self-tuning track of the AlgoPerf benchmark (Defazio et al. 2024).
 
 In two dimensions two basins are simply separated by a ridge.
 In a network, swapping two hidden units, with their weights, gives the same function at a different point.
 This [[permutation symmetry|permsym]] of hidden units causes many of the barriers between separately trained solutions.
 Once the units are matched, independently trained wide ResNets on CIFAR-10 can be averaged with no barrier (see <i>Twins and re-basin</i>).
+
+Averaging the latest checkpoints speeds up language-model pretraining (Kaddour 2022), and helps more at high learning rates (Sanyal et al. 2023).
+Li et al. (2025) merged checkpoints taken at a constant learning rate, in models from millions to more than 100B parameters.
+They found that merging improves these models and predicts the effect of the final learning-rate decay.
+Schedule-free methods build the average into the update itself (see <i>The river valley</i>).
+Schedule-Free AdamW was the core of a winning entry in the self-tuning track of the AlgoPerf benchmark (Defazio et al. 2024).
 
 ## References
 

@@ -24,7 +24,6 @@ This works because averaging over a ripple’s period cancels the ripple.
 ## Try
 
 1. Watch the five fixed races → [[gradient descent|gd]] and [[Adam|adam]] always stop in the dimple nearest their start.
-   Outside the funnel’s own basin, the ripples are steeper than the funnel.
 2. Follow the [[heavy ball|hb]] in races two to four, which start 1.6 to 2.3 from the origin → most of its particles reach the funnel.
    Momentum averages recent gradients.
    The ripples’ pushes change sign from one ripple to the next and partly cancel, while the funnel’s pull adds up.
@@ -38,7 +37,7 @@ This works because averaging over a ripple’s period cancels the ripple.
 
 ## Background
 
-Ackley (1987) defined the function in two dimensions to test a genetic hill-climbing algorithm.
+Ackley defined it in two dimensions, to test a genetic hill-climbing algorithm.
 Bäck and Schwefel (1993) generalized it to n dimensions.
 The first exponential then takes the root mean square of the coordinates, and the second the mean of their cosines.
 It is usually evaluated on [−32.768, 32.768]ⁿ.
@@ -47,13 +46,10 @@ There the global minimum is f = 0 at the origin, and there is a local minimum ne
 The two terms have different scales, and this is what makes the function hard.
 The funnel term decays with distance from the origin, and its slope is at most 2.8.
 The ripple term has the same amplitude everywhere, and its slope reaches 5.8 along the axes and 6.5 at most.
-So a method that follows the local gradient stops in the first dimple it meets, unless it starts inside the funnel’s own basin.
+So outside the funnel’s own basin, a method that follows the local gradient stops in the first dimple it meets.
 This holds at every step size tried on this sheet.
 
-Averaging f over one ripple period removes the ripples and leaves the funnel.
-So methods that sample f over larger scales, such as population-based and noisy searches, can follow the funnel.
-Momentum averages gradients over time rather than space.
-On this sheet that is enough to cross a few ripples, but only for starts that give it a run-up, i.e. room to build speed.
+Momentum also averages, but over time rather than space, and on this sheet that is enough to cross a few ripples.
 
 ## Method
 
@@ -67,15 +63,11 @@ This rounds the tip within about 0.07 of the origin and gives it [[λ<sub>max</s
 The constant is lowered by 20(1 − e<sup>−0.01</sup>) ≈ 0.199 so that f(0, 0) = 0.
 
 The first five races start from fixed points 1.6 to 2.9 from the origin.
-Later races start at random points of high loss, one every 2,500 steps.
-A particle retires when it comes to rest or after 2,400 steps.
+Races start every 2,500 steps, and particles retire after 2,400.
 
-The figure plots log₁₀(L − L*) against step, averaged over each optimizer’s particles still moving.
-The readouts give the lowest L − L* each reached in the latest race.
+## Limits
 
-## At scale
-
-The n-dimensional form has a dimple near almost every integer point, so the number of local minima grows exponentially with n.
+In n dimensions, rather than this sheet’s two, the number of dimples grows exponentially with n.
 Network losses are thought to be different.
 In high dimensions most of their high-loss critical points are saddles rather than minima (see <i>Saddle points</i> and <i>Rastrigin’s egg crate</i>).
 So being trapped in the nearest dimple is rarely the problem training has to solve.

@@ -18,7 +18,7 @@ So the optimizer picks the classifier, and this plate lets us watch it choose.
 
 On separable data, near-zero training loss does not determine the classifier.
 The optimizer’s geometry picks the margin.
-Gradient descent’s direction also keeps changing, converging only at rate 1/log t.
+Gradient descent’s direction also keeps changing.
 So two runs at the same loss can hold different classifiers.
 
 ## Figure caption
@@ -41,20 +41,19 @@ A curve that levels off on a dashed line has found that road.
 
 ## Background
 
-Soudry et al. (2018) studied linearly separable data and losses with an exponential tail, such as the logistic loss.
-They proved that gradient descent with a small enough fixed step drives ‖w‖ to infinity like log t.
-Its direction converges to the ℓ₂ maximum-margin separator, the hard-margin support vector machine.
+Soudry et al.’s result holds for losses with an exponential tail, such as the logistic loss, and a small enough fixed step.
+They also proved that ‖w‖ goes to infinity like log t.
+The ℓ₂ maximum-margin separator that gradient descent reaches is the hard-margin support vector machine.
 
 Intuitively, once ‖w‖ is large, the exponential tail lets the examples with the smallest margins dominate the gradient.
 So training keeps widening the smallest margin.
 Nothing in the loss or the algorithm mentions margins, so this is an [[implicit bias|implicit]].
 
-The convergence is slow: the angle to the separator shrinks like 1/log t.
-Nacson et al. (2019) showed that with a fixed step no loss tail does better than the exponential one, whose rate is only 1/log t.
+Nacson et al. (2019) showed that with a fixed step no loss tail does better than the exponential one.
 For the exponential loss, they also analysed normalized gradient descent, `w ← w − η_t∇L/L` with `η_t = 1/√(t+1)`.
 It brings the margin to its maximum at rate `log t/√t`.
 
-Gunasekar et al. (2018) showed that the bias comes from the geometry of the update.
+Gunasekar et al. traced the bias to the geometry of the update.
 Steepest descent for a norm fixes the step’s length in that norm and picks the direction that most decreases the loss.
 Sign descent is steepest descent for ℓ∞.
 So it heads for the ℓ∞ maximum-margin direction, which can differ from the ℓ₂ one.
@@ -79,7 +78,7 @@ Particles step in weight space with exact gradients:
 
 1. Gradient descent with η = 1, below `2/β` for the smoothness bound β = 0.47.
 2. Normalized descent, `w ← w − 0.2∇L/‖∇L‖₂`.
-3. Sign descent, `w ← w − 0.2 sign(∇L)`.
+3. Sign descent, `w ← w − 0.2 sign(∇L)`, a step of 0.28 in ℓ₂.
 
 The sheet is an azimuthal projection of weight space, in which directions are true.
 A point at ‖w‖ = r lies at radius proportional to `log(1 + 2r)`, so rings at ‖w‖ = 1, 10, 100 and 1,000 fit.
@@ -89,18 +88,15 @@ So the valley floor is the best direction at each distance.
 This removes the overall fall of the loss with ‖w‖, which would otherwise hide the differences between directions.
 
 The roads come from scanning 72,000 directions for the largest ℓ₂ margin (88.7°, 0.663) and the largest ℓ∞ margin (45.0°, 0.678).
-The figure plots each optimizer’s mean direction against log₁₀ steps.
+Each curve in the figure is an optimizer’s mean direction.
 
-## Caveat
+## Limits
 
-Normalized and sign descent here take steps of constant length.
-Normalized descent steps 0.2 in ℓ₂, and sign descent steps 0.2 in ℓ∞ (0.28 in ℓ₂).
-The theorems cover particular step-size schedules, such as `η_t = 1/√(t+1)` on `∇L/L` in Nacson et al.
+On this sheet normalized and sign descent take steps of constant length.
+The theorems cover particular step-size schedules, such as that of Nacson et al.
 So the sheet shows that the constant-length versions reach the same directions on these data, not that they always do.
 
-## At scale
-
-Large networks are usually trained with [[Adam|adam]], which on separable data behaves like sign descent.
+Large networks are usually trained with [[Adam|adam]], which on separable data behaves like this sheet’s sign descent.
 Adam divides each coordinate’s step by an estimate of that coordinate’s gradient size, leaving roughly its sign.
 Zhang, Zou and Cao (2024) showed that it heads for the ℓ∞ road, not the ℓ₂ one.
 

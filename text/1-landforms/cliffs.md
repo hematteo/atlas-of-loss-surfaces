@@ -43,24 +43,19 @@ The dashed line is ηc, the longest step clipped SGD can take.
 
 ## Background
 
-Back-propagating through every time step forms products of the recurrent Jacobian over long spans.
-Hochreiter (1991) and Bengio, Simard and Frasconi (1994) showed that these products make the long-term components of the gradient vanish or explode.
+Hochreiter (1991) and Bengio, Simard and Frasconi (1994) showed that these Jacobian products make the long-term components of the gradient vanish or explode.
 If the Jacobian shrinks vectors, the product shrinks geometrically; if it stretches them, the product grows geometrically.
-Pascanu, Mikolov and Bengio (2013) gave a sufficient condition on the recurrent weights for vanishing and a necessary one for exploding.
+Pascanu et al. gave a sufficient condition on the recurrent weights for vanishing and a necessary one for exploding.
 
-Pascanu et al. also described the loss surface near an explosion as having steep walls.
-A step that hits a wall jumps across the valley and can leave it.
-They proposed rescaling the gradient to norm c whenever its norm exceeds c.
-Mikolov (2012) had clipped the gradient elementwise.
-
+Before them, Mikolov (2012) had clipped the gradient elementwise.
 Pascanu et al. hypothesized that where the gradient explodes the curvature does too, so a short step along the gradient is safe.
+
 Zhang et al. (2020) made this hypothesis precise as [[relaxed smoothness|relsmooth]], and observed it while training LSTM language models.
 They proved that clipped gradient descent can then converge arbitrarily faster than gradient descent with any fixed step.
 A fixed step must be small enough for the steepest point the run might reach.
 A clipped step shrinks only where the gradient is large.
 
-Adam’s step is also bounded, by about `η(1 − β₁)/√(1 − β₂)` per coordinate (Kingma and Ba 2015).
-But Adam adapts its step over many iterations rather than at once.
+Unlike clipping, Adam adapts its step over many iterations rather than at once (Kingma and Ba 2015).
 
 ## Method
 
@@ -70,14 +65,13 @@ Its face has slope `H/4w`, about 63 after scaling, against about 0.6 on the terr
 On the face `|L″| ≤ |L′|/w`, so it satisfies relaxed smoothness with `L₁ = 1/w`.
 
 Particles start on the [[terrace|@Terrace]] at least 0.18 above the edge.
-SGD’s step on the face is `η‖∇L‖`.
-Clipped SGD rescales the noisy gradient g̃ to norm c = 1.2 whenever it is longer, so no step exceeds ηc.
+Clipped SGD rescales the noisy gradient g̃ to norm c = 1.2 whenever it is longer.
 
 Steps longer than 0.05 are drawn as arcs.
 The readouts give the longest step of SGD and of clipped SGD, ηc, and the number of SGD and Adam particles that left the sheet.
-The figure is a histogram of step lengths, with vertical axis `log₁₀(1 + count)`.
+The figure’s vertical axis is `log₁₀(1 + count)`.
 
-## Caveat
+## Limits
 
 Here the face drops toward lower loss, so the danger shown is how far a throw goes, which can be off the sheet.
 In Pascanu et al.’s picture the wall instead rises from a valley floor.
@@ -86,8 +80,6 @@ There a throw can carry the parameters out of the valley to higher loss.
 In a recurrent network the walls are not marked.
 They appear where the network’s dynamics change abruptly, as the weights cross a bifurcation.
 At a bifurcation, a small change in the weights changes the network’s long-run behaviour.
-
-## At scale
 
 In large transformers trained with Adam, clipping the global gradient norm at 1 is routine, yet loss spikes still occur.
 The loss of PaLM’s largest model spiked about 20 times with clipping on.
@@ -98,8 +90,7 @@ Spikes have also been traced to attention and output logits that grow during tra
 The usual remedies for these spikes control the logits rather than clip the gradient (see <i>The pull of softmax</i>).
 Examples are qk-layernorm, which normalizes queries and keys, and a z-loss, a penalty on the log of the softmax’s normalizer.
 
-Adam already bounds each coordinate’s step.
-So global clipping matters most when the gradient jumps after a calm stretch, as at this cliff.
+Because Adam already bounds each coordinate’s step, global clipping matters most when the gradient jumps after a calm stretch, as at this cliff.
 
 ## References
 
