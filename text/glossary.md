@@ -623,6 +623,26 @@ A Newton-type search for a critical point of a chosen index k.
 In the eigenbasis of the Hessian it steps uphill along the k directions of lowest curvature and downhill along the rest, dividing each component of the gradient by the absolute value of its curvature.
 Near a critical point of index k it converges as fast as Newton’s method, and with k = 0 it is saddle-free Newton.
 
+## plasticity: Plasticity
+
+A network’s ability to keep learning from new data.
+A network trained on a sequence of tasks has lost plasticity when it learns a new task worse than the same architecture trained from scratch on that task (Lyle et al. 2024; Dohare et al. 2024).
+
+## contlearn: Continual learning
+
+Training one network on data whose distribution keeps changing, such as a sequence of tasks, without starting again from a fresh initialization.
+Reinforcement learning is continual in this sense, because the data change as the policy changes.
+
+## saturated: Saturated unit
+
+A unit whose input lies where its activation function is flat, such as a large input to tanh or a negative input to a ReLU (where the unit is called dead).
+Its output barely changes with its input, so the gradient through it nearly vanishes.
+
+## snp: Shrink and perturb
+
+Scaling the parameters towards zero and adding a little noise, `θ ← αθ + ε` with α &lt; 1, before training continues on new data (Ash and Adams 2020).
+It restores some of the plasticity of a fresh initialization while keeping much of what was learned.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.

@@ -3112,6 +3112,226 @@ plate({
   },
 });
 
+// --- loss of plasticity: one small network trained on a stream of tasks. Its output φ(θ) = R erf(‖θ‖/R) θ/‖θ‖ saturates
+// in norm, so far from the origin only the direction of θ matters and the gradient dies away. Every K steps a new task
+// asks φ to match a new target c, drawn from the sheet's seed; some targets lie beyond the output's reach (|c| > R).
+// Each run is N tasks; every optimizer starts it from the same points near the origin
+const PLS = { R: 0.22, A: 12, K: 400, N: 24, m0: 0.3, m1: 1.15, x0: 0.05, eps: 0.02, win: 40, edge: [1.55, 0.96], hold: 900, nf: 16, T: [] };
+const PLC = [0, 0], PLO = [0, 0], PLG = { phx: null, phy: null, wx: null, wy: null };
+const plsErf = (q) => { const t = 1 / (1 + 0.3275911 * q); return 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-q * q); };   // q ≥ 0 (Abramowitz and Stegun 7.1.26)
+function plsErfInv(m) { let q = m; for (let k = 0; k < 60; k++) { const e = plsErf(q) - m; q -= e / (1.1283791670955126 * Math.exp(-q * q)); if (Math.abs(e) < 1e-12) break; } return q; }
+function plsPhi(x, y, o) { const r = Math.hypot(x, y), k = r < 1e-9 ? 1.1283791670955126 : PLS.R * plsErf(r / PLS.R) / r; o[0] = k * x; o[1] = k * y; return o; }
+const plsWall = (v, e) => { const d = Math.abs(v) - e; return d > 0 ? 60 * d * d : 0; };      // a steep wall just inside the edge keeps particles on the map
+function plsTask(x, y) { plsPhi(x, y, PLO); const ex = PLO[0] - PLC[0], ey = PLO[1] - PLC[1]; return 0.5 * PLS.A * (ex * ex + ey * ey); }
+// minibatch noise: the target scatters by σ in each output coordinate, and the scatter reaches θ through the Jacobian of φ,
+// as the gradient does: along θ it is scaled by φ’s radial slope 1.13 e^(−‖θ‖²/R²), across θ by R erf(‖θ‖/R)/‖θ‖
+function plsNoise(i, x, y, s, R, out) {
+  const d1 = s * R.normal(), d2 = s * R.normal(), r = Math.hypot(x, y);
+  if (r < 1e-9) { out[0] = 1.1283791670955126 * PLS.A * d1; out[1] = 1.1283791670955126 * PLS.A * d2; return; }
+  const ux = x / r, uy = y / r, q = r / PLS.R, rp = 1.1283791670955126 * Math.exp(-q * q), rr = PLS.R * plsErf(q) / r, d = ux * d1 + uy * d2;
+  out[0] = PLS.A * (rp * d * ux + rr * (d1 - d * ux)); out[1] = PLS.A * (rp * d * uy + rr * (d2 - d * uy));
+}
+function sheetPlasticity(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  PLS.T = [];
+  for (let k = 0; k < PLS.N; k++) { const a = R.range(0, TAU), m = R.range(PLS.m0, PLS.m1) * PLS.R; PLS.T.push([m * Math.cos(a), m * Math.sin(a)]); }
+  PLC[0] = PLS.T[0][0]; PLC[1] = PLS.T[0][1];
+  EXTRA = (x, y) => plsTask(x, y) + plsWall(x, PLS.edge[0]) + plsWall(y, PLS.edge[1]);
+  Lofs = 0; Lsc = 1; Lbase = 0.03;
+}
+// the output φ at every grid node does not depend on the task, so a new task's heights are a few operations per node
+function plsGridInit() {
+  const n = GW * GH;
+  if (PLG.phx && PLG.phx.length === n) return;
+  PLG.phx = new Float32Array(n); PLG.phy = new Float32Array(n); PLG.wx = new Float32Array(GW); PLG.wy = new Float32Array(GH);
+  for (let i = 0; i < GW; i++) PLG.wx[i] = plsWall(X0 + i * GDX, PLS.edge[0]);
+  for (let j = 0; j < GH; j++) PLG.wy[j] = plsWall(Y0 + j * GDY, PLS.edge[1]);
+  for (let j = 0, k = 0; j < GH; j++) for (let i = 0; i < GW; i++, k++) { plsPhi(X0 + i * GDX, Y0 + j * GDY, PLO); PLG.phx[k] = PLO[0]; PLG.phy[k] = PLO[1]; }
+}
+// a new task's terrain, over four frames: the heights in two halves, then the shading gradient in two halves (as
+// buildData does it, with no lakes); then the upload, and the names are printed again on the next frame
+function plsPaint() {
+  const st = PL.st, c1 = PLC[0], c2 = PLC[1], h = 0.5 * PLS.A, G = PLG, half = GH >> 1, s = st.paint;
+  if (s < 2) {
+    let mn = s ? st.hmin : Infinity, mx = s ? st.hmax : -Infinity;
+    for (let j = s ? half : 0, k = j * GW; j < (s ? GH : half); j++) for (let i = 0; i < GW; i++, k++) {
+      const a = G.phx[k] - c1, b = G.phy[k] - c2, v = Lbase + h * (a * a + b * b) + G.wx[i] + G.wy[j];
+      HG[k] = v; if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+    st.hmin = mn; st.hmax = mx;
+    if (s) { HMIN = mn; HMAX = mx; }
+    st.paint++; return;
+  }
+  for (let j = s === 2 ? 0 : half; j < (s === 2 ? half : GH); j++) {
+    const jd = j > 0 ? j - 1 : j, ju = j < GH - 1 ? j + 1 : j;
+    for (let i = 0, k = j * GW; i < GW; i++, k++) {
+      const il = i > 0 ? i - 1 : i, ir = i < GW - 1 ? i + 1 : i, o = 4 * k;
+      DATA[o] = HG[k]; DATA[o + 1] = (HG[j * GW + ir] - HG[j * GW + il]) / ((ir - il) * GDX); DATA[o + 2] = (HG[ju * GW + i] - HG[jd * GW + i]) / ((ju - jd) * GDY); DATA[o + 3] = -1;
+    }
+  }
+  if (s === 2) { st.paint = 3; return; }
+  uploadData(); printDirty = true; st.paint = -1;
+}
+// a network trained from scratch on the current task, off the map: the same steps and noise, from fresh starts
+function plsFreshInit(st) {
+  const R = Frame.rng((F.seed * 2654435761 + st.run * 40503 + st.k * 977) >>> 0), n = PLS.nf;
+  st.fz = { R, x: Float64Array.from({ length: n }, () => PLS.x0 * R.normal()), y: Float64Array.from({ length: n }, () => PLS.x0 * R.normal()), s: 0, acc: 0, cnt: 0 };
+}
+function plsFreshStep(n) {
+  const z = PL.st.fz; if (!z) return;
+  for (; n > 0 && z.s < PLS.K; n--, z.s++) for (let p = 0; p < PLS.nf; p++) {
+    const x = z.x[p], y = z.y[p]; grad(x, y); plsNoise(0, x, y, SIM.noise, z.R, NOISEFN);
+    z.x[p] = x - SIM.lr * (gX + NOISEFN[0]); z.y[p] = y - SIM.lr * (gY + NOISEFN[1]);
+    if (z.s >= PLS.K - PLS.win) { z.acc += plsTask(z.x[p], z.y[p]); z.cnt++; }
+  }
+}
+function plsBegin(k) {
+  const st = PL.st;
+  st.k = k; st.t0 = STAT.steps; nextRelease = st.t0 + PLS.K;
+  PLC[0] = PLS.T[k][0]; PLC[1] = PLS.T[k][1];
+  const g = TRIBES.map(() => [0, 0]), a = SIM.shrink;
+  for (let i = 0; i < hiW; i++) {
+    if (!Alive[i]) continue;
+    if (k > 0 && Tr[i] === 2) {      // shrink and perturb: θ ← αθ + ε, the particle thrown to its new start
+      const x = Wx[i], y = Wy[i], nx = a * x + PLS.eps * NR.normal(), ny = a * y + PLS.eps * NR.normal();
+      Wx[i] = Px[i] = Fx[i] = Dx[i] = nx; Wy[i] = Py[i] = Fy[i] = Dy[i] = ny;
+      if (!REDUCED && Math.hypot(nx - x, ny - y) > 0.02) { FT[i] = NOWMS; FX0[i] = x; FY0[i] = y; FZ0[i] = hgrid(x, y); FX1[i] = nx; FY1[i] = ny; FZ1[i] = hgrid(nx, ny); CWF[i] = 0; }
+    }
+    grad(Wx[i], Wy[i]); g[Tr[i]][0] += Math.hypot(gX, gY); g[Tr[i]][1]++;
+  }
+  TRIBES.forEach((T, t) => { st.g0[t][k] = g[t][1] ? g[t][0] / g[t][1] : NaN; st.acc[t] = 0; st.cnt[t] = 0; });
+  plsFreshInit(st); st.fade = k > 0;      // the last task's trails fade, so the current one reads clearly
+  st.paint = 0; linesDirty = true;
+}
+function plsFinish() {
+  const st = PL.st, k = st.k, r = TRIBES.map(() => [0, 0]);
+  for (let i = 0; i < hiW; i++) if (Alive[i]) { r[Tr[i]][0] += Math.hypot(Wx[i], Wy[i]); r[Tr[i]][1]++; }
+  TRIBES.forEach((T, t) => { st.fin[t][k] = st.cnt[t] ? st.acc[t] / st.cnt[t] : NaN; st.norm[t][k] = r[t][1] ? r[t][0] / r[t][1] : NaN; });
+  plsFreshStep(PLS.K); st.fresh[k] = st.fz.cnt ? st.fz.acc / st.fz.cnt : NaN;
+}
+function plsRun(x = 0, y = 0) {
+  const st = PL.st;
+  if (st.fin[0].length) st.prev = { fin: st.fin, fresh: st.fresh, norm: st.norm };     // the last run stays in the figure, faded
+  resetWalkers(); clearInk(false); ARCS.length = 0;
+  st.fin = TRIBES.map(() => []); st.norm = TRIBES.map(() => []); st.g0 = TRIBES.map(() => []); st.fresh = [];
+  st.run++; st.done = false; st.restart = false;
+  PLC[0] = PLS.T[0][0]; PLC[1] = PLS.T[0][1];
+  stamp(x, y, 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  for (let p = 0; p < (PHONE ? 7 : 14); p++) {
+    const a = x + PLS.x0 * RREL.normal(), b = y + PLS.x0 * RREL.normal();
+    for (let t = 0; t < TRIBES.length; t++) spawn(a, b, t);
+  }
+  STAT.released++;
+  plsBegin(0);
+}
+const plsRestart = () => { PL.st.restart = true; nextRelease = STAT.steps; };
+plate({
+  id: 'plasticity', ch: 3, seed: 2840,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.set('noise', 0.25); T.set('shrink', 0.5); T.set('wd', 0); plsRestart(); },
+    (T) => { T.set('noise', 0.25); T.set('wd', 0.5); T.set('shrink', 1); plsRestart(); },
+    (T) => { T.set('wd', 0.5); T.set('shrink', 0.5); T.set('noise', 0.1); plsRestart(); },
+    (T) => { T.set('noise', 0.25); T.set('wd', 0.5); T.set('shrink', 0.5); T.release(0.7, 0); },
+  ],
+  status: 'open',
+  tribes: [
+    { k: 'sgd', name: 'SGD', noise: N_FN, noiseFn: plsNoise, rest: 'never', maxAge: 1e9, inkA: 0.07, rule: 'θ ← θ − η g̃' },
+    { k: 'sgd', name: 'SGD with weight decay', color: '#4b3fa0', noise: N_FN, noiseFn: plsNoise, wd: 'l2', rest: 'never', maxAge: 1e9, inkA: 0.05, rule: 'θ ← θ − η(g̃ + λθ)' },
+    { k: 'sgd', name: 'Shrink and perturb', color: '#167a5b', noise: N_FN, noiseFn: plsNoise, rest: 'never', maxAge: 1e9, inkA: 0.05, rule: 'SGD; at each new task θ ← αθ + ε' },
+  ],
+  sim: { lr: 0.01, noise: 0.25, wd: 0.5, shrink: 0.5 },
+  ctl: [
+    { key: 'noise', label: 'Target noise σ', min: 0, max: 0.5, step: 0.01 },
+    { key: 'wd', label: 'Weight decay λ', min: 0, max: 2, step: 0.05 },
+    { key: 'shrink', label: 'Shrink factor α', min: 0.1, max: 1, step: 0.05 },
+  ],
+  view: { yaw: -6, pitch: 50, zoom: 1.15, at: [0, 0] },
+  speed: 4, figH: 260, fade: 0.06, liveNames: true,
+  sheet: sheetPlasticity,
+  features: () => {
+    plsGridInit();
+    PL.st = { k: -1, run: 0, t0: 0, fin: TRIBES.map(() => []), norm: TRIBES.map(() => []), g0: TRIBES.map(() => []), fresh: [], acc: [0, 0, 0], cnt: [0, 0, 0], prev: null, paint: -1, done: false, restart: false, fz: null };
+  },
+  names: (S) => {
+    const st = PL.st, k = Math.max(0, st.k), c = PLS.T[k], cm = Math.hypot(c[0], c[1]), ux = c[0] / cm, uy = c[1] / cm, m = cm / PLS.R;
+    if (m < 1) { const r = PLS.R * plsErfInv(Math.min(m, 0.999)); S.marks.push({ p: { x: r * ux, y: r * uy }, name: `Task ${k + 1}`, sub: `its minimum · |c| = ${m.toFixed(2)}R`, sym: 'min', pri: 9 }); }
+    else S.marks.push({ p: { x: 0.62 * ux, y: 0.62 * uy }, name: `Task ${k + 1}`, sub: `|c| = ${m.toFixed(2)}R, out of reach: no minimum`, sym: 'none', pri: 9 });
+  },
+  print: (c) => {        // the circle beyond which φ's slope along θ is below 2% of its value at the origin
+    const r = 2 * PLS.R; c.save(); c.strokeStyle = 'rgba(36,38,43,0.6)'; c.lineWidth = 0.9; c.setLineDash([5, 3]);
+    c.beginPath(); c.arc(ox(0), oy(0), r * OPU, 0, TAU); c.stroke(); c.setLineDash([]);
+    c.font = `italic 400 ${10.5 * FS}px ${SERIF}`; c.fillStyle = 'rgba(36,38,43,0.8)'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+    c.fillText('output saturated beyond', ox(0), oy(r) - 4 * FS); c.restore();
+  },
+  release: () => {
+    const st = PL.st;
+    if (st.restart) { plsRun(); return; }
+    if (st.k >= 0 && !st.done) { plsFinish(); if (st.k + 1 < PLS.N) plsBegin(st.k + 1); else { st.done = true; nextRelease = STAT.steps + PLS.hold; } return; }
+    if (!F.params.auto) { nextRelease = STAT.steps + 45; return; }
+    plsRun();
+  },
+  click: (x, y) => plsRun(x, y),
+  onSim: (k) => { if (k === 'noise' || k === 'wd' || k === 'shrink') plsRestart(); },
+  step: (i) => {
+    const st = PL.st;
+    if (!st.done && STAT.steps - st.t0 >= PLS.K - PLS.win) { const t = Tr[i]; st.acc[t] += plsTask(Wx[i], Wy[i]); st.cnt[t]++; }
+  },
+  frame: (dt, n) => { const st = PL.st; if (st.fade) { st.fade = false; fadeInk(0.45); } if (st.paint >= 0) plsPaint(); if (!st.done && st.k >= 0) plsFreshStep(n); },
+  readouts: () => {
+    const st = PL.st, k = st.k, out = [];
+    if (k < 0) return [['task', '…']];
+    const c = PLS.T[k], m = Math.hypot(c[0], c[1]) / PLS.R, last = st.done ? k : k - 1;
+    out.push(['task', `${k + 1} of ${PLS.N}${st.done ? ', run over' : ''} · |c| = ${m.toFixed(2)}R, ${m < 1 ? 'within' : 'beyond'} the output’s reach`]);
+    const f = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : '…');
+    TRIBES.forEach((T, t) => {
+      let r = 0, n = 0; for (let i = 0; i < hiW; i++) if (Alive[i] && Tr[i] === t) { r += Math.hypot(Wx[i], Wy[i]); n++; }
+      out.push([T.name, `‖θ‖ ${n ? f(r / n, 2) : '…'} · ‖∇L‖ at task start ${f(st.g0[t][k], 2)} · final loss, task ${last + 1}: ${last >= 0 ? f(st.fin[t][last], 3) : '…'}`]);
+    });
+    out.push(['trained from scratch', last >= 0 ? `final loss, task ${last + 1}: ${f(st.fresh[last], 3)}` : '…']);
+    return out;
+  },
+  debug: () => { const st = PL.st, f = (a) => a.map((v) => +v.toFixed(4)); return { k: st.k, run: st.run, done: st.done, fin: st.fin.map(f), fresh: f(st.fresh), norm: st.norm.map(f), g0: st.g0.map(f) }; },
+  fig: (c, w, h) => {
+    const st = PL.st, N = PLS.N, x0 = 30, x1 = w - 8, split = Math.round(h * 0.6);
+    const tx = (k) => x0 + (x1 - x0) * (k + 0.5) / N;
+    const runs = [[st.prev, 0.22], [st, 1]];
+    const plot = (r, y0, y1, key, ymax, fresh) => {
+      const [S, a] = r; if (!S) return;
+      const ty = (v) => y1 - (y1 - y0) * Math.min(v, ymax) / ymax;
+      const line = (ys, col, w, dash, dots) => {
+        c.strokeStyle = col; c.fillStyle = col; c.lineWidth = w; c.globalAlpha = a; c.setLineDash(dash); c.beginPath(); let on = false;
+        for (let k = 0; k < ys.length; k++) { const v = ys[k]; if (!Number.isFinite(v)) { on = false; continue; } if (on) c.lineTo(tx(k), ty(v)); else c.moveTo(tx(k), ty(v)); on = true; }
+        c.stroke(); c.setLineDash([]);
+        if (dots) for (let k = 0; k < ys.length; k++) if (Number.isFinite(ys[k])) { c.beginPath(); c.arc(tx(k), ty(ys[k]), 1.9, 0, TAU); c.fill(); }
+        c.globalAlpha = 1;
+      };
+      if (fresh) line(S.fresh, 'rgba(36,38,43,0.7)', 1, [3, 2], false);
+      TRIBES.forEach((T, t) => line(S[key][t], T.color, 1.3, [], true));
+    };
+    let y0 = 8, y1 = split - 20;
+    let ymax = 0.1; for (const [S] of runs) if (S) for (const a of [...S.fin, S.fresh]) for (const v of a) if (Number.isFinite(v)) ymax = Math.max(ymax, v);
+    ymax = Math.ceil(ymax * 10) / 10;
+    FIG.axes(c, x0, y0, x1, y1, '', 'final loss on each task');
+    for (const r of runs) plot(r, y0, y1, 'fin', ymax, true);
+    for (const v of [0, ymax / 2, ymax]) FIG.tick(c, x0 - 3, y1 - (y1 - y0) * v / ymax, +v.toFixed(2), 'right', 'middle');
+    c.font = `italic 400 11px ${SERIF}`; const kw = c.measureText('trained from scratch').width;
+    c.strokeStyle = 'rgba(36,38,43,0.7)'; c.lineWidth = 1; c.setLineDash([3, 2]); c.beginPath(); c.moveTo(x1 - kw - 24, y0 + 6); c.lineTo(x1 - kw - 6, y0 + 6); c.stroke(); c.setLineDash([]);
+    FIG.note(c, x1 - 2, y0 + 6, 'trained from scratch', 'rgba(36,38,43,0.7)', 'right');
+    y0 = split + 2; y1 = h - 28;
+    const rmax = 1;
+    FIG.axes(c, x0, y0, x1, y1, 'task', '‖θ‖ at the end of each task');
+    c.setLineDash([2, 3]); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.lineWidth = 0.8; const ys = y1 - (y1 - y0) * 2 * PLS.R / rmax;
+    c.beginPath(); c.moveTo(x0, ys); c.lineTo(x1, ys); c.stroke(); c.setLineDash([]);
+    FIG.note(c, x1 - 2, ys - 7, 'output saturated beyond', 'rgba(36,38,43,0.7)', 'right');
+    for (const r of runs) plot(r, y0, y1, 'norm', rmax, false);
+    for (const v of [0, 0.5, 1]) FIG.tick(c, x0 - 3, y1 - (y1 - y0) * v / rmax, String(v), 'right', 'middle');
+    for (const k of [0, 5, 11, 17, 23]) if (k < N) FIG.tick(c, tx(k), y1 + 4, String(k + 1));
+  },
+});
+
 // --- warmup: a gorge whose curvature across falls a hundredfold downstream
 function sheetGorge(R) {
   sheetBase(R, { bk: 0, bk4: 0, na: 0.03 });
