@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 277 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 283 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -470,6 +470,22 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Wei, B., Huang, K., Huang, Y., Xie, T., Qi, X., Xia, M., Mittal, P., Wang, M. and Henderson, P. (2024). Assessing the brittleness of safety alignment via pruning and low-rank modifications. ICML. *Safety-critical regions are about 3% of parameters and 2.5% of ranks; removing them breaks safety, not utility.*
 - Qi, X., Panda, A., Lyu, K., Ma, X., Roy, S., Beirami, A., Mittal, P. and Henderson, P. (2025). Safety alignment should be made more than just a few tokens deep. ICLR. *Alignment mainly changes the distribution of the first few output tokens.*
 
+### IX · Beyond two dimensions
+
+**41. [Minima in many dimensions](https://matteohe.com/atlas-of-loss-surfaces/?plate=sinking)**
+
+- Bray, A. J. and Dean, D. S. (2007). Statistics of critical points of Gaussian fields on large-dimensional spaces. Physical Review Letters 98(15), 150201. *At a critical point of a high-dimensional Gaussian field, the Hessian is a shifted semicircle, so the index is set by the loss.*
+- Fyodorov, Y. V. (2004). Complexity of random energy landscapes, glass transition, and absolute value of the spectral determinant of random matrices. Physical Review Letters 92(24), 240601. *Counts the critical points of a random field in a bowl, and finds them exponentially many when the bowl is shallow.*
+- Auffinger, A., Ben Arous, G. and Černý, J. (2013). Random matrices and complexity of spin glasses. Communications on Pure and Applied Mathematics 66(2), 165–201. *Proves that the low critical values of the spherical spin glass are layered by index, with minima at the bottom.*
+- Choromanska, A., Henaff, M., Mathieu, M., Ben Arous, G. and LeCun, Y. (2015). The loss surfaces of multilayer networks. AISTATS. *Relates a network’s loss to a spin glass, and finds the test losses reached by SGD spreading less in larger networks.*
+- Sagun, L., Guney, V. U., Ben Arous, G. and LeCun, Y. (2014). Explorations on high dimensional landscapes. arXiv:1412.6615 (ICLR 2015 workshop). *Finds the narrow band of critical values numerically, and finds that gradient descent and SGD reach it.*
+- Dauphin, Y. N., Pascanu, R., Gulcehre, C., Cho, K., Ganguli, S. and Bengio, Y. (2014). Identifying and attacking the saddle point problem in high-dimensional non-convex optimization. NeurIPS. *Argues that high-loss critical points in high dimensions are mostly saddles, and measures index against loss in small networks.*
+- Rahimi, A. and Recht, B. (2007). Random features for large-scale kernel machines. NeurIPS. *Random Fourier features: a sum of random cosines whose covariance approximates a chosen kernel.*
+- Cooper, Y. (2018). The loss landscape of overparameterized neural networks. arXiv:1804.10200. *With n parameters and d data points, the global minima form a manifold of dimension n − d.*
+- Draxler, F., Veschgini, K., Salmhofer, M. and Hamprecht, F. A. (2018). Essentially no barriers in neural network energy landscape. ICML. *Builds paths of nearly constant loss between minima of CIFAR-10 and CIFAR-100 networks.*
+- Baity-Jesi, M., Sagun, L., Geiger, M., Spigler, S., Ben Arous, G., Cammarota, C., LeCun, Y., Wyart, M. and Biroli, G. (2018). Comparing dynamics: deep neural networks versus glassy systems. ICML. *Training slows as flat directions multiply, and its dynamics differ from those of mean-field glasses.*
+- Frye, C. G., Simon, J., Wadia, N. S., Ligeralde, A., DeWeese, M. R. and Bouchard, K. E. (2021). Critical point-finding methods reveal gradient-flat regions of deep network losses. Neural Computation 33(6). *The methods used to find critical points of network losses often stop at gradient-flat points instead.*
+
 ## All works, alphabetically
 
 - Abbe, E., Boix-Adserà, E. and Misiakiewicz, T. (2023). SGD learning on neural networks: leap complexity and saddle-to-saddle dynamics. COLT, PMLR 195.
@@ -482,12 +498,14 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Andriushchenko, M., Croce, F., Müller, M., Hein, M. and Flammarion, N. (2023). A modern look at the relationship between sharpness and generalization. ICML.
 - Andriushchenko, M., Varre, A. V., Pillaud-Vivien, L. and Flammarion, N. (2023). SGD with large step sizes learns sparse features. ICML.
 - Arora, S., Li, Z. and Lyu, K. (2019). Theoretical analysis of auto rate-tuning by batch normalization. ICLR.
+- Auffinger, A., Ben Arous, G. and Černý, J. (2013). Random matrices and complexity of spin glasses. Communications on Pure and Applied Mathematics 66(2), 165–201.
 - Azar, M. G., Guo, Z. D., Piot, B., Munos, R., Rowland, M., Valko, M. and Calandriello, D. (2024). A general theoretical paradigm to understand learning from human preferences. AISTATS.
 - Bach, F. and Moulines, E. (2013). Non-strongly-convex smooth stochastic approximation with convergence rate O(1/n). NeurIPS.
 - Bäck, T. and Schwefel, H.-P. (1993). An overview of evolutionary algorithms for parameter optimization. Evolutionary Computation 1(1).
 - Bahri, D., Mobahi, H. and Tay, Y. (2022). Sharpness-aware minimization improves language model generalization. ACL.
 - Bai, Z., Zhou, Z., Zhao, J., Li, X., Li, Z., Xiong, F., Yang, H., Zhang, Y. and Xu, Z.-Q. J. (2026). Adaptive preconditioners trigger loss spikes in Adam. ICML.
 - Bailey, J. P., Gidel, G. and Piliouras, G. (2020). Finite regret and cycles with fixed step-size via alternating gradient descent-ascent. COLT.
+- Baity-Jesi, M., Sagun, L., Geiger, M., Spigler, S., Ben Arous, G., Cammarota, C., LeCun, Y., Wyart, M. and Biroli, G. (2018). Comparing dynamics: deep neural networks versus glassy systems. ICML.
 - Balduzzi, D., Racanière, S., Martens, J., Foerster, J., Tuyls, K. and Graepel, T. (2018). The mechanics of n-player differentiable games. ICML.
 - Balles, L. and Hennig, P. (2018). Dissecting Adam: the sign, magnitude and variance of stochastic gradients. ICML.
 - Balles, L., Pedregosa, F. and Le Roux, N. (2020). The geometry of sign gradient descent. arXiv:2002.08056.
@@ -504,6 +522,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Blanc, G., Gupta, N., Valiant, G. and Valiant, P. (2020). Implicit regularization for deep neural networks driven by an Ornstein–Uhlenbeck like process. COLT.
 - Boix-Adserà, E., Littwin, E., Abbe, E., Bengio, S. and Susskind, J. (2023). Transformers learn through gradual rank increase. NeurIPS.
 - Böttcher, L. and Wheeler, G. (2024). Visualizing high-dimensional loss landscapes with Hessian directions. Journal of Statistical Mechanics: Theory and Experiment 2024, 023401.
+- Bray, A. J. and Dean, D. S. (2007). Statistics of critical points of Gaussian fields on large-dimensional spaces. Physical Review Letters 98(15), 150201.
 - Cai, Y., Zhou, K., Wu, J., Mei, S., Lindsey, M. and Bartlett, P. (2025). Implicit bias of gradient descent for non-homogeneous deep networks. ICML.
 - Cattaneo, M. D., Klusowski, J. M. and Shigida, B. (2024). On the implicit bias of Adam. ICML.
 - Chaudhari, P. and Soatto, S. (2018). Stochastic gradient descent performs variational inference, converges to limit cycles for deep networks. ICLR.
@@ -542,6 +561,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Freeman, C. D. and Bruna, J. (2017). Topology and geometry of half-rectified network optimization. ICLR.
 - Frye, C. G., Simon, J., Wadia, N. S., Ligeralde, A., DeWeese, M. R. and Bouchard, K. E. (2021). Critical point-finding methods reveal gradient-flat regions of deep network losses. Neural Computation 33(6).
 - Fukumizu, K. and Amari, S. (2000). Local minima and plateaus in hierarchical structures of multilayer perceptrons. Neural Networks 13(3).
+- Fyodorov, Y. V. (2004). Complexity of random energy landscapes, glass transition, and absolute value of the spectral determinant of random matrices. Physical Review Letters 92(24), 240601.
 - Garipov, T., Izmailov, P., Podoprikhin, D., Vetrov, D. and Wilson, A. G. (2018). Loss surfaces, mode connectivity, and fast ensembling of DNNs. NeurIPS.
 - Ge, R., Huang, F., Jin, C. and Yuan, Y. (2015). Escaping from saddle points: online stochastic gradient for tensor decomposition. COLT.
 - Ghorbani, B., Krishnan, S. and Xiao, Y. (2019). An investigation into neural net optimization via Hessian eigenvalue density. ICML.
@@ -674,6 +694,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Qi, X., Zeng, Y., Xie, T., Chen, P.-Y., Jia, R., Mittal, P. and Henderson, P. (2024). Fine-tuning aligned language models compromises safety, even when users do not intend to! ICLR.
 - Qian, N. (1999). On the momentum term in gradient descent learning algorithms. Neural Networks 12(1).
 - Rafailov, R., Sharma, A., Mitchell, E., Manning, C. D., Ermon, S. and Finn, C. (2023). Direct preference optimization: your language model is secretly a reward model. NeurIPS.
+- Rahimi, A. and Recht, B. (2007). Random features for large-scale kernel machines. NeurIPS.
 - Rastrigin, L. A. (1974). Systems of Extremal Control. Nauka, Moscow.
 - Razin, N., Malladi, S., Bhaskar, A., Chen, D., Arora, S. and Hanin, B. (2025). Unintentional unalignment: likelihood displacement in direct preference optimization. ICLR.
 - Ren, Y. and Sutherland, D. J. (2025). Learning dynamics of LLM finetuning. ICLR.
@@ -684,6 +705,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Ruppert, D. (1988). Efficient estimations from a slowly convergent Robbins–Monro process. Technical report 781, Cornell University.
 - Saad, D. and Solla, S. A. (1995). On-line learning in soft committee machines. Physical Review E 52(4), 4225–4243.
 - Sagun, L., Evci, U., Güney, V. U., Dauphin, Y. and Bottou, L. (2018). Empirical analysis of the Hessian of over-parametrized neural networks. ICLR Workshop Track.
+- Sagun, L., Guney, V. U., Ben Arous, G. and LeCun, Y. (2014). Explorations on high dimensional landscapes. arXiv:1412.6615 (ICLR 2015 workshop).
 - Sanyal, S., Neerkaje, A., Kaddour, J., Kumar, A. and Sanghavi, S. (2023). Early weight averaging meets high learning rates for LLM pre-training. NeurIPS Workshop on Advancing Neural Network Training (WANT).
 - Saxe, A. M., McClelland, J. L. and Ganguli, S. (2014). Exact solutions to the nonlinear dynamics of learning in deep linear neural networks. ICLR.
 - Schaipp, F., Hägele, A., Taylor, A., Şimşekli, U. and Bach, F. (2025). The surprising agreement between convex optimization theory and learning-rate scheduling for large model training. ICML.
