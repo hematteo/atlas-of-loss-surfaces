@@ -602,6 +602,15 @@ The number of steps over which a direction forgets an offset.
 For gradient descent on a quadratic with curvature λ, an offset shrinks by the factor `1 − ηλ` per step, so it relaxes in about `1/(ηλ)` steps.
 Over a recording shorter than that, the noise along the direction accumulates like a random walk.
 
+## bsharp: Batch sharpness
+
+The curvature of a minibatch’s loss along its own gradient, `g_Bᵀ H_B g_B / ‖g_B‖²`, averaged over minibatches (Andreyev and Beneventano 2024).
+To second order, a step of size η lowers the loss of the batch it was computed on only while this curvature is below 2/η.
+
+## eoss: Edge of stochastic stability
+
+The regime of minibatch SGD in which the batch sharpness hovers at about 2/η while λ<sub>max</sub> of the full loss stays below it, further below for smaller batches (Andreyev and Beneventano 2024).
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.

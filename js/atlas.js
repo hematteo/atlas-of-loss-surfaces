@@ -2445,6 +2445,222 @@ plate({
   },
 });
 
+// --- the edge of stochastic stability: the loss is the mean of twelve examples. Each example's own valley floor weaves
+// about the floor of the mean, v = A sin(ωθ₁ + 2πn/12), and its loss is a soft wall of the distance to that floor. So the
+// examples' Hessians tilt different ways by up to atan(Aω) while their mean stays a straight valley that sharpens downstream
+const ES = { N: 12, T: 0.5, A: 0.012, Hc: 2.6, base: 0.12, a: 0.14, l0: 4, k: Math.log(160) / 2.75, span: 36, settle: 20, ema: 50 };     // a cohort lives span/η steps; its levels are averaged from settle/η on
+ES.om = ES.T / ES.A;
+const ESCOS = new Float64Array(ES.N), ESSIN = new Float64Array(ES.N), ESGR = new Float64Array(ES.N * 5), ESIDX = Int32Array.from({ length: ES.N }, (_, n) => n), ESDX = [0, 0];
+const esH = (x) => ES.l0 * Math.exp(ES.k * (x + 1.4));
+const esLam = (x) => FEAT.es.cbar * esH(x) + 2 * ES.base;          // λ_max of the mean loss on its floor
+const esX = (lam) => -1.4 + Math.log(Math.max(1e-9, (lam - 2 * ES.base) / (FEAT.es.cbar * ES.l0))) / ES.k;
+const esFloor = (n, x) => { const th = ES.om * x; return ES.A * (Math.sin(th) * ESCOS[n] + Math.cos(th) * ESSIN[n]); };
+function sheetEoss(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0.03 });
+  const f = FEAT.es = { cy: R.range(-0.06, 0.06), ph: R.range(0, TAU), cbar: 1 };
+  for (let n = 0; n < ES.N; n++) { const p = f.ph + TAU * n / ES.N; ESCOS[n] = Math.cos(p); ESSIN[n] = Math.sin(p); }
+  let cb = 0; for (let n = 0; n < ES.N; n++) { const t = ES.T * Math.cos(f.ph + TAU * n / ES.N); cb += 1 / (1 + t * t); }
+  f.cbar = cb / ES.N;                                               // mean of cos² of the tilts: the floor's curvature per unit h
+  EXTRA = (x, y) => {
+    const v = y - f.cy, h = esH(x), th = ES.om * x, s0 = Math.sin(th), c0 = Math.cos(th);
+    let w = 0;
+    for (let n = 0; n < ES.N; n++) {
+      const sn = s0 * ESCOS[n] + c0 * ESSIN[n], f1 = ES.T * (c0 * ESCOS[n] - s0 * ESSIN[n]), s = (v - ES.A * sn) / Math.sqrt(1 + f1 * f1), sg = h * s * s / (2 * ES.Hc);
+      w += sg / Math.sqrt(1 + sg * sg);
+    }
+    const av = Math.abs(v); EXCALM = av < 0.42 ? 1.2 : av < 0.62 ? 1.2 * (0.62 - av) / 0.2 : 0;     // no texture where the particles walk
+    let z = -ES.a * x + ES.Hc * w / ES.N + ES.base * v * v;
+    if (x > 1.3) z += 4 * (x - 1.3) * (x - 1.3);
+    if (x < -1.45) z += 4 * (x + 1.45) * (x + 1.45);
+    return z;
+  };
+  for (let k = 0; k < 7; k++) { const x = R.range(-1.4, 1.4), y = f.cy + (R() < 0.5 ? 1 : -1) * R.range(0.62, 0.88); addGauss(x, y, R.range(-0.15, 0.25), R.range(0.12, 0.2), R.range(0.08, 0.12), R.range(0, 3)); }
+  sheetEnd(R, true);
+}
+// each example's gradient and Hessian at (θ₁, v), v = θ₂ − cy, into ESGR: ∂₁, ∂v, ∂₁₁, ∂₁v, ∂vv. The loss of example n is
+// H_c σ/√(1 + σ²), σ = h s²/2H_c, with s = (v − f)/√(1 + f′²) its distance to its own floor f(θ₁)
+function esExamples(x, v) {
+  const h = esH(x), h1 = ES.k * h, h2 = ES.k * h1, om = ES.om, A = ES.A, Hc = ES.Hc, th = om * x, s0 = Math.sin(th), c0 = Math.cos(th);
+  for (let n = 0; n < ES.N; n++) {
+    const sn = s0 * ESCOS[n] + c0 * ESSIN[n], cn = c0 * ESCOS[n] - s0 * ESSIN[n];
+    const f = A * sn, f1 = A * om * cn, f2 = -A * om * om * sn, f3 = -A * om * om * om * cn;
+    const q = Math.sqrt(1 + f1 * f1), qx = f1 * f2 / q, qxx = (f2 * f2 + f1 * f3) / q - f1 * f1 * f2 * f2 / (q * q * q);
+    const s = (v - f) / q, sv = 1 / q, sx = -f1 / q - s * qx / q, sxv = -qx / (q * q);
+    const sxx = -f2 / q + f1 * qx / (q * q) - sx * qx / q - s * (qxx / q - qx * qx / (q * q));
+    const sg = h * s * s / (2 * Hc), gx = h1 * s * s / (2 * Hc) + h * s * sx / Hc, gv = h * s * sv / Hc;
+    const gxx = h2 * s * s / (2 * Hc) + 2 * h1 * s * sx / Hc + h * (sx * sx + s * sxx) / Hc, gxv = (h1 * s * sv + h * (sx * sv + s * sxv)) / Hc, gvv = h * sv * sv / Hc;
+    const u = 1 + sg * sg, r = Math.sqrt(u), W1 = Hc / (u * r), W2 = -3 * Hc * sg / (u * u * r), o = n * 5;
+    ESGR[o] = W1 * gx; ESGR[o + 1] = W1 * gv; ESGR[o + 2] = W2 * gx * gx + W1 * gxx; ESGR[o + 3] = W2 * gx * gv + W1 * gxv; ESGR[o + 4] = W2 * gv * gv + W1 * gvv;
+  }
+}
+const esTop = (a, b, d) => { const tr = a + d, det = a * d - b * b; return tr / 2 + Math.sqrt(Math.max(0, tr * tr / 4 - det)); };
+// one step for both optimizers. The batch is b of the 12 examples, drawn without replacement (all 12 for gradient descent);
+// its gradient is the map's plus the batch's mean example gradient minus the mean over all twelve, and likewise its
+// Hessian. The step records λ_max of the full Hessian and the batch sharpness g_BᵀH_Bg_B/‖g_B‖², each averaged over
+// about 50 steps (Ax, Ay)
+function esStep(i, x, y, eta, g1, g2) {
+  const N = ES.N, b = clamp(Tag[i], 1, N);
+  esExamples(x, y - FEAT.es.cy);
+  let mx = 0, mv = 0, mxx = 0, mxv = 0, mvv = 0;
+  for (let n = 0; n < N; n++) { const o = n * 5; mx += ESGR[o]; mv += ESGR[o + 1]; mxx += ESGR[o + 2]; mxv += ESGR[o + 3]; mvv += ESGR[o + 4]; }
+  mx /= N; mv /= N; mxx /= N; mxv /= N; mvv /= N;
+  hess(x, y);                       // the full Hessian is the map's own: the examples' mean plus the terms they share
+  const Fxx = hXX, Fxv = hXY, Fvv = hYY;
+  let bx = g1, bv = g2, Bxx = Fxx, Bxv = Fxv, Bvv = Fvv;
+  if (b < N) {
+    let sx = 0, sv = 0, sxx = 0, sxv = 0, svv = 0;
+    for (let k = 0; k < b; k++) {
+      const j = k + Math.floor(NR() * (N - k)), t = ESIDX[k]; ESIDX[k] = ESIDX[j]; ESIDX[j] = t;
+      const o = ESIDX[k] * 5; sx += ESGR[o]; sv += ESGR[o + 1]; sxx += ESGR[o + 2]; sxv += ESGR[o + 3]; svv += ESGR[o + 4];
+    }
+    bx += sx / b - mx; bv += sv / b - mv; Bxx += sxx / b - mxx; Bxv += sxv / b - mxv; Bvv += svv / b - mvv;
+  }
+  const lam = esTop(Fxx, Fxv, Fvv), gn = bx * bx + bv * bv, rq = gn > 1e-18 ? (bx * (Bxx * bx + Bxv * bv) + bv * (Bxv * bx + Bvv * bv)) / gn : NaN;
+  if (Age[i] === 0) { Ax[i] = lam; Ay[i] = Number.isFinite(rq) ? rq : lam; }
+  else { Ax[i] += (lam - Ax[i]) / ES.ema; if (Number.isFinite(rq)) Ay[i] += (rq - Ay[i]) / ES.ema; }
+  ESDX[0] = -eta * bx; ESDX[1] = -eta * bv;
+  return ESDX;
+}
+const esBatch = () => clamp(Math.round(SIM.batch), 1, ES.N);
+const esEta = () => (PL.st.run ? PL.st.run.eta : SIM.lr), esLife = () => Math.round(ES.span / esEta()), esFrom = () => Math.round(ES.settle / esEta());
+// the settled level of a curve: its mean over the latest cohort's ages from settle/η on
+function esLevel(C, t) { let s = 0, n = 0; for (let k = esFrom(), e = Math.min(C.len, esLife()); k < e; k++) if (C.cnt[t][k] > 0) { s += C.sum[t][k] / C.cnt[t][k]; n++; } return n > 200 ? s / n : NaN; }
+function esRecord() {           // keep the latest cohort's settled levels, once, for the lower figure
+  const st = PL.st; if (st.recd || !st.run) return;
+  const r = Object.assign({}, st.run, { gd: esLevel(st.L, 0), sL: esLevel(st.L, 1), sB: esLevel(st.B, 1) });
+  if (!Number.isFinite(r.sL)) return;
+  st.recd = true; st.hist.push(r); if (st.hist.length > 60) st.hist.shift();
+}
+function esRelease() {
+  const st = PL.st, f = FEAT.es;
+  esRecord();
+  curveReset(st.L); curveReset(st.B); st.recd = false; st.age = 0;
+  const b = esBatch();
+  st.run = { eta: SIM.lr, b };
+  const p = [-1.28, f.cy + (st.k++ % 2 ? -1 : 1) * 0.12];
+  stamp(p[0], p[1], 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  const n = PHONE ? [2, 5] : [3, 8];
+  for (let t = 0; t < 2; t++) for (let k = 0; k < n[t]; k++) {
+    const i = spawn(p[0] + RREL.normal() * 0.01, p[1] + RREL.normal() * 0.01, t);
+    if (i >= 0) { An[i] = st.L.cid; Tag[i] = t === 0 ? ES.N : b; }
+  }
+  STAT.released++;
+  PL.maxAge = esLife();
+  nextRelease = STAT.steps + PL.maxAge;
+}
+function esFig(c, w, h) {
+  const st = PL.st, x0 = 30, x1 = w - 8, eta = esEta(), hh = (h - 12) * 0.54;
+  const cols = TRIBES.map((T) => T.color), ink = 'rgba(36,38,43,0.6)';
+  const hline = (r, v, lab) => { const yy = r.ty(v); c.setLineDash([3, 2]); c.strokeStyle = ink; c.lineWidth = 0.9; c.beginPath(); c.moveTo(r.x0, yy); c.lineTo(r.x1, yy); c.stroke(); c.setLineDash([]); FIG.note(c, r.x1 - 2, yy - 7, lab, ink, 'right'); };
+  // above: λ_max (solid) and batch sharpness (dashed) of the latest cohort, against its age
+  let y0 = 8, y1 = hh - 22;
+  FIG.axes(c, x0, y0, x1, y1, 'steps', 'log₁₀ λ_max (solid), batch sharpness (dashed)');
+  const lg = (v) => (v > 0 ? Math.log10(v) : NaN), life = esLife(), from = esFrom();
+  c.fillStyle = 'rgba(36,38,43,0.06)'; c.fillRect(x0 + (x1 - x0) * from / life, y0, (x1 - x0) * (life - from) / life, y1 - y0);
+  const S = [{ ys: curveMean(st.L, 0, lg), color: cols[0], w: 1.4 }, { ys: curveMean(st.L, 1, lg), color: cols[1], w: 1.4 }, { ys: curveMean(st.B, 1, lg), color: cols[1], w: 1.1, dash: [4, 2] }];
+  const r = Object.assign(figSeries(c, x0, y0, x1, y1, S, { xmax: life, ymin: 0.6, ymax: Math.log10(2 / eta) + 0.25 }), { x0, x1 });
+  hline(r, Math.log10(2 / eta), '2/η');
+  for (const v of [1, 2]) FIG.tick(c, x0 - 3, r.ty(v), String(v), 'right', 'middle');
+  for (let v = 0; v < life; v += 1000) FIG.tick(c, r.tx(v), y1 + 4, String(v));
+  // below: each finished cohort's settled levels, as fractions of 2/η, against its batch size
+  y0 = hh + 14; y1 = h - 28;
+  FIG.axes(c, x0, y0, x1, y1, 'batch size b', 'level ÷ (2/η): λ_max ●, batch sharpness ○');
+  const lo = 0.5, hi = 1.1, tx = (b) => x0 + 10 + (x1 - x0 - 20) * (b - 1) / (ES.N - 1), ty = (v) => y1 - (y1 - y0) * (clamp(v, lo, hi) - lo) / (hi - lo);
+  hline({ x0, x1, ty }, 1, '2/η');
+  for (const b of [1, 2, 3, 4, 6, 8, 10, 12]) FIG.tick(c, tx(b), y1 + 4, String(b));
+  for (const v of [0.6, 0.8, 1]) FIG.tick(c, x0 - 3, ty(v), String(v), 'right', 'middle');
+  const dot = (b, v, col, open, dx) => { if (!Number.isFinite(v)) return; c.beginPath(); c.arc(tx(b) + dx, ty(v), 2.6, 0, TAU); if (open) { c.strokeStyle = col; c.lineWidth = 1.1; c.stroke(); } else { c.fillStyle = col; c.fill(); } };
+  for (const q of st.hist) {
+    const u = q.eta / 2;
+    dot(ES.N, q.gd * u, cols[0], false, 4);
+    dot(q.b, q.sL * u, cols[1], false, q.b === ES.N ? -4 : 0); dot(q.b, q.sB * u, cols[1], true, q.b === ES.N ? -4 : 0);
+  }
+  if (!st.hist.length) FIG.note(c, (x0 + x1) / 2, (y0 + y1) / 2, 'each cohort adds its settled levels here when it ends', 'rgba(36,38,43,0.5)', 'center');
+}
+plate({
+  id: 'eoss', ch: 1, seed: 1613,
+  run: [1, 3, 12, 1].map((b, k) => (T) => {
+    T.set('lr', k === 3 ? 0.02 : 0.01); T.set('batch', b); T.clear();
+    const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; }
+  }),
+  status: 'open',
+  get tribes() {         // a getter: K_FN is declared further down the file
+    return [
+      { k: 'gd', name: 'Gradient descent', color: '#23708f', kind: K_FN, fn: esStep, sigMul: 0, rest: 'never', rule: 'θ ← θ − η∇L, all twelve examples' },
+      { k: 'sgd', name: 'SGD', color: '#c22a40', kind: K_FN, fn: esStep, sigMul: 0, rest: 'never', rule: 'θ ← θ − η∇L_B, b examples drawn without replacement' },
+    ];
+  },
+  sim: { lr: 0.01, batch: 1 },
+  ctl: [{ key: 'lr', label: 'Learning rate η', min: 0.007, max: 0.02, scale: 'log', f: (v) => v.toFixed(4) }, { key: 'batch', label: 'Batch size b (of 12 examples)', min: 1, max: 12, step: 1, f: (v) => String(Math.round(v)) }],
+  view: { yaw: -16, pitch: 40 },
+  speed: 3, figH: 330,
+  maxAge: 3600,
+  sheet: sheetEoss,
+  features: () => { const n = Math.ceil(ES.span / 0.007); PL.st = { L: curveInit(2, n), B: curveInit(2, n), k: 0, hist: [], recd: true, run: null, age: 0 }; },
+  names: (S) => {
+    const f = FEAT.es;
+    S.paths.push({ text: 'Braided Valley', pts: [-1.25, f.cy, -0.2, f.cy], size: 12.5, offset: 0.13 });
+    for (const lam of [10, 30, 100, 300]) { const x = esX(lam); if (x > X0 + 0.05 && x < X1 - 0.05) S.marks.push({ p: { x, y: f.cy - 0.1 }, name: '', sub: `λ ${lam}`, sym: 'none', pin: false }); }
+  },
+  print: () => {
+    const f = FEAT.es, c = sc;
+    c.strokeStyle = 'rgba(36,38,43,0.75)'; c.lineWidth = 0.9; c.beginPath();
+    for (const lam of [10, 20, 30, 50, 100, 200, 300, 500]) { const x = esX(lam); if (x < X0 || x > X1) continue; const w = Math.sqrt(2 * ES.Hc / esH(x)) * 0.6; c.moveTo(ox(x), oy(f.cy - w)); c.lineTo(ox(x), oy(f.cy + w)); }
+    c.stroke();
+    c.strokeStyle = 'rgba(36,38,43,0.32)'; c.lineWidth = 0.45;            // the twelve examples' own floors, braided about the floor of the mean
+    for (let n = 0; n < ES.N; n++) { c.beginPath(); for (let k = 0; k <= 650; k++) { const x = -1.3 + k * 0.004, X = ox(x), Y = oy(f.cy + esFloor(n, x)); if (k) c.lineTo(X, Y); else c.moveTo(X, Y); } c.stroke(); }
+  },
+  lines: () => {
+    const f = FEAT.es, x = esX(2 / SIM.lr), pts = []; for (let y = f.cy - 0.32; y <= f.cy + 0.32; y += 0.005) pts.push(x, y, 0.003);
+    line(pts, '#c22a40', 1.8, 0.024, true, 0.9);
+  },
+  markers: (B, n) => {
+    const f = FEAT.es, o = n * 11; B[o] = Math.min(esX(2 / SIM.lr), 1.3); B[o + 1] = f.cy; B[o + 2] = 7; B[o + 3] = 1; B[o + 4] = 0; B[o + 5] = 0; B[o + 6] = 1; B[o + 7] = 0; B[o + 8] = 0.14; B[o + 9] = 0.15; B[o + 10] = 0.17;
+    return n + 1;
+  },
+  overlay: (oc) => {
+    const f = FEAT.es, x = esX(2 / SIM.lr), y = f.cy + 0.34;
+    project(VP, x, y, hgrid(x, y) * ZS + 0.02, P0);
+    oc.font = `italic 400 ${PHONE ? 11 : 12}px ${SERIF}`; oc.textAlign = 'center'; oc.textBaseline = 'bottom'; oc.lineJoin = 'round';
+    const t = `λ = 2/η = ${(2 / SIM.lr).toFixed(0)}`;
+    oc.strokeStyle = 'rgba(236,238,232,0.9)'; oc.lineWidth = 3; oc.strokeText(t, P0[0], P0[1]); oc.fillStyle = '#a3203a'; oc.fillText(t, P0[0], P0[1]);
+  },
+  onSim: (k) => {
+    if (k === 'lr') linesDirty = true;
+    if (k === 'lr' || k === 'batch') nextRelease = Math.min(nextRelease, STAT.steps + 60);     // a new cohort soon after an instrument moves
+  },
+  release: () => {
+    if (!F.params.auto || STAT.alive > maxAlive - 20) { nextRelease = STAT.steps + 45; return; }
+    esRelease();
+  },
+  click: (x, y) => {
+    const b = esBatch(), n = PHONE ? [2, 4] : [3, 5];
+    stamp(x, y, 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+    for (let t = 0; t < 2; t++) for (let k = 0; k < n[t]; k++) { const i = spawn(x + RREL.normal() * 0.01, y + RREL.normal() * 0.01, t); if (i >= 0) { An[i] = 0; Tag[i] = t === 0 ? ES.N : b; } }
+    STAT.released++;
+  },
+  step: (i) => {
+    const st = PL.st; if (An[i] !== st.L.cid) return;
+    curveAdd(st.L, Tr[i], Age[i], Ax[i]); curveAdd(st.B, Tr[i], Age[i], Ay[i]);
+    if (Age[i] > st.age) st.age = Age[i];
+  },
+  frame: () => { const st = PL.st; if (!st.recd && st.age >= esLife() - 1) esRecord(); },
+  readouts: () => {
+    const st = PL.st, f1 = (v) => (Number.isFinite(v) ? v.toFixed(0) : '…');
+    const now = (C, t) => { for (let k = Math.min(st.age, C.len - 1); k >= 0; k--) if (C.cnt[t][k] > 0) return C.sum[t][k] / C.cnt[t][k]; return NaN; };
+    const lv = (C, t) => (st.age >= esFrom() + 200 ? esLevel(C, t) : now(C, t)), b = st.run ? st.run.b : esBatch();
+    return [['2/η', (2 / SIM.lr).toFixed(0)], ['λ_max, gradient descent', f1(lv(st.L, 0))], [`λ_max, SGD, b = ${b}`, f1(lv(st.L, 1))], [`batch sharpness, SGD, b = ${b}`, f1(lv(st.B, 1))]];
+  },
+  debug: () => {
+    const st = PL.st, r = (v) => (Number.isFinite(v) ? +v.toFixed(1) : null);
+    const pos = TRIBES.map(() => [0, 0, 0]);      // per optimizer: the floor's λ at the particles, their RMS distance from the floor, count
+    for (let i = 0; i < hiW; i++) if (Alive[i] && An[i] === st.L.cid) { const q = pos[Tr[i]], v = Wy[i] - FEAT.es.cy; q[0] += esLam(Wx[i]); q[1] += v * v; q[2]++; }
+    return { run: st.run, age: st.age, gd: r(esLevel(st.L, 0)), sL: r(esLevel(st.L, 1)), sB: r(esLevel(st.B, 1)), hist: st.hist.length,
+      floor: pos.map((q) => (q[2] ? [r(q[0] / q[2]), +Math.sqrt(q[1] / q[2]).toFixed(3), q[2]] : null)) };
+  },
+  fig: esFig,
+});
+
 // --- temperature: SGD as a Langevin process
 function sheetThreeWells(R) {
   sheetBase(R, { bk: 0.35, bk4: 0.03, na: 0.015 });
