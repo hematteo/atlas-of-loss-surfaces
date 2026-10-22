@@ -65,6 +65,8 @@
       gestures: [], params: [], keys: {}, tone: 'dark', accent: null, maxDpr: 2, renderScale: 1,
       seed: null, back: '../index.html', exhibition: 'Hidden Layers', idleMs: 3200,
       standalone: false,          // published on its own: no exhibition link, no catalogue number
+      maxFps: null,               // draw at most this often, except during a drag or a scroll
+      still: null, stillMs: 3000, // still(): nothing on screen moves until the next input; while paused, the loop then sleeps
       onSeed: null, onParam: null, onReset: null,
     }, o || {});
     F = { opts, params: {}, paused: false, timeScale: 1, time: 0, frame: 0, fps: 60, captureLayers: null,
@@ -215,7 +217,7 @@
     // ---------- params ----------
     const ctls = {};
     const commit = (k, v) => { F.params[k] = v; if (opts.onParam) opts.onParam(k, v, F.params, F); };
-    F.setParam = (k, v, silent) => { F.params[k] = v; if (ctls[k]) ctls[k](v); if (!silent && opts.onParam) opts.onParam(k, v, F.params, F); };
+    F.setParam = (k, v, silent) => { F.params[k] = v; if (ctls[k]) ctls[k](v); if (!silent && opts.onParam) opts.onParam(k, v, F.params, F); F.redraw(); };
     const group = tune.querySelector('[data-params]');
     for (const p of opts.params) {
       const type = p.type || 'range';
@@ -288,6 +290,7 @@
       try { history.replaceState(null, '', '#' + F.seed); } catch (_) {}
       if (opts.onSeed) opts.onSeed(F.seed, F);
       if (!quiet) F.toast('Seed ' + F.seed);
+      F.redraw();
     };
     F.randomSeed = () => F.setSeed((Math.random() * 4294967296) >>> 0);
     F.regenerate = () => F.setSeed(F.seed, true);
@@ -311,6 +314,7 @@
       bPause.title = F.paused ? 'Resume (Space)' : 'Pause (Space)';
       bPause.setAttribute('aria-label', bPause.title);
       F.toast(F.paused ? 'Paused' : 'Resumed', 900);
+      F.redraw();
     };
     function toggleFullscreen() {
       const d = document;
@@ -321,7 +325,7 @@
 
     // ---------- capture ----------
     let captureWanted = false, running = false, lightbox = null;
-    F.capture = () => { captureWanted = true; if (!running) doCapture(); };
+    F.capture = () => { captureWanted = true; if (!running) doCapture(); else F.redraw(); };
     function doCapture() {
       captureWanted = false;
       const layers = F.captureLayers || [canvas];
@@ -377,16 +381,36 @@
     });
 
     // ---------- loop ----------
+    // Frames are drawn on every Nth display refresh, so as not to exceed opts.maxFps (every other refresh at 120 Hz),
+    // and on every refresh while a drag or a scroll is under way. Paused, the loop sleeps once opts.still() holds and
+    // nothing has been touched for opts.stillMs; input, F.redraw() or still() turning false wakes it.
     let loopFn = null, last = 0, roLast = 0, rafId = 0;
-    F._stop = () => { running = false; cancelAnimationFrame(rafId); };
+    let prevRaf = 0, gapMin = Infinity, gapN = 0, vsync = 1 / 60, skip = 0, inputAt = 0, wheelAt = -1e9, asleep = false, sleepTimer = 0;
+    F._stop = () => { running = false; cancelAnimationFrame(rafId); clearInterval(sleepTimer); };
     F.start = (fn) => {
       loopFn = fn || null;
       try { if (opts.onSeed) opts.onSeed(F.seed, F); }
       catch (err) { Frame.fail(err.message || String(err), err.detail || err.stack); return; }
       running = true; last = performance.now(); rafId = requestAnimationFrame(tick); wake();
     };
+    F.redraw = () => {
+      inputAt = performance.now();
+      if (!asleep || !running) return;
+      asleep = false; clearInterval(sleepTimer);
+      last = performance.now(); rafId = requestAnimationFrame(tick);
+    };
+    for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'input', 'change', 'resize']) addEventListener(ev, F.redraw, { capture: true, passive: true });
+    addEventListener('wheel', () => { wheelAt = performance.now(); F.redraw(); }, { capture: true, passive: true });
     function tick(now) {
       if (!running) return;
+      if (prevRaf) {        // the display's refresh interval: the shortest gap between callbacks over the last 60
+        gapMin = Math.min(gapMin, now - prevRaf);
+        if (++gapN === 60) { if (gapMin > 2 && gapMin < 50) vsync = gapMin / 1000; gapMin = Infinity; gapN = 0; }
+      }
+      prevRaf = now;
+      const every = opts.maxFps ? Math.max(1, Math.floor(1 / (vsync * opts.maxFps) + 0.25)) : 1;
+      if (++skip < every && !P.down && now - wheelAt > 300) { rafId = requestAnimationFrame(tick); return; }
+      skip = 0;
       const raw = Math.min(Math.max((now - last) / 1000, 0), 1 / 15); last = now;
       const dt = F.paused ? 0 : raw * F.timeScale;
       F.time += dt; F.frame++;
@@ -396,6 +420,11 @@
       P.dx = 0; P.dy = 0; P.wheel = 0;
       if (raw > 0) F.fps = F.fps * 0.94 + (1 / raw) * 0.06;
       if (now - roLast > 120) { flushReadouts(); roLast = now; }
+      if (F.paused && opts.still && now - inputAt > opts.stillMs && opts.still()) {
+        asleep = true;
+        sleepTimer = setInterval(() => { if (!F.paused || !opts.still()) F.redraw(); }, 250);
+        return;
+      }
       rafId = requestAnimationFrame(tick);
     }
 

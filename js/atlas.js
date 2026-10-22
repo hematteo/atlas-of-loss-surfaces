@@ -7223,7 +7223,7 @@ const SIMKEYS = {
 const F = Frame.init({ standalone: true, byline: 'By hematteo, made with Claude (Anthropic).',
   slug: 'atlas-of-loss-surfaces', number: 3, title: 'An Atlas of Loss Surfaces', year: 2026,
   medium: "A map of the places gradient descent gets stuck, and the ways it gets out.",
-  tone: 'light', accent: '#4b3fa0', seed: 1938, maxDpr: 2,
+  tone: 'light', accent: '#4b3fa0', seed: 1938, maxDpr: 2, maxFps: 60, still: sceneStill,
   statement: TEXT.about,
   hint: 'drag to turn · right-drag to pan · scroll to approach · click to release a cohort · <kbd>↑</kbd><kbd>↓</kbd> plates',
   gestures: [['Drag', 'turn the relief model'], ['Right-drag, Shift-drag, two fingers', 'pan across the sheet; twist two fingers to turn'], ['Scroll, pinch', 'approach the pointer'],
@@ -8979,9 +8979,11 @@ function planView() {
   camK = 4;
 }
 function wrapAngle(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
-let lastInteract = 0;
+let lastInteract = 0, spinMs = 0, spinPrev = 0;
 function camUpdate(dt, now) {
-  if (F.params.spin && !planOn && !FOL.on && now - lastInteract > 9000 && !dragging) GOAL.yaw = baseYaw + 0.2 * Math.sin((now - lastInteract - 9000) / 1000 * 0.045);
+  const spinning = F.params.spin && !planOn && !FOL.on && now - lastInteract > 9000 && !dragging;
+  spinMs = spinning ? spinMs + (F.paused ? 0 : Math.min(now - spinPrev, 100)) : 0; spinPrev = now;      // the spin's own clock stops while paused
+  if (spinning) GOAL.yaw = baseYaw + 0.2 * Math.sin(spinMs / 1000 * 0.045);
   if (!(INTRO.on && introGlide(now))) {
     const k = REDUCED && !gesture && !FOL.on ? 1 : 1 - Math.exp(-Math.min(dt, 0.1) * camK);
     CAM.yaw += wrapAngle(GOAL.yaw - CAM.yaw) * k; CAM.pitch += (GOAL.pitch - CAM.pitch) * k; CAM.dist += (GOAL.dist - CAM.dist) * k;
@@ -10622,6 +10624,15 @@ if (matchMedia('(pointer: coarse)').matches) {
 }
 window.__debug = {};
 let acc = 0, loopMs = 0, simMs = 0, lastPrint = 0, figT = 0, lastClean = false;
+// nothing moves of its own accord: no turn, rise, glide or flood under way, the camera at rest and nothing left to
+// redraw. Paused, the frame stops drawing once this holds; stick men and plate overlays freeze with it
+function sceneStill() {
+  if (sinkFn || INTRO.on || FOL.on || watchOpen() || (!REDUCED && RISE < 1) || performance.now() - printAt < 1100) return false;
+  if (printDirty || linesDirty || ribDirty || inkMipDirty || segN || stampN || (F.params.lamp && (lightDirty || aoDirty))) return false;
+  if ((SCAF.on && (!SCAF.tree || SCAF.flood > -0.5)) || DUSKV !== (DUSK ? 1 : 0)) return false;
+  return Math.abs(wrapAngle(GOAL.yaw - CAM.yaw)) + Math.abs(GOAL.pitch - CAM.pitch) + Math.abs(GOAL.dist - CAM.dist) / CAM.dist +
+    Math.abs(GOAL.tx - CAM.tx) + Math.abs(GOAL.ty - CAM.ty) + Math.abs(GOAL.tz - CAM.tz) < 1e-4;
+}
 F.start((t, dt) => {
   const now = performance.now();
   NOWMS = now;
