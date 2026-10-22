@@ -117,6 +117,10 @@ It has layers and symmetries, so many minima are copies of one another (see <i>T
 In an overparameterized network the global minima form manifolds, of dimension the number of parameters minus the number of training examples (Cooper 2018).
 Minima are often joined by paths along which the loss barely rises (Draxler et al. 2018), so the bottom is connected, not a band of isolated points.
 
+For networks themselves, exact results exist in simpler settings.
+Huang, Loureiro and Sarao Mannelli (2026) described the local minima of two-layer ReLU networks learning from a teacher network exactly, through a few summary statistics.
+They found that overparameterization makes the global minima easier to reach.
+
 Baity-Jesi et al. (2018) compared training with the dynamics of glassy systems.
 In overparameterized networks training slowed as flat directions multiplied, and near zero loss the weights drifted along a flat bottom.
 Like mean-field glasses they crossed no barriers, but their dynamics differed, which points to differently organized landscapes.
@@ -150,3 +154,5 @@ In <i>The road to infinity</i>, the loss has no minimum at all, and gradient des
   Training slows as flat directions multiply, and its dynamics differ from those of mean-field glasses.
 - Frye, C. G., Simon, J., Wadia, N. S., Ligeralde, A., DeWeese, M. R. and Bouchard, K. E. (2021). Critical point-finding methods reveal gradient-flat regions of deep network losses. Neural Computation 33(6).
   The methods used to find critical points of network losses often stop at gradient-flat points instead.
+- Huang, J., Loureiro, B. and Sarao Mannelli, S. (2026). Sharp description of local minima in the loss landscape of high-dimensional two-layer ReLU neural networks. arXiv:2604.09412.
+  In a teacher–student ReLU network, local minima described exactly by summary statistics; overparameterization helps reach the global ones.

@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 301 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 302 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -512,6 +512,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Draxler, F., Veschgini, K., Salmhofer, M. and Hamprecht, F. A. (2018). Essentially no barriers in neural network energy landscape. ICML. *Builds paths of nearly constant loss between minima of CIFAR-10 and CIFAR-100 networks.*
 - Baity-Jesi, M., Sagun, L., Geiger, M., Spigler, S., Ben Arous, G., Cammarota, C., LeCun, Y., Wyart, M. and Biroli, G. (2018). Comparing dynamics: deep neural networks versus glassy systems. ICML. *Training slows as flat directions multiply, and its dynamics differ from those of mean-field glasses.*
 - Frye, C. G., Simon, J., Wadia, N. S., Ligeralde, A., DeWeese, M. R. and Bouchard, K. E. (2021). Critical point-finding methods reveal gradient-flat regions of deep network losses. Neural Computation 33(6). *The methods used to find critical points of network losses often stop at gradient-flat points instead.*
+- Huang, J., Loureiro, B. and Sarao Mannelli, S. (2026). Sharp description of local minima in the loss landscape of high-dimensional two-layer ReLU neural networks. arXiv:2604.09412. *In a teacher–student ReLU network, local minima described exactly by summary statistics; overparameterization helps reach the global ones.*
 
 **44. [What a slice hides](https://matteohe.com/atlas-of-loss-surfaces/?plate=slices)**
 
@@ -642,6 +643,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Hoffer, E., Hubara, I. and Soudry, D. (2017). Train longer, generalize better: closing the generalization gap in large batch training of neural networks. NeurIPS.
 - Hoogland, J., Wang, G., Farrugia-Roberts, M., Carroll, L., Wei, S. and Murfet, D. (2025). Loss landscape degeneracy and stagewise development in transformers. TMLR.
 - Hu, S. et al. (2024). MiniCPM: unveiling the potential of small language models with scalable training strategies. arXiv:2404.06395.
+- Huang, J., Loureiro, B. and Sarao Mannelli, S. (2026). Sharp description of local minima in the loss landscape of high-dimensional two-layer ReLU neural networks. arXiv:2604.09412.
 - Huang, W. R., Emam, Z., Goldblum, M., Fowl, L., Terry, J. K., Huang, F. and Goldstein, T. (2020). Understanding generalization through visualizations. NeurIPS Workshop “I Can’t Believe It’s Not Better!”, PMLR 137.
 - Huang, Y., Gokaslan, A., Kuleshov, V. and Tompkin, J. (2024). The GAN is dead; long live the GAN! A modern GAN baseline. NeurIPS.
 - Imhof, E. (1965). Kartographische Geländedarstellung. De Gruyter. English edition: Cartographic Relief Presentation (1982).
