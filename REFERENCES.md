@@ -94,7 +94,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Hoffer, E., Hubara, I. and Soudry, D. (2017). Train longer, generalize better: closing the generalization gap in large batch training of neural networks. NeurIPS. *The large-batch gap comes mainly from too few updates, and closes when training is lengthened and retuned.*
 - Shallue, C. J., Lee, J., Antognini, J., Sohl-Dickstein, J., Frostig, R. and Dahl, G. E. (2019). Measuring the effects of data parallelism on neural network training. Journal of Machine Learning Research 20(112). *With the learning rate and other metaparameters retuned for each batch size, no consistent large-batch generalization penalty.*
 - Wen, K., Li, Z. and Ma, T. (2023). Sharpness minimization algorithms do not only minimize sharpness to achieve better generalization. NeurIPS. *Two-layer ReLU networks in which the flattest minima generalize poorly, yet sharpness minimization still helps.*
-- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2026). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779. *Flat minima of two-layer ReLU networks generalize at a rate that worsens exponentially with input dimension.*
+- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779. *Flat minima of two-layer ReLU networks generalize at a rate that worsens exponentially with input dimension.*
 
 ### II · Step size and noise
 
@@ -628,7 +628,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Li, Z., Lyu, K. and Arora, S. (2020). Reconciling modern deep learning with traditional optimization analyses: the intrinsic learning rate. NeurIPS.
 - Li, Z., Malladi, S. and Arora, S. (2021). On the validity of modeling SGD with stochastic differential equations (SDEs). NeurIPS.
 - Li, Z., Wang, T. and Arora, S. (2022). What happens after SGD reaches zero loss? A mathematical framework. ICLR.
-- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2026). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
+- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
 - Litman, E. (2026). The origin of edge of stability. arXiv:2604.20446.
 - Liu, H., Li, Z., Hall, D., Liang, P. and Ma, T. (2024). Sophia: a scalable stochastic second-order optimizer for language model pre-training. ICLR.
 - Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982.

@@ -114,7 +114,7 @@ Much of the large-batch gap that Keskar et al. reported then closed.
 Wen, Li and Ma (2023) showed that in two-layer ReLU networks some of the flattest minima generalize poorly.
 They also showed that sharpness-aware minimization can generalize well for reasons other than flatness.
 Flatness can also lose its force as the input dimension grows.
-For two-layer ReLU networks, Liang et al. (2026) proved that flat minima still generalize, but at a rate that worsens exponentially with the input dimension.
+For two-layer ReLU networks, Liang et al. (2025) proved that flat minima still generalize, but at a rate that worsens exponentially with the input dimension.
 Low-norm solutions, such as those weight decay finds, do not suffer this.
 
 The claim that survives at scale is narrower than the original argument.
@@ -144,5 +144,5 @@ Flat minima and good generalization often appear together, but the learning rate
   With the learning rate and other metaparameters retuned for each batch size, no consistent large-batch generalization penalty.
 - Wen, K., Li, Z. and Ma, T. (2023). Sharpness minimization algorithms do not only minimize sharpness to achieve better generalization. NeurIPS.
   Two-layer ReLU networks in which the flattest minima generalize poorly, yet sharpness minimization still helps.
-- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2026). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
+- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
   Flat minima of two-layer ReLU networks generalize at a rate that worsens exponentially with input dimension.
