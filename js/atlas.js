@@ -3058,6 +3058,179 @@ plate({
   },
 });
 
+// --- grokking: the training loss has a valley whose level floor of zero loss runs from large ‖θ‖, at the edge of the
+// sheet, to small ‖θ‖ near the origin. The test loss is the training loss plus a gap that grows with ‖θ‖, so it is low
+// only at the floor's small end. On the floor the gradient vanishes, and only weight decay moves θ along it.
+const GRK = { T: 10000, eta: 0.01, thr: 0.1, Lam: 30, Hw: 0.8, Hd: 0.8, rA: 1.45, rB: 0.35, G0: 0.6, wg: 0.05, ray: -0.3, rot: 0, bend: 0.8, rg: 0.62 };
+// the floor's bearing at norm r: a smootherstep from rot at rA (and beyond) to rot + bend at rB (and inside)
+const grkPhi = (r) => { const u = clamp((GRK.rA - r) / (GRK.rA - GRK.rB), 0, 1); return GRK.rot + GRK.bend * u * u * u * (10 - 15 * u + 6 * u * u); };
+// tan ψ = r|dφ/dr|, with ψ the floor's angle to the radius: decay moves ‖θ‖ along the floor at dr/dt = −ηλ r cos²ψ
+const grkTan = (r) => { const u = (GRK.rA - r) / (GRK.rA - GRK.rB); return u <= 0 || u >= 1 ? 0 : r * GRK.bend * 30 * u * u * (1 - u) * (1 - u) / (GRK.rA - GRK.rB); };
+const grkGap = (r) => GRK.G0 / (1 + Math.exp(-(r - GRK.rg) / GRK.wg));
+const grkTest = (x, y) => L(x, y) + grkGap(Math.hypot(x, y));
+const grkRc = () => { const g = GRK.thr - 0.03; return GRK.rg + GRK.wg * Math.log(g / (GRK.G0 - g)); };     // below this norm the floor's test loss is under thr
+// ηλ × the steps decay needs to carry ‖θ‖ along the floor from r down to grkRc(): ∫ (1 + tan²ψ)/r dr
+function grkDrift(r) { const r0 = grkRc(); if (!(r > r0)) return 0; let s = 0; const n = 200, h = (r - r0) / n; for (let k = 0; k < n; k++) { const q = r0 + (k + 0.5) * h, t = grkTan(q); s += (1 + t * t) / q * h; } return s; }
+const grkFloor = (r, sg = 1) => { const f = grkPhi(r); return [sg * r * Math.cos(f), sg * r * Math.sin(f)]; };
+const grkStart = (sg) => { const f = GRK.rot + GRK.ray; return [sg * SIM.init * Math.cos(f), sg * SIM.init * Math.sin(f)]; };
+function sheetGrok(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0.02 });
+  GRK.rot = R.range(-0.1, 0.1); GRK.bend = R.range(0.7, 0.9); GRK.rg = R.range(0.58, 0.66);
+  EXTRA = (x, y) => {
+    // v: distance to the line through θ = 0 at the floor's bearing, on which both arms lie (L(−θ) = L(θ))
+    const r = Math.hypot(x, y), f = grkPhi(r), t = grkTan(r), v = y * Math.cos(f) - x * Math.sin(f);
+    const q = GRK.Lam * v * v / (2 * GRK.Hw * (1 + t * t)), u = r < GRK.rB ? 1 - (r / GRK.rB) ** 2 : 0;
+    EXCALM = Math.max(q < 2 ? 1 : q < 30 ? Math.exp(2 - q) : 0, clamp((GRK.rB + 0.2 - r) / 0.12, 0, 1)) / 0.88;
+    return GRK.Hw * q / (1 + q) + GRK.Hd * u * u;
+  };
+  sheetEnd(R, true);
+}
+function grkPrint() {
+  const c = sc, f = GRK.rot + GRK.ray, cu = Math.cos(f), su = Math.sin(f);
+  c.save();
+  c.strokeStyle = 'rgba(44,104,148,0.85)'; c.lineWidth = 1.3; c.beginPath();          // the floor of each arm
+  for (const sg of [1, -1]) {
+    let on = false;
+    for (let r = GRK.rB; r <= 1.9; r += 0.005) { const [x, y] = grkFloor(r, sg); if (x < X0 || x > X1 || y < Y0 || y > Y1) { on = false; continue; } if (on) c.lineTo(ox(x), oy(y)); else c.moveTo(ox(x), oy(y)); on = true; }
+  }
+  c.stroke();
+  c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 0.8; c.setLineDash([4, 3]);        // where θ₀ = αu starts, ticked at α = 0.5, 1, 1.5
+  c.beginPath(); c.moveTo(ox(-1.55 * cu), oy(-1.55 * su)); c.lineTo(ox(1.55 * cu), oy(1.55 * su)); c.stroke(); c.setLineDash([]);
+  c.font = `400 ${7.5 * FS}px ${MONO}`; c.fillStyle = 'rgba(36,38,43,0.7)'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (const a of [0.5, 1, 1.5]) for (const sg of [1, -1]) {
+    const x = sg * a * cu, y = sg * a * su, h = 0.025;
+    c.beginPath(); c.moveTo(ox(x + h * su), oy(y - h * cu)); c.lineTo(ox(x - h * su), oy(y + h * cu)); c.stroke();
+    if (sg > 0) c.fillText(`α ${a}`, ox(x + 0.07 * su), oy(y - 0.07 * cu));
+  }
+  c.restore();
+  const mask = new Uint8Array(GW * GH);                                                      // the memorizing floor: training loss at its floor, test loss high
+  for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) { const k = j * GW + i; mask[k] = HG[k] < 0.06 && grkGap(Math.hypot(X0 + i * GDX, Y0 + j * GDY)) > 0.3 ? 1 : 0; }
+  hatchChains(maskChains(mask, 2), 'rgba(36,38,43,0.45)', 3, -0.8, 0.5);
+  const G = fieldGrid(grkTest, PHONE ? 128 : 192);                                          // the test loss, as a second set of contours
+  [[0.1, 0.2], [0.3, 0.42], [0.5, 0.64]].forEach(([v, fr]) => isoPrint(G, [v], 'rgba(22,122,91,0.85)', [3, 2.4], (u) => `test L ${u}`, fr));
+}
+function grkCohort(p) {
+  const st = PL.st;
+  for (const C of [st.tr, st.te, st.nr]) curveReset(C);
+  st.cid++; st.age = 0; st.t1 = [[], [], []]; st.t2 = [[], [], []]; st.r1 = [[], [], []];
+  raceSpawn(p, PHONE ? 4 : 8, 0.006, st.cid);
+  nextRelease = STAT.steps + GRK.T + 60;
+}
+function grkGo(T) { T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } }
+const grkMean = (a) => (a.length ? a.reduce((p, q) => p + q, 0) / a.length : NaN);
+function grkLog(C, t) {           // a mean curve against log₁₀(step + 1): single steps up to 25, then bins 4% wide
+  const xs = [], ys = [];
+  for (let a = 0; a < C.len;) {
+    const b = Math.min(C.len, Math.max(a + 1, Math.round(a * 1.04))); let s = 0, n = 0;
+    for (let k = a; k < b; k++) { s += C.sum[t][k]; n += C.cnt[t][k]; }
+    if (n > 0) { xs.push(Math.log10((a + b - 1) / 2 + 1)); ys.push(s / n); }
+    a = b;
+  }
+  return { xs, ys };
+}
+function grkStats() {
+  const st = PL.st, il = TRIBES.map((T) => (T.wd ? GRK.eta * SIM.wd * (T.wdMul || 1) : 0));
+  const t1 = st.t1.map(grkMean), t2 = st.t2.map(grkMean), r1 = st.r1.map(grkMean);
+  const pred = TRIBES.map((T, t) => (il[t] > 0 && Number.isFinite(t1[t]) ? t1[t] + grkDrift(r1[t]) / il[t] : NaN));
+  const k = Math.min(st.age, GRK.T - 1), C = st.nr;           // the cohort's mean ‖θ‖ at its latest step
+  return { il, t1, t2, r1, pred, norm: TRIBES.map((T, t) => (C.cnt[t][k] > 0 ? C.sum[t][k] / C.cnt[t][k] : NaN)) };
+}
+plate({
+  id: 'grokking', ch: 3, seed: 2203,
+  run: [
+    (T) => { T.set('wd', 0.1); T.set('init', 1.4); grkGo(T); },
+    (T) => { T.set('wd', 0.05); T.set('init', 1.4); grkGo(T); },
+    null,
+    (T) => { T.set('wd', 0.1); T.set('init', 0.3); grkGo(T); },
+    (T) => { T.set('wd', 0.1); T.set('init', 0.8); grkGo(T); },
+  ],
+  status: 'contested',
+  tribes: [
+    { k: 'gd', name: 'Weight decay λ', color: '#c22a40', wd: 'dec', rule: 'θ ← θ − η(∇L + λθ)', rest: 'never', maxAge: GRK.T },
+    { k: 'gd', name: 'Weight decay λ/4', color: '#23708f', wd: 'dec', wdMul: 0.25, rule: 'θ ← θ − η(∇L + ¼λθ)', rest: 'never', maxAge: GRK.T },
+    { k: 'gd', name: 'No weight decay', color: '#cf6d0c', rule: 'θ ← θ − η∇L', rest: 'never', maxAge: GRK.T },
+  ],
+  sim: { lr: GRK.eta, noise: 0, wd: 0.1, init: 1.4 },
+  ctl: [
+    { key: 'wd', label: 'Weight decay λ', min: 0.02, max: 0.5, scale: 'log', f: (v) => `${v.toFixed(3)}, ηλ = ${(GRK.eta * v).toExponential(1)}` },
+    { key: 'init', label: 'Initialization scale α', min: 0.1, max: 1.5, step: 0.01, f: (v) => `‖θ₀‖ = ${v.toFixed(2)}` },
+  ],
+  view: { yaw: -4, pitch: 52 },
+  speed: 6, figH: 300,
+  sheet: sheetGrok,
+  features: () => { PL.st = { tr: curveInit(3, GRK.T), te: curveInit(3, GRK.T), nr: curveInit(3, GRK.T), cid: 0, k: 0, age: 0, t1: [[], [], []], t2: [[], [], []], r1: [[], [], []] }; },
+  names: (S) => {
+    const pts = []; for (let r = 0.8; r <= 1.42; r += 0.02) pts.push(...grkFloor(r));
+    S.paths.push({ text: 'Floor of Zero Training Loss', pts, size: 11.5, offset: 0.1 });
+    const [bx, by] = grkFloor(GRK.rB), [mx, my] = grkFloor(1.15, -1);
+    S.marks.push({ p: { x: bx, y: by }, name: 'Generalizing solution', sub: `‖θ‖ ${GRK.rB.toFixed(2)} · test L ${grkTest(bx, by).toFixed(2)}`, sym: 'min', pri: 9 });
+    S.marks.push({ p: { x: -bx, y: -by }, name: '', sub: `test L ${grkTest(-bx, -by).toFixed(2)}`, sym: 'min', pin: false });
+    S.marks.push({ p: { x: mx, y: my }, name: 'Memorizing solutions', sub: `training L ${L(mx, my).toFixed(2)} · test L ${grkTest(mx, my).toFixed(2)}`, sym: 'x', pri: 8 });
+    S.marks.push({ p: { x: 0, y: 0 }, name: '', sub: `θ = 0 · L ${L(0, 0).toFixed(2)}`, sym: 'peak', pin: false });
+  },
+  print: grkPrint,
+  lines: () => {            // the current initialization scale, across the ray on each side
+    const f = GRK.rot + GRK.ray, cu = Math.cos(f), su = Math.sin(f), h = 0.045;
+    for (const sg of [1, -1]) { const x = sg * SIM.init * cu, y = sg * SIM.init * su; line([x + h * su, y - h * cu, 0.003, x - h * su, y + h * cu, 0.003], INK, 2, 0, true, 0.9); }
+  },
+  release: () => {
+    const st = PL.st;
+    if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
+    grkCohort(grkStart(st.k++ % 2 ? -1 : 1));
+  },
+  click: (x, y) => grkCohort([x, y]),
+  frame: () => { if (STAT.alive === 0 && nextRelease - STAT.steps > 120) nextRelease = STAT.steps + 120; },
+  onSim: (k) => {
+    if (k !== 'wd' && k !== 'init') return;
+    for (let i = 0; i < hiW; i++) if (Alive[i]) retire(i, false);
+    PL.st.cid++; nextRelease = STAT.steps + 20;
+    if (k === 'init') linesDirty = true;
+  },
+  step: (i) => {
+    const st = PL.st; if (Tag[i] !== st.cid) return;
+    const t = Tr[i], n = Age[i] - 1, r = Math.hypot(Px[i], Py[i]), tr = Wl[i], te = tr + grkGap(r);      // Wl and Px, Py: before this step
+    curveAdd(st.tr, t, n, tr); curveAdd(st.te, t, n, te); curveAdd(st.nr, t, n, r);
+    if (n > st.age) st.age = n;
+    if (!Ax[i] && tr < GRK.thr) { Ax[i] = 1; st.t1[t].push(n); st.r1[t].push(r); }
+    if (!Ay[i] && te < GRK.thr) { Ay[i] = 1; st.t2[t].push(n); }
+  },
+  readouts: () => {
+    const st = PL.st, s = grkStats(), step = (v) => (Number.isFinite(v) ? String(Math.round(v)) : '…');
+    const test = s.t2.map((v) => (Number.isFinite(v) ? step(v) : st.age >= GRK.T - 1 ? 'none' : '…'));
+    const ratio = s.t2.map((v, t) => (Number.isFinite(v) && s.t1[t] > 0 ? `×${(v / s.t1[t]).toFixed(v / s.t1[t] < 10 ? 1 : 0)}` : '—'));
+    const dl = [0, 1].map((t) => (Number.isFinite(s.t2[t]) ? (s.il[t] * (s.t2[t] - s.t1[t])).toFixed(2) : '…'));
+    return [
+      ['ηλ', s.il.map((v) => (v > 0 ? v.toExponential(1) : '0')).join(' · ')],
+      ['training L < 0.1 at step', s.t1.map(step).join(' · ')],
+      ['test L < 0.1 at step', `${test.join(' · ')} (predicted ${s.pred.slice(0, 2).map(step).join(' · ')})`],
+      ['test step ÷ training step', ratio.join(' · ')],
+      ['ηλ × (test step − training step)', `${dl.join(' · ')} (predicted ${Number.isFinite(s.r1[0]) ? grkDrift(s.r1[0]).toFixed(2) : '…'})`],
+      ['‖θ‖ now', s.norm.map((v) => (Number.isFinite(v) ? v.toFixed(2) : '…')).join(' · ')],
+    ];
+  },
+  debug: () => { const st = PL.st, s = grkStats(), f = (v, d = 1) => (Number.isFinite(v) ? +v.toFixed(d) : null); return { cid: st.cid, age: st.age, t1: s.t1.map((v) => f(v)), t2: s.t2.map((v) => f(v)), pred: s.pred.map((v) => f(v)), r1: s.r1.map((v) => f(v, 3)), norm: s.norm.map((v) => f(v, 3)), drift: f(grkDrift(s.r1[0]), 3), rc: f(grkRc(), 3), rg: f(GRK.rg, 3) }; },
+  fig: (c, w, h) => {
+    const st = PL.st, x0 = 30, x1 = w - 6, lx = Math.log10(GRK.T + 1), ya = 8, yb = Math.round(h * 0.56), yc = yb + 24, yd = h - 28;
+    FIG.axes(c, x0, ya, x1, yb, '', 'L');
+    const ser = [];
+    TRIBES.forEach((T, t) => { ser.push(Object.assign(grkLog(st.tr, t), { color: T.color, w: 1.2 })); ser.push(Object.assign(grkLog(st.te, t), { color: T.color, w: 1.5, dash: [4, 2.5] })); });
+    const r = figSeries(c, x0, ya, x1, yb, ser, { xmax: lx, ymin: 0, ymax: 1.3 });
+    c.setLineDash([1.5, 2]); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.lineWidth = 0.8;
+    c.beginPath(); c.moveTo(x0, r.ty(GRK.thr)); c.lineTo(x1, r.ty(GRK.thr)); c.stroke();
+    const s = grkStats();
+    for (const t of [0, 1]) if (Number.isFinite(s.pred[t]) && s.pred[t] < GRK.T) { const X = r.tx(Math.log10(s.pred[t] + 1)); c.strokeStyle = TRIBES[t].color; c.globalAlpha = 0.6; c.beginPath(); c.moveTo(X, ya); c.lineTo(X, yb); c.stroke(); c.globalAlpha = 1; }
+    c.setLineDash([]);
+    for (const v of [0, 0.5, 1]) FIG.tick(c, x0 - 3, r.ty(v), String(v), 'right', 'middle');
+    FIG.note(c, x1 - 2, ya + 6, 'solid: training · dashed: test', 'rgba(36,38,43,0.7)', 'right');
+    FIG.axes(c, x0, yc, x1, yd, 'steps, log scale', '‖θ‖');
+    const r2 = figSeries(c, x0, yc, x1, yd, TRIBES.map((T, t) => Object.assign(grkLog(st.nr, t), { color: T.color, w: 1.4 })), { xmax: lx, ymin: 0, ymax: 1.6 });
+    const rc = grkRc(); c.setLineDash([3, 2]); c.strokeStyle = 'rgba(22,122,91,0.8)'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(x0, r2.ty(rc)); c.lineTo(x1, r2.ty(rc)); c.stroke(); c.setLineDash([]);
+    FIG.note(c, x0 + 4, r2.ty(rc) + 8, 'below this norm, test L < 0.1 on the floor', 'rgba(22,122,91,0.9)', 'left');
+    for (const v of [0, 1]) FIG.tick(c, x0 - 3, r2.ty(v), String(v), 'right', 'middle');
+    ['0', '10', '10²', '10³', '10⁴'].forEach((txt, k) => FIG.tick(c, r2.tx(k), yd + 4, txt));
+  },
+});
+
 // --- mode connectivity: train a Bézier curve between two minima
 function sheetConnected(R) {
   sheetBase(R, { bk: 0.15, bk4: 0.02, na: 0.03 });
