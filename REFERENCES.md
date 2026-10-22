@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 282 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 286 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -475,6 +475,15 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Wei, B., Huang, K., Huang, Y., Xie, T., Qi, X., Xia, M., Mittal, P., Wang, M. and Henderson, P. (2024). Assessing the brittleness of safety alignment via pruning and low-rank modifications. ICML. *Safety-critical regions are about 3% of parameters and 2.5% of ranks; removing them breaks safety, not utility.*
 - Qi, X., Panda, A., Lyu, K., Ma, X., Roy, S., Beirami, A., Mittal, P. and Henderson, P. (2025). Safety alignment should be made more than just a few tokens deep. ICLR. *Alignment mainly changes the distribution of the first few output tokens.*
 
+**41. [Task arithmetic and merging](https://matteohe.com/atlas-of-loss-surfaces/?plate=merging)**
+
+- Frankle, J., Dziugaite, G. K., Roy, D. M. and Carbin, M. (2020). Linear mode connectivity and the lottery ticket hypothesis. ICML. *Runs from one initialization with different minibatch orders are often separated by a loss barrier.*
+- Wortsman, M., Ilharco, G., Gadre, S. Y., Roelofs, R., Gontijo-Lopes, R., Morcos, A. S., Namkoong, H., Farhadi, A., Carmon, Y., Kornblith, S. and Schmidt, L. (2022). Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time. ICML. *Averaging the weights of fine-tunes of one pretrained model works because they share a basin.*
+- Ilharco, G., Ribeiro, M. T., Wortsman, M., Gururangan, S., Schmidt, L., Hajishirzi, H. and Farhadi, A. (2023). Editing models with task arithmetic. ICLR. *Task vectors; adding them builds multi-task models, negating one forgets a task; vectors of different tasks are nearly orthogonal.*
+- Ortiz-Jimenez, G., Favero, A. and Frossard, P. (2023). Task arithmetic in the tangent space: improved editing of pre-trained models. NeurIPS. *Weight disentanglement explains task arithmetic and is acquired in pretraining; fine-tuning in the tangent space strengthens it.*
+- Yadav, P., Tam, D., Choshen, L., Raffel, C. and Bansal, M. (2023). TIES-Merging: resolving interference when merging models. NeurIPS. *Interference from redundant changes and sign conflicts; trim, elect a sign, then merge only agreeing values.*
+- Zhang, C., Theus, A., Teney, D., Orvieto, A., Pang, J. and Mauw, S. (2026). How does the optimizer implicitly bias the model merging loss landscape? ICLR. *One effective noise scale gathers the optimizer’s settings; merging works best at an intermediate value of it.*
+
 ## All works, alphabetically
 
 - Abbe, E., Boix-Adserà, E. and Misiakiewicz, T. (2023). SGD learning on neural networks: leap complexity and saddle-to-saddle dynamics. COLT, PMLR 195.
@@ -581,6 +590,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Hu, S. et al. (2024). MiniCPM: unveiling the potential of small language models with scalable training strategies. arXiv:2404.06395.
 - Huang, W. R., Emam, Z., Goldblum, M., Fowl, L., Terry, J. K., Huang, F. and Goldstein, T. (2020). Understanding generalization through visualizations. NeurIPS Workshop “I Can’t Believe It’s Not Better!”, PMLR 137.
 - Huang, Y., Gokaslan, A., Kuleshov, V. and Tompkin, J. (2024). The GAN is dead; long live the GAN! A modern GAN baseline. NeurIPS.
+- Ilharco, G., Ribeiro, M. T., Wortsman, M., Gururangan, S., Schmidt, L., Hajishirzi, H. and Farhadi, A. (2023). Editing models with task arithmetic. ICLR.
 - Imhof, E. (1965). Kartographische Geländedarstellung. De Gruyter. English edition: Cartographic Relief Presentation (1982).
 - Imkeller, P. and Pavlyukevich, I. (2006). First exit times of SDEs driven by stable Lévy processes. Stochastic Processes and their Applications 116(4).
 - Islamov, R., Crawshaw, M., Cohen, J. and Gower, R. (2026). Non-Euclidean gradient descent operates at the edge of stability. arXiv:2603.05002.
@@ -667,6 +677,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Neyshabur, B., Sedghi, H. and Zhang, C. (2020). What is being transferred in transfer learning? NeurIPS.
 - Nguyen, T. H., Şimşekli, U., Gürbüzbalaban, M. and Richard, G. (2019). First exit time analysis of stochastic gradient descent under heavy-tailed gradient noise. NeurIPS.
 - Nocedal, J. and Wright, S. J. (2006). Numerical Optimization, 2nd edition, chapters 3 and 4. Springer.
+- Ortiz-Jimenez, G., Favero, A. and Frossard, P. (2023). Task arithmetic in the tangent space: improved editing of pre-trained models. NeurIPS.
 - Pagliardini, M., Ablin, P. and Grangier, D. (2025). The AdEMAMix optimizer: better, faster, older. ICLR.
 - Pang, R. Y., Yuan, W., Cho, K., He, H., Sukhbaatar, S. and Weston, J. (2024). Iterative reasoning preference optimization. NeurIPS.
 - Panigrahi, A., Somani, R., Goyal, N. and Netrapalli, P. (2019). Non-Gaussianity of stochastic gradient noise. arXiv:1910.09626.
@@ -743,10 +754,12 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Xie, S. and Li, Z. (2024). Implicit bias of AdamW: ℓ∞-norm constrained optimization. ICML.
 - Xie, S., Mohamadi, M. A. and Li, Z. (2025). Adam exploits ℓ∞-geometry of loss landscape via coordinate-wise adaptivity. ICLR.
 - Xie, Z., Sato, I. and Sugiyama, M. (2021). A diffusion theory for deep learning dynamics: stochastic gradient descent exponentially favors flat minima. ICLR.
+- Yadav, P., Tam, D., Choshen, L., Raffel, C. and Bansal, M. (2023). TIES-Merging: resolving interference when merging models. NeurIPS.
 - Yang, S., Zhang, Q., Liu, Y., Huang, Y., Jia, X., Ning, K., Yao, J., Wang, J., Dai, H., Song, Y. and Yuan, L. (2026). AsFT: anchoring safety during LLM fine-tuning within narrow safety basin. AAAI.
 - Yu, Q. et al. (2025). DAPO: an open-source LLM reinforcement learning system at scale. NeurIPS.
 - Yue, Y., Chen, Z., Lu, R., Zhao, A., Wang, Z., Yue, Y., Song, S. and Huang, G. (2025). Does reinforcement learning really incentivize reasoning capacity in LLMs beyond the base model? NeurIPS.
 - Zhang, B., Zheng, Z., Chen, Z. and Li, J. (2025). Beyond the permutation symmetry of transformers: the role of rotation for model fusion. ICML.
+- Zhang, C., Theus, A., Teney, D., Orvieto, A., Pang, J. and Mauw, S. (2026). How does the optimizer implicitly bias the model merging loss landscape? ICLR.
 - Zhang, C., Zou, D. and Cao, Y. (2024). The implicit bias of Adam on separable data. NeurIPS.
 - Zhang, G., Li, L., Nado, Z., Martens, J., Sachdeva, S., Dahl, G., Shallue, C. and Grosse, R. (2019). Which algorithmic choices matter at which batch sizes? Insights from a noisy quadratic model. NeurIPS.
 - Zhang, G., Wang, C., Xu, B. and Grosse, R. (2019). Three mechanisms of weight decay regularization. ICLR.
