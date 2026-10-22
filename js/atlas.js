@@ -4885,6 +4885,195 @@ plate({
   },
 });
 
+// --- LoRA's saddle: the toy model of LoRA+ (Hayou, Ghosh and Yu 2024), one output f(x) = (W₀ + b aᵀ)x with a ∈ Rⁿ, b ∈ R
+// and a single input x with ‖x‖² = n. Only a's component along x matters, so the loss is exactly two-dimensional. The map
+// is in LoRA's features, θ₁ = z = aᵀx (what A computes) and θ₂ = b, and the output must rise by δ: L = ½(zb − δ)².
+// A gradient step η on a moves z by ηn·∂L/∂z, n times what the same step does to b
+const LOR = { d: 0.25, A: 0.27, L0: 0.002, T: 3000, TS: 5000, G: 49, e0: -2.7, e1: 0.3 };
+const lorPow2 = (v) => 2 ** Math.round(Math.log2(v));
+const lorN = () => lorPow2(SIM.n), lorLam = () => lorPow2(SIM.lam);
+const lorStep = (plus) => (i, x, y, eta) => { const r = x * y - LOR.d; return [-eta * lorN() * y * r, -(plus ? lorLam() : 1) * eta * x * r]; };
+const lorMed = (a) => { if (!a.length) return null; const s = a.slice().sort((p, q) => p - q); return s[s.length >> 1]; };
+const lorEta = (v) => +v.toPrecision(2);
+function sheetLora(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  EXTRA = (x, y) => { const r = x * y - LOR.d; return LOR.A * Math.log(1 + 0.5 * r * r / LOR.L0); };      // the loss, compressed so that floor and saddle both show
+  sheetEnd(R, true);
+}
+// steps until zb stays within 1% of δ (Infinity if still closing in, without oscillating, after LOR.TS steps); −1 if the run
+// leaves the map (as a particle would) or ends jumping back and forth across zb = δ
+function lorRun(z, b, eta, n, lam) {
+  const d = LOR.d, tol = 0.01 * d, zm = X1 + 0.04 * MAPW, bm = Y1 + 0.04 * MAPW;
+  let hit = Infinity, rh = Infinity, rp = 0, r = z * b - d;
+  for (let t = 0; t <= LOR.TS; t++) {
+    r = z * b - d;
+    if (Math.abs(r) >= tol) hit = Infinity; else if (hit === Infinity) hit = t;
+    if (Math.abs(r) < 1e-7 * d) return hit;
+    if (t === LOR.TS >> 1) rh = Math.abs(r);
+    const dz = eta * n * b * r, db = lam * eta * z * r;
+    z -= dz; b -= db; rp = r;
+    if (!(Math.abs(z) <= zm && Math.abs(b) <= bm)) return -1;
+  }
+  r = z * b - d;
+  return r * rp > 0 && Math.abs(r) <= rh ? hit : -1;
+}
+// steps to 1% from the designed starts over a grid of η, per optimizer, up to the first η that fails; spread over frames
+function lorSweepReset() {
+  const G = LOR.G, eta = new Float64Array(G);
+  for (let k = 0; k < G; k++) eta[k] = 10 ** (LOR.e0 + (LOR.e1 - LOR.e0) * k / (G - 1));
+  PL.st.sw = { eta, hit: [0, 1, 2].map(() => new Float64Array(G).fill(NaN)), wall: [0, 0, 0], stop: [false, false, false], t: 0, k: 0, done: false };
+}
+function lorSweep(budget) {
+  const sw = PL.st.sw; if (sw.done) return;
+  const t0 = performance.now(), n = lorN(), l = lorLam(), s = SIM.sig;
+  while (!sw.done && performance.now() - t0 < budget) {
+    const t = sw.t;
+    if (!sw.stop[t]) {
+      const e = sw.eta[sw.k], h = t === 2 ? lorRun(0, s, e, n, 1) : lorRun(s, 0, e, n, t === 1 ? l : 1);
+      if (h < 0) sw.stop[t] = true; else { sw.hit[t][sw.k] = h; sw.wall[t] = e; }
+    }
+    if (++sw.k >= LOR.G) { sw.k = 0; if (++sw.t >= 3) sw.done = true; }
+  }
+}
+const LOR_TRIBES = [
+  { k: 'sgd', name: 'LoRA', color: '#c22a40', kind: K_FN, sigMul: 0, rest: 'never', maxAge: LOR.T, rule: 'B = 0 · η for A and B', fn: lorStep(false) },
+  { k: 'sgd', name: 'LoRA+', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: LOR.T, rule: 'B = 0 · η for A, λη for B', fn: lorStep(true) },
+  { k: 'sgd', name: 'LoRA from A = 0', color: '#cf6d0c', kind: K_FN, sigMul: 0, rest: 'never', maxAge: LOR.T, rule: 'A = 0 · η for A and B', fn: lorStep(false) },
+];
+// a cohort: each optimizer from its own start, A's (or B's) random draw at scale σ with either sign; or, for a click,
+// LoRA and LoRA+ from the clicked point
+function lorRace(at) {
+  const st = PL.st, s = SIM.sig, per = PHONE ? 4 : 6;
+  curveReset(st.C); st.cid = st.C.cid; st.hit = [[], [], []]; st.lost = [0, 0, 0]; st.slow = [0, 0, 0]; st.fin = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; st.at = at; st.t0 = STAT.steps; st.xm = 0;
+  for (let t = 0; t < TRIBES.length; t++) {
+    if (at && t === 2) continue;
+    for (let k = 0; k < per; k++) {
+      const g = (k % 2 ? -1 : 1) * s * Math.exp(0.05 * RREL.normal());
+      const x = at ? at[0] + 0.004 * RREL.normal() : t < 2 ? g : 0, y = at ? at[1] + 0.004 * RREL.normal() : t < 2 ? 0 : g;
+      if (spawn(x, y, t, { tag: st.cid }) >= 0) curveAdd(st.C, t, 0, Math.log10(Math.max(1e-14, 0.5 * (x * y - LOR.d) ** 2)));
+    }
+  }
+  for (const [x, y] of at ? [at] : [[s, 0], [-s, 0], [0, s], [0, -s]]) stamp(x, y, 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  STAT.released++;
+  nextRelease = STAT.steps + LOR.T + 100;
+}
+const lorSetup = (o) => (T) => { for (const k in o) T.set(k, o[k]); T.clear(); lorRace(null); };
+plate({
+  id: 'lora', ch: 7, seed: 3305,
+  run: [
+    lorSetup({ lr: 0.008, lam: 16, n: 16, sig: 0.5 }),
+    lorSetup({ lr: 0.008, lam: 16, n: 16, sig: 0.5 }),
+    lorSetup({ lr: 0.05, lam: 1, n: 1, sig: 0.5 }),
+    lorSetup({ lr: 0.008, lam: 16, n: 16, sig: 0.0005 }),
+    lorSetup({ lr: 0.3, lam: 16, n: 16, sig: 0.5 }),
+    lorSetup({ lr: 0.008, lam: 16, n: 64, sig: 0.5 }),
+  ],
+  status: 'established',
+  tribes: LOR_TRIBES,
+  sim: { lr: 0.008, noise: 0, lam: 16, n: 16, sig: 0.5 },
+  ctl: [
+    { key: 'lr', label: 'Learning rate η', min: 0.002, max: 2, scale: 'log', f: (v) => String(lorEta(v)) },
+    { key: 'lam', label: 'LoRA+ ratio λ', min: 1, max: 64, scale: 'log', f: (v) => String(lorPow2(v)) },
+    { key: 'n', label: 'Width n', min: 1, max: 64, scale: 'log', f: (v) => String(lorPow2(v)) },
+    { key: 'sig', label: 'Starting scale σ', min: 1e-4, max: 0.8, scale: 'log', f: (v) => (v >= 0.01 ? v.toFixed(2) : v.toExponential(0)) },
+  ],
+  view: { yaw: -6, pitch: 50 }, speed: 3, liveNames: true, figH: 270,
+  sheet: sheetLora,
+  features: () => { PL.st = { C: curveInit(3, LOR.T + 1), cid: 1, hit: [[], [], []], lost: [0, 0, 0], slow: [0, 0, 0], fin: [[0, 0, 0], [0, 0, 0], [0, 0, 0]], at: null, t0: 0, xm: 0 }; lorSweepReset(); lorSweep(Infinity); },
+  names: (S) => {
+    const s = SIM.sig, d = LOR.d, f = (v) => (v >= 0.01 ? v.toFixed(2) : v.toExponential(0));
+    S.marks.push({ p: { x: 0, y: 0 }, name: 'Saddle', sub: 'A = B = 0 · zero gradient', sym: 'pass', pri: 9 });
+    if (s > 0.12) {
+      S.marks.push({ p: { x: s, y: 0 }, name: 'B = 0 start', sub: `A random · z = ±${f(s)}`, sym: 'x', pri: 7 });
+      S.marks.push({ p: { x: 0, y: s }, name: 'A = 0 start', sub: `B random · b = ±${f(s)}`, sym: 'x', pri: 6 });
+    }
+    const v = []; for (let x = 0.3; x <= 1.5; x += 0.02) v.push(x, d / x);
+    S.paths.push({ text: 'Valley of solutions, zb = δ', pts: v, size: 12, offset: 0.05 });
+    S.paths.push({ text: 'A’s feature z = Ax', pts: [-1.5, 0, -0.35, 0], size: 10.5, offset: 0.04 });
+    S.paths.push({ text: 'B’s weight b', pts: [0, -0.95, 0, -0.3], size: 10.5, offset: 0.04 });
+    S.areas.push({ x: -0.95, y: 0.55, lines: ['Wrong Sign'], size: 12, ls: 2.2 });
+    S.areas.push({ x: 0.95, y: -0.55, lines: ['Wrong Sign'], size: 12, ls: 2.2 });
+  },
+  lines: () => {      // gradient flow from each start: from B = 0 it keeps z²/n − b²/λ = σ²/n, from A = 0 it keeps z²/n − b² = −σ²
+    const s = SIM.sig, n = lorN(), d = LOR.d, zm = X1 - 0.01, bm = Y1 - 0.01;
+    const draw = (pts, col) => { if (pts.length >= 4) line(drape(pts), col, 1.1, 0.02, true, 0.65); };
+    for (const t of [0, 1]) {
+      const q = n / (t ? lorLam() : 1), be = Math.sqrt((-s * s + Math.sqrt(s ** 4 + 4 * q * d * d)) / (2 * q));
+      for (const sg of [1, -1]) { const pts = []; for (let k = 0; k <= 80; k++) { const b = be * k / 80, z = Math.sqrt(s * s + q * b * b); if (z > zm || b > bm) break; pts.push(sg * z, sg * b); } draw(pts, TRIBES[t].color); }
+    }
+    const ze = Math.sqrt(n * (-s * s + Math.sqrt(s ** 4 + 4 * d * d / n)) / 2);
+    for (const sg of [1, -1]) { const pts = []; for (let k = 0; k <= 80; k++) { const z = ze * k / 80, b = Math.sqrt(s * s + z * z / n); if (z > zm || b > bm) break; pts.push(sg * z, sg * b); } draw(pts, TRIBES[2].color); }
+  },
+  release: () => {
+    if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
+    lorRace(null);
+  },
+  click: (x, y) => lorRace([x, y]),
+  frame: () => { ch8Wait(); lorSweep(1.5); },
+  step: (i) => {
+    const st = PL.st; if (Tag[i] !== st.cid) return;
+    const t = Tr[i], z = Wx[i], b = Wy[i], r = z * b - LOR.d;
+    curveAdd(st.C, t, Age[i], Math.log10(Math.max(1e-14, 0.5 * r * r)));
+    if (Math.abs(r) >= 0.01 * LOR.d) Sx[i] = 0; else if (Sx[i] === 0) Sx[i] = Age[i];      // the step from which zb stays within 1% of δ
+    if (Math.abs(r) < 2e-4 * LOR.d) { const f = st.fin[t]; f[0] += Math.abs(z); f[1] += Math.abs(b); f[2]++; st.hit[t].push(Sx[i]); Ex[i] = z; Ey[i] = b; retire(i, true); return false; }
+  },
+  lost: (i) => { const st = PL.st; if (Tag[i] === st.cid) st.lost[Tr[i]]++; },
+  retire: (i, ring) => { const st = PL.st; if (!ring && Tag[i] === st.cid && Age[i] > LOR.T) st.slow[Tr[i]]++; },
+  onSim: (k) => {      // a new experiment: the sweep and the predicted paths follow the instruments, and a fresh cohort starts
+    if (k === 'n' || k === 'lam' || k === 'sig') { lorSweepReset(); linesDirty = true; printDirty = true; }
+    for (let i = 0; i < hiW; i++) if (Alive[i]) retire(i, false);
+    nextRelease = STAT.steps + 20;
+  },
+  readouts: () => {
+    const st = PL.st, sw = st.sw, dec = (l) => Math.round(Math.LN10 / Math.log(1 + SIM.lr * LOR.d * Math.sqrt(lorN() * l)));    // steps per tenfold drop in σ, near the saddle
+    return [['steps per 10× smaller σ', `${dec(1)} for LoRA and from A = 0 · ${dec(lorLam())} for LoRA+`]].concat(TRIBES.map((T, t) => {
+      const wall = !sw.done ? 'stable to η …' : !sw.wall[t] ? 'unstable at every η' : `stable to η ${sw.stop[t] ? '≈' : '≥'} ${lorEta(sw.wall[t])}`;
+      if (st.at && t === 2) return [T.name, wall];
+      let z = st.fin[t][0], b = st.fin[t][1], n = st.fin[t][2];
+      for (let i = 0; i < hiW; i++) if (Alive[i] && Tag[i] === st.cid && Tr[i] === t) { z += Math.abs(Wx[i]); b += Math.abs(Wy[i]); n++; }
+      const h = lorMed(st.hit[t]), out = [h != null ? `1% at step ${h}` : n ? 'not settled yet' : st.lost[t] ? 'left the map' : st.slow[t] ? `not settled by step ${LOR.T}` : '…'];
+      if (n) out.push(`z ${(z / n).toFixed(2)}, b ${(b / n).toFixed(2)}, z/b ${(z / Math.max(b, 1e-9)).toFixed(1)}`);
+      if (st.lost[t] && n) out.push(`${st.lost[t]} left the map`);
+      out.push(wall);
+      return [T.name, out.join(' · ')];
+    }));
+  },
+  debug: () => {
+    const st = PL.st, sw = st.sw;
+    return { n: lorN(), lam: lorLam(), sig: SIM.sig, lr: SIM.lr, hit: st.hit.map(lorMed), lost: st.lost, fin: st.fin.map((f) => (f[2] ? [+(f[0] / f[2]).toFixed(4), +(f[1] / f[2]).toFixed(4), f[2]] : null)),
+      wall: sw.wall.map(lorEta), stop: sw.stop, done: sw.done, best: sw.hit.map((a) => { let m = Infinity, e = 0; a.forEach((v, k) => { if (v < m) { m = v; e = sw.eta[k]; } }); return [m, lorEta(e)]; }) };
+  },
+  fig: (c, w, h) => {
+    const st = PL.st, sw = st.sw, x0 = 30, x1 = w - 6, hh = (h - 12) / 2, Lt = Math.log10(0.5 * (0.01 * LOR.d) ** 2);
+    // above: the loss of the latest cohort
+    let y0 = 8, y1 = hh - 22;
+    FIG.axes(c, x0, y0, x1, y1, 'steps, latest cohort', 'log₁₀ L');
+    const age = Math.min(STAT.steps - st.t0, LOR.T); let m = 40;
+    for (let t = 0; t < TRIBES.length; t++) { const q = lorMed(st.hit[t]); m = Math.max(m, q != null ? q : st.C.cnt[t][age] > 0 ? age : 0); }
+    const sN = niceStep(m * 1.25 / 4), xm = st.xm = clamp(Math.max(st.xm, Math.ceil(m * 1.25 / sN) * sN), 50, LOR.T);
+    const mean = (t) => { const s = st.C.sum[t], q = st.C.cnt[t], ys = new Float64Array(xm + 1); for (let k = 0; k <= xm; k++) ys[k] = q[k] > 0 && q[k] === q[0] ? s[k] / q[k] : NaN; return ys; };   // while the whole cohort is on its way
+    const r = figSeries(c, x0, y0, x1, y1, TRIBES.map((T, t) => ({ ys: mean(t), color: T.color, w: 1.5 })), { xmax: xm, ymin: -9, ymax: -1 });
+    c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.45)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x0, r.ty(Lt)); c.lineTo(x1, r.ty(Lt)); c.stroke(); c.setLineDash([]);
+    FIG.note(c, x1 - 4, r.ty(Lt) - 8, 'zb within 1% of δ', 'rgba(36,38,43,0.6)', 'right');
+    for (const v of [-8, -6, -4, -2]) FIG.tick(c, x0 - 3, r.ty(v), String(v), 'right', 'middle');
+    FIG.tick(c, x0, y1 + 4, '0', 'left'); FIG.tick(c, x1, y1 + 4, String(xm), 'right');
+    // below: steps to 1% from the designed starts, against η; a cross marks the last η before a run fails
+    y0 = hh + 14; y1 = h - 28;
+    FIG.axes(c, x0, y0, x1, y1, 'learning rate η', 'steps to 1%');
+    const lx = (e) => Math.log10(e) - LOR.e0, ly = (v) => Math.log10(Math.max(1, v));
+    const r2 = figSeries(c, x0, y0, x1, y1, TRIBES.map((T, t) => ({ xs: Array.from(sw.eta, lx), ys: Array.from(sw.hit[t], (v) => (Number.isFinite(v) ? ly(v) : NaN)), color: T.color, w: 1.4 })), { xmax: LOR.e1 - LOR.e0, ymin: 0, ymax: Math.log10(LOR.TS) });
+    TRIBES.forEach((T, t) => {
+      const k = sw.eta.indexOf(sw.wall[t]); if (!sw.stop[t] || k < 0 || !Number.isFinite(sw.hit[t][k])) return;
+      const X = r2.tx(lx(sw.wall[t])), Y = r2.ty(ly(sw.hit[t][k]));
+      c.strokeStyle = T.color; c.lineWidth = 1.3; c.beginPath(); c.moveTo(X - 3, Y - 3); c.lineTo(X + 3, Y + 3); c.moveTo(X + 3, Y - 3); c.lineTo(X - 3, Y + 3); c.stroke();
+    });
+    const xe = r2.tx(lx(SIM.lr));
+    c.setLineDash([2, 2]); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.lineWidth = 1; c.beginPath(); c.moveTo(xe, y0); c.lineTo(xe, y1); c.stroke(); c.setLineDash([]);
+    for (const e of [0.01, 0.1, 1]) FIG.tick(c, r2.tx(lx(e)), y1 + 4, String(e));
+    for (const v of [1, 2, 3]) FIG.tick(c, x0 - 3, r2.ty(v), String(10 ** v), 'right', 'middle');
+  },
+});
+
 // --- the safety basin: a slice of weight space through an aligned model at the origin, spanned by the alignment
 // direction θ₁ (from the base model before safety training to the aligned one) and a worst-case direction θ₂.
 // Refusal holds while the margin s(θ) = 1 − (θ₁/a)² − (θ₂/b)² is positive; the sheet is the attack success rate

@@ -662,6 +662,17 @@ It works when the best values do not move with width, as Yang et al. (2021) foun
 
 The finding of Noci et al. (2024) that under [[μP|mup]] the [[sharpness|sharpness]] follows nearly the same course during training at every width, while under other parametrizations it changes with width.
 
+## lora: LoRA (low-rank adaptation)
+
+Fine-tuning that keeps a pretrained weight matrix W₀ frozen and trains a low-rank product BA added to it, so the model uses `W₀ + BA` (Hu et al. 2022).
+With rank r far below the size of W₀, A and B hold far fewer parameters than W₀.
+The standard start sets B = 0 and draws A at random, so training begins at the pretrained model.
+
+## loraplus: LoRA+
+
+LoRA with a larger learning rate for B than for A, `η_B = λη_A` with a fixed ratio λ &gt; 1 (Hayou, Ghosh and Yu 2024).
+Their analysis of wide layers says the best ratio grows with the layer’s width.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.
