@@ -103,7 +103,7 @@ At dusk, some lie back and point at the stars.
 
 ## What a map cannot show
 
-Every plate has two parameters.
+The plates of the first eight chapters have two parameters.
 Real networks have millions or billions, and several of the best-established facts about their loss surfaces have no two-dimensional picture:
 
 1. The Hessian of a trained network is mostly flat.
@@ -129,6 +129,13 @@ A saddle with a few directions of negative curvature looks like a bowl (Böttche
 Slices can also miss the topology of the full landscape.
 At high loss, the critical points of a high-dimensional landscape are overwhelmingly saddles (Dauphin et al. 2014).
 So the many local minima of the proving grounds are a low-dimensional picture.
+
+The last chapter, Beyond two dimensions, takes up these points directly.
+Its plates compute in many dimensions and use the map only for a slice or a projection:
+
+1. <i>Minima in many dimensions</i>: where the minima sit when there are many directions.
+2. <i>What a slice hides</i>: what a random two-dimensional slice leaves out.
+3. <i>Trajectories in PCA</i>: what a projected training path does and does not mean.
 
 Real gradient noise differs too.
 It is anisotropic and concentrated in the sharp directions.

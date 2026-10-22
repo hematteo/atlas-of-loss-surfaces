@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 277 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 281 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -117,6 +117,9 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Bai, Z., Zhou, Z., Zhao, J., Li, X., Li, Z., Xiong, F., Yang, H., Zhang, Y. and Xu, Z.-Q. J. (2026). Adaptive preconditioners trigger loss spikes in Adam. ICML. *Loss spikes when the second-moment estimate stops tracking the gradient and the preconditioned sharpness passes the threshold.*
 - Andreyev, A. and Beneventano, P. (2024). Edge of stochastic stability: revisiting the edge of stability for SGD. arXiv:2412.20553. *With minibatches, batch sharpness settles at 2/η and λmax stays below it.*
 - Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR. *Projecting updates onto the top Hessian eigenspace stalls training; the orthogonal bulk does the work.*
+- Islamov, R., Crawshaw, M., Cohen, J. and Gower, R. (2026). Non-Euclidean gradient descent operates at the edge of stability. arXiv:2603.05002. *Sign, normalized and spectral descent also sharpen to an edge, once sharpness is measured in their own norm.*
+- Litman, E. (2026). The origin of edge of stability. arXiv:2604.20446. *A mechanism that draws the sharpness toward 2/η from any starting point.*
+- Covic, N., Lipshitz, B., Padula, A. and Visnjic, S. (2026). Muon operates beyond the edge of stability. arXiv:2610.24305. *Muon stays stable above the sharpness threshold that bounds diagonally preconditioned methods.*
 
 **10. [Implicit gradient regularization](https://matteohe.com/atlas-of-loss-surfaces/?plate=igr)**
 
@@ -304,6 +307,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Tissue, H., Wang, V. and Wang, L. (2025). Scaling law with learning rate annealing. NeurIPS. *Fits the loss as a power law in the summed learning rate minus a term in the area of the decay.*
 - Luo, K., Wen, H., Hu, S., Sun, Z., Sun, M., Liu, Z., Lyu, K. and Chen, W. (2025). A multi-power law for loss curve prediction across learning rate schedules. ICLR. *Predicts loss curves under unseen schedules from the summed learning rate and power-law gains from decay.*
 - Bergsma, S., Dey, N., Gosal, G., Gray, G., Soboleva, D. and Hestness, J. (2025). Straight to zero: why linearly decaying the learning rate to zero works best for LLMs. ICLR. *With a tuned peak, linear decay to zero beats cosine decay to 10% of the peak.*
+- Shen, T., Yang, J., Shi, R., Ma, J., Teng, J. and Ma, Z. (2026). Towards understanding the power and limits of the Muon optimizer: a river-valley perspective. arXiv:2606.21514. *In a river-valley model, Muon is fast along the river early and slow or oscillating near the bottom.*
 
 ### V · Solutions
 
@@ -519,6 +523,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Cohen, J. M., Ghorbani, B., Krishnan, S., Agarwal, N., Medapati, S., Badura, M., Suo, D., Cardoze, D., Nado, Z., Dahl, G. E. and Gilmer, J. (2022). Adaptive gradient methods at the edge of stability. arXiv:2207.14484.
 - Cohen, J. M., Kaur, S., Li, Y., Kolter, J. Z. and Talwalkar, A. (2021). Gradient descent on neural networks typically occurs at the edge of stability. ICLR.
 - Cooper, Y. (2018). The loss landscape of overparameterized neural networks. arXiv:1804.10200.
+- Covic, N., Lipshitz, B., Padula, A. and Visnjic, S. (2026). Muon operates beyond the edge of stability. arXiv:2610.24305.
 - Cui, G., Zhang, Y., Chen, J., Yuan, L., Wang, Z., Zuo, Y., Li, H., Fan, Y., Chen, H., Chen, W., Liu, Z., Peng, H., Bai, L., Ouyang, W., Cheng, Y., Zhou, B. and Ding, N. (2025). The entropy mechanism of reinforcement learning for reasoning language models. arXiv:2505.22617.
 - Cullen, B., Estan-Ruiz, S., Danait, R. and Li, J. (2026). A basin-selection perspective on grokking via singular learning theory. arXiv:2603.01192.
 - D’Angelo, F., Andriushchenko, M., Varre, A. and Flammarion, N. (2024). Why do we need weight decay in modern deep learning? NeurIPS.
@@ -577,6 +582,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Huang, Y., Gokaslan, A., Kuleshov, V. and Tompkin, J. (2024). The GAN is dead; long live the GAN! A modern GAN baseline. NeurIPS.
 - Imhof, E. (1965). Kartographische Geländedarstellung. De Gruyter. English edition: Cartographic Relief Presentation (1982).
 - Imkeller, P. and Pavlyukevich, I. (2006). First exit times of SDEs driven by stable Lévy processes. Stochastic Processes and their Applications 116(4).
+- Islamov, R., Crawshaw, M., Cohen, J. and Gower, R. (2026). Non-Euclidean gradient descent operates at the edge of stability. arXiv:2603.05002.
 - Izmailov, P., Podoprikhin, D., Garipov, T., Vetrov, D. and Wilson, A. G. (2018). Averaging weights leads to wider optima and better generalization. UAI.
 - Jacot, A., Ged, F., Şimşek, B., Hongler, C. and Gabriel, F. (2021). Saddle-to-saddle dynamics in deep linear networks: small initialization training, symmetry, and sparsity. arXiv:2106.15933.
 - Jastrzębski, S., Kenton, Z., Arpit, D., Ballas, N., Fischer, A., Bengio, Y. and Storkey, A. (2017). Three factors influencing minima in SGD. arXiv:1711.04623. Published as: Width of minima reached by stochastic gradient descent is influenced by learning rate to batch size ratio. ICANN 2018.
@@ -621,6 +627,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Li, Z., Lyu, K. and Arora, S. (2020). Reconciling modern deep learning with traditional optimization analyses: the intrinsic learning rate. NeurIPS.
 - Li, Z., Malladi, S. and Arora, S. (2021). On the validity of modeling SGD with stochastic differential equations (SDEs). NeurIPS.
 - Li, Z., Wang, T. and Arora, S. (2022). What happens after SGD reaches zero loss? A mathematical framework. ICLR.
+- Litman, E. (2026). The origin of edge of stability. arXiv:2604.20446.
 - Liu, H., Li, Z., Hall, D., Liang, P. and Ma, T. (2024). Sophia: a scalable stochastic second-order optimizer for language model pre-training. ICLR.
 - Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982.
 - Liu, L., Jiang, H., He, P., Chen, W., Liu, X., Gao, J. and Han, J. (2020). On the variance of the adaptive learning rate and beyond. ICLR.
@@ -689,6 +696,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Schaipp, F., Hägele, A., Taylor, A., Şimşekli, U. and Bach, F. (2025). The surprising agreement between convex optimization theory and learning-rate scheduling for large model training. ICML.
 - Shallue, C. J., Lee, J., Antognini, J., Sohl-Dickstein, J., Frostig, R. and Dahl, G. E. (2019). Measuring the effects of data parallelism on neural network training. Journal of Machine Learning Research 20(112).
 - Shao, Z., Wang, P., Zhu, Q., Xu, R., Song, J., Bi, X., Zhang, H., Zhang, M., Li, Y. K., Wu, Y. and Guo, D. (2024). DeepSeekMath: pushing the limits of mathematical reasoning in open language models. arXiv:2402.03300.
+- Shen, T., Yang, J., Shi, R., Ma, J., Teng, J. and Ma, Z. (2026). Towards understanding the power and limits of the Muon optimizer: a river-valley perspective. arXiv:2606.21514.
 - Shenfeld, I., Pari, J. and Agrawal, P. (2026). RL’s razor: why online reinforcement learning forgets less. ICLR.
 - Şimşekli, U., Sagun, L. and Gürbüzbalaban, M. (2019). A tail-index analysis of stochastic gradient noise in deep neural networks. ICML.
 - Smith, S. L. and Le, Q. V. (2018). A Bayesian perspective on generalization and stochastic gradient descent. ICLR.

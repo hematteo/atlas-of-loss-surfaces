@@ -104,6 +104,10 @@ In language-model pretraining, the loss curve under a schedule can be predicted 
 
 Bergsma et al. (2025) also found that decaying linearly all the way to zero beats the common cosine decay to 10% of the peak.
 
+Muon has no two-dimensional version, so this sheet cannot run it, but a matrix model of a river valley shows the same split.
+Shen et al. (2026) found that Muon moves faster along the river early, but near the bottom it converges slowly or overshoots, because its orthogonalized steps discard the gradient's scale.
+They suggest finishing with a gradient-descent-like optimizer.
+
 ## References
 
 - Loshchilov, I. and Hutter, F. (2017). SGDR: stochastic gradient descent with warm restarts. ICLR.
@@ -134,3 +138,5 @@ Bergsma et al. (2025) also found that decaying linearly all the way to zero beat
   Predicts loss curves under unseen schedules from the summed learning rate and power-law gains from decay.
 - Bergsma, S., Dey, N., Gosal, G., Gray, G., Soboleva, D. and Hestness, J. (2025). Straight to zero: why linearly decaying the learning rate to zero works best for LLMs. ICLR.
   With a tuned peak, linear decay to zero beats cosine decay to 10% of the peak.
+- Shen, T., Yang, J., Shi, R., Ma, J., Teng, J. and Ma, Z. (2026). Towards understanding the power and limits of the Muon optimizer: a river-valley perspective. arXiv:2606.21514.
+  In a river-valley model, Muon is fast along the river early and slow or oscillating near the bottom.

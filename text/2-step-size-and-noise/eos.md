@@ -69,8 +69,13 @@ The division is there because Adam’s momentum is an average rather than a sum.
 Cohen et al. (2022) found that full-batch Adam holds the preconditioned sharpness at that threshold while λ<sub>max</sub> keeps rising.
 Bai et al. (2026) traced loss spikes in Adam to a v̂ that lags behind the gradient.
 
+Three 2026 results widen the picture.
+Litman (2026) gave a mechanism that draws the sharpness toward 2/η from any starting point, not only one that holds it there.
+Islamov et al. (2026) measured sharpness in the norm each method steps in, and found that sign descent, normalized descent and spectral descent also sharpen up to their own edge.
+Covic et al. (2026) found Muon stable above the threshold that bounds diagonally preconditioned methods such as Adam, and left its exact edge open.
+
 The batch sharpness of SGD is the curvature of each minibatch loss along its own gradient.
-Andreyev and Beneventano (2024) found that it settles at 2/η, while λ<sub>max</sub> stays below it.
+Andreyev and Beneventano (2024) found that it settles at 2/η, while λ<sub>max</sub> stays below it (see <i>The edge of stochastic stability</i>).
 
 ## Method
 
@@ -118,3 +123,9 @@ Updates with that subspace removed train about as well as the full ones.
   With minibatches, batch sharpness settles at 2/η and λ<sub>max</sub> stays below it.
 - Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR.
   Projecting updates onto the top Hessian eigenspace stalls training; the orthogonal bulk does the work.
+- Islamov, R., Crawshaw, M., Cohen, J. and Gower, R. (2026). Non-Euclidean gradient descent operates at the edge of stability. arXiv:2603.05002.
+  Sign, normalized and spectral descent also sharpen to an edge, once sharpness is measured in their own norm.
+- Litman, E. (2026). The origin of edge of stability. arXiv:2604.20446.
+  A mechanism that draws the sharpness toward 2/η from any starting point.
+- Covic, N., Lipshitz, B., Padula, A. and Visnjic, S. (2026). Muon operates beyond the edge of stability. arXiv:2610.24305.
+  Muon stays stable above the sharpness threshold that bounds diagonally preconditioned methods.
