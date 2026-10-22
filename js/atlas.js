@@ -8035,7 +8035,7 @@ function placePoint(m) {
   const c = sc, x = ox(m.p.x), y = oy(m.p.y);
   const f1 = `500 ${8.6 * FS}px ${SERIF}`, f2 = `400 ${6.9 * FS}px ${MONO}`;
   const w1 = m.name ? meas(f1, 1.5, m.name.toUpperCase()) : 0, w2 = meas(f2, 0.2, m.sub), w = Math.max(w1, w2), h = (m.name ? 20 : 9) * FS;
-  const sr = m.sym === 'pass' ? 12 : 6;
+  const sr = m.sym === 'pass' ? 12 : 8;      // at least the ±8 px box every mark reserves for its own symbol, or no place is ever free
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, -1], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1]]) {
     const cx = x + dx * (w / 2 + sr + 3), cy = y + dy * (h / 2 + sr + 2), b = textBox(cx, cy, w, h, 2);
     if (!inMap(b, 10) || boxHit(b)) continue;
