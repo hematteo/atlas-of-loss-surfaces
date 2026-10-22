@@ -35,7 +35,7 @@ The plates are grouped in nine chapters:
 7. **Where there is no bottom**: two players on one sheet, the pull of softmax, the road to infinity
 8. **After pretraining**: likelihood displacement, entropy collapse, RL's razor, the safety basin, LoRA's saddle, task
    arithmetic and merging
-9. **Beyond two dimensions**: minima in many dimensions, what a slice hides, trajectories in PCA, double descent,
+9. **Beyond two dimensions**: the sinking minima, what a slice hides, trajectories in PCA, double descent,
    learning rates across widths
 
 The optimizers are gradient descent and SGD, heavy ball, Nesterov, Adam, RMSprop, sign descent, Lion, SAM, Newton,

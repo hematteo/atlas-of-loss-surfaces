@@ -59,7 +59,7 @@ Du et al. (2017) built functions on which gradient descent takes time exponentia
 Perturbed gradient descent adds a small random kick when the gradient is small.
 Jin et al. proved that it needs a number of steps that grows only polylogarithmically with the dimension.
 
-Dauphin et al. related the loss at a critical point to its eigenvalues, drawing on results for random Gaussian fields and on measurements in small networks (see <i>Minima in many dimensions</i>).
+Dauphin et al. related the loss at a critical point to its eigenvalues, drawing on results for random Gaussian fields and on measurements in small networks (see <i>The sinking minima</i>).
 The higher the loss, the larger the fraction of negative eigenvalues.
 They argued that saddles surrounded by [[plateaus|plateau]] slow training.
 They also argued that Newton’s method is attracted to saddles (see <i>Newton’s method and saddles</i>).

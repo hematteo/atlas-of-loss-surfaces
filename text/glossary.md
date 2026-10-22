@@ -614,7 +614,7 @@ The regime of minibatch SGD in which the batch sharpness hovers at about 2/η wh
 ## grf: Gaussian random field
 
 A random function whose values at any finite set of points are jointly Gaussian.
-On <i>Minima in many dimensions</i> it is stationary and isotropic: the covariance of two values depends only on the distance between their points, and it fades over the correlation length.
+On <i>The sinking minima</i> it is stationary and isotropic: the covariance of two values depends only on the distance between their points, and it fades over the correlation length.
 A sum of many cosine waves with random directions and phases approximates one.
 
 ## efollow: Eigenvector following

@@ -533,7 +533,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 
 ### IX · Beyond two dimensions
 
-**47. [Minima in many dimensions](https://matteohe.com/atlas-of-loss-surfaces/?plate=sinking)**
+**47. [The sinking minima](https://matteohe.com/atlas-of-loss-surfaces/?plate=sinking)**
 
 - Bray, A. J. and Dean, D. S. (2007). Statistics of critical points of Gaussian fields on large-dimensional spaces. Physical Review Letters 98(15), 150201. *At a critical point of a high-dimensional Gaussian field, the Hessian is a shifted semicircle, so the index is set by the loss.*
 - Fyodorov, Y. V. (2004). Complexity of random energy landscapes, glass transition, and absolute value of the spectral determinant of random matrices. Physical Review Letters 92(24), 240601. *Counts the critical points of a random field in a bowl, and finds them exponentially many when the bowl is shallow.*

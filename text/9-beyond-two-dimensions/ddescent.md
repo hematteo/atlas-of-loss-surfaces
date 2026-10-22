@@ -126,7 +126,7 @@ So contours are still its level sets, while the steep walls near p = n stay in v
 
 The model is linear in θ because the random features are fixed, so the training loss is exactly quadratic.
 It is a bowl, or a trough with no curvature at all along the null space.
-In a network the features change during training, and the exact fits form curved manifolds rather than flat sets (see <i>Minima in many dimensions</i>).
+In a network the features change during training, and the exact fits form curved manifolds rather than flat sets (see <i>The sinking minima</i>).
 
 The figure shows one training set.
 The height of the peak varies widely between training sets, from about 1 to several thousand, so change the seed to compare.

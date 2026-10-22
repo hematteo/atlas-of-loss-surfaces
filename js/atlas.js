@@ -5676,23 +5676,30 @@ function symEig(A, n) {
 }
 // plate: sinking (minima in many dimensions)
 // A random loss in d dimensions: a Gaussian random field of K random Fourier features, L(θ) = √(2d/K) Σₖ cos(wₖ·θ + bₖ),
-// wₖ ~ N(0, I/d), bₖ uniform. Its covariance tends to d·exp(−|θ − θ′|²/2d) (Bray and Dean's scaling), so the loss per parameter
-// L/d, the Hessian's spread and the curve α(L/d) are the same in every d, and the correlation length is √d. Critical points
-// are found by eigenvector following towards a chosen index; the particles take gradient steps in all d coordinates. The
-// map is the plane through three minima found while the sheet is built, and a particle is drawn at its projection on it.
-const SNK = { K: 256, dmax: 32, d: 2, lc: 1, amp: 1, S: 1, h: 0.02, W: null, B: null, cs: null, G: null, gw: 0, gh: 0, mins: [], seed: 1,
-  P: null, PL: null, PG: null, D2: [0, 0] };
-function skLand(R, d) {
-  const K = SNK.K;
-  SNK.d = d; SNK.lc = Math.sqrt(d); SNK.amp = Math.sqrt(2 * d / K);
-  SNK.W = new Float64Array(K * d); SNK.B = new Float64Array(K); SNK.cs = new Float64Array(K);
-  for (let k = 0; k < K; k++) { for (let i = 0; i < d; i++) SNK.W[k * d + i] = R.normal() / SNK.lc; SNK.B[k] = R() * TAU; }
-  SNK.g = new Float64Array(d); SNK.pg = new Float64Array(d); SNK.H = new Float64Array(d * d); SNK.s = new Float64Array(d); SNK.tmp = new Float64Array(d);
-  if (!SNK.P) { SNK.P = new Float64Array(CAP * SNK.dmax); SNK.PL = new Float64Array(CAP); SNK.PG = new Float64Array(CAP); }
+// wₖ ~ N(0, I/d), bₖ uniform. Its covariance tends to d·exp(−|θ − θ′|²/2d) (Bray and Dean's scaling), so the loss per
+// parameter L/d means the same in every d and the correlation length is √d. One gradient descent in all d coordinates is
+// computed ahead of its replay, a few hundred steps per frame, and a small group of walkers replays it. The map is a view
+// through them: the plane spanned by their direction of travel and the direction in which the loss curves down most
+// steeply. When they drift off that plane, or near its edge, the next view is the same construction at their new
+// position. Heights are L/d + SNK.shift, so every view stands at its true depth. In the background, descents from random
+// starts at every d are run to rest, for the figure.
+const SNK = { K: 256, ds: [2, 4, 8, 16, 32], runs: { 2: 40, 4: 40, 8: 40, 16: 32, 32: 24 }, eta: 0.1, rest: 1e-4, shift: 2.2,
+  h: 0.02, x0: -0.95, sc: 0.6, tol: 0.05, dwell: 80, s0: 3, fields: new Map(), fseed: -1, f: null, view: null, G: null, gw: 0, gh: 0,
+  stats: null, D2: [0, 0] };
+const SK_OFF = [[0, 0], [0.03, 0.022], [-0.022, 0.03]];      // the walkers' places in their group, in map units
+// the landscape at dimension d for the current seed: the walkers' and the background runs' are the same
+function skField(d) {
+  if (SNK.fseed !== F.seed) { SNK.fields.clear(); SNK.fseed = F.seed; }
+  let f = SNK.fields.get(d); if (f) return f;
+  const R = Frame.rng((F.seed ^ Math.imul(d, 0x9e3779b1)) >>> 0), K = SNK.K;
+  f = { d, K, lc: Math.sqrt(d), amp: Math.sqrt(2 * d / K), W: new Float64Array(K * d), B: new Float64Array(K), cs: new Float64Array(K) };
+  for (let k = 0; k < K; k++) { for (let i = 0; i < d; i++) f.W[k * d + i] = R.normal() / f.lc; f.B[k] = R() * TAU; }
+  SNK.fields.set(d, f);
+  return f;
 }
 // the loss L(θ) (not per parameter) and its gradient into g, θ read from th at offset o; keeps cos(wₖ·θ + bₖ) for skHess
-function skGrad(th, g, o = 0) {
-  const { K, d, W, B, amp, cs } = SNK; let s = 0;
+function skGrad(f, th, g, o = 0) {
+  const { K, d, W, B, amp, cs } = f; let s = 0;
   for (let i = 0; i < d; i++) g[i] = 0;
   for (let k = 0; k < K; k++) {
     const q = k * d; let p = B[k];
@@ -5702,88 +5709,87 @@ function skGrad(th, g, o = 0) {
   }
   return amp * s;
 }
-function skHess(H) {             // the Hessian (d × d, row-major) at the point of the last skGrad
-  const { K, d, W, amp, cs } = SNK; H.fill(0);
+function skHess(f, H) {          // the Hessian (d × d, row-major) at the point of the last skGrad on f
+  const { K, d, W, amp, cs } = f; H.fill(0);
   for (let k = 0; k < K; k++) { const a = -amp * cs[k], q = k * d; for (let i = 0; i < d; i++) { const wi = a * W[q + i]; for (let j = i; j < d; j++) H[i * d + j] += wi * W[q + j]; } }
   for (let i = 0; i < d; i++) for (let j = 0; j < i; j++) H[i * d + j] = H[j * d + i];
 }
-// one step of eigenvector following towards a critical point of index J.k: a Newton step in the Hessian's eigenbasis with
-// |λ| floored at 0.03, uphill along the k lowest modes and downhill along the rest, at most half a correlation length long.
-// Returns 1 at a critical point (J.neg negative eigenvalues), −1 if it gives up, 0 to go on
-function skEF(J) {
-  const { d, g, H, s } = SNK;
-  J.L = skGrad(J.th, g); const gn = normN(g, d);
-  skHess(H); const E = symEig(H, d);
-  if (gn < 1e-7 * SNK.lc) { let neg = 0; for (let j = 0; j < d; j++) if (E.vals[j] < 0) neg++; J.neg = neg; return 1; }
-  if (J.it++ >= 80 || !Number.isFinite(gn)) return -1;
-  s.fill(0);
-  for (let j = 0; j < d; j++) {
-    let gj = 0; for (let i = 0; i < d; i++) gj += E.vecs[i * d + j] * g[i];
-    const a = (j < J.k ? 1 : -1) * gj / Math.max(Math.abs(E.vals[j]), 0.03);
-    for (let i = 0; i < d; i++) s[i] += a * E.vecs[i * d + j];
+// a descent from θ₀, computed ahead of its replay: the path, the loss per parameter at each point, and the views
+const skJourney = (f, th0) => ({ f, th: Float64Array.from(th0), g: new Float64Array(f.d), H: new Float64Array(f.d * f.d), path: [], L: [], views: [], done: false });
+// the view at path index t: the plane through θ_t spanned by the direction of travel u = −∇L/|∇L| and the Hessian's
+// eigenvector with the lowest eigenvalue, made orthogonal to u (the eigenvector nearest u is passed over). θ_t sits at
+// map point (x₀, 0), and one map unit is SNK.sc correlation lengths. Uses the gradient and Hessian at θ_t
+function skView(J, t) {
+  const f = J.f, d = f.d, g = J.g;
+  skHess(f, J.H); const E = symEig(J.H, d);
+  let neg = 0; for (let j = 0; j < d; j++) if (E.vals[j] < 0) neg++;
+  const gn = normN(g, d), u = new Float64Array(d); for (let i = 0; i < d; i++) u[i] = -g[i] / gn;
+  let v = null;
+  for (let j = 0; j < d && !v; j++) {
+    const w = new Float64Array(d); for (let i = 0; i < d; i++) w[i] = E.vecs[i * d + j];
+    if (Math.abs(dotN(w, u, d)) < 0.98) v = orthoN(u, w, d);
   }
-  const sl = normN(s, d), f = sl > 0.5 * SNK.lc ? 0.5 * SNK.lc / sl : 1;
-  for (let i = 0; i < d; i++) J.th[i] += f * s[i];
-  return 0;
-}
-// sheet coordinates of a point θ (read at offset o): its projection on the plane, in units of S
-const skX = (th, o = 0) => { let a = 0; for (let i = 0; i < SNK.d; i++) a += (th[o + i] - SNK.c[i]) * SNK.e1[i]; return a / SNK.S; };
-const skY = (th, o = 0) => { let a = 0; for (let i = 0; i < SNK.d; i++) a += (th[o + i] - SNK.c[i]) * SNK.e2[i]; return a / SNK.S; };
-// a start: at sheet point (x, y) of the plane (uniform over the middle of the sheet if not given), moved off the plane by a
-// Gaussian offset of one correlation length in each of the other d − 2 directions
-function skStart(R, x, y, out) {
-  const { d, c, e1, e2, S, lc } = SNK;
-  if (x == null) { x = R.range(-1.35, 1.35); y = R.range(-0.8, 0.8); }
-  for (let i = 0; i < d; i++) out[i] = R.normal() * lc;
-  const a = dotN(out, e1, d), b = dotN(out, e2, d);
-  for (let i = 0; i < d; i++) out[i] += c[i] + (S * x - a) * e1[i] + (S * y - b) * e2[i];
-  return out;
-}
-// the plane: through the three lowest of the minima reached from eight starts (four above d = 8), centred on their centroid
-function skPlane(R) {
-  const { d, lc } = SNK, mins = [];
-  for (let t = 0, n = d <= 8 ? 8 : 4; t < n; t++) {
-    const J = { th: new Float64Array(d), k: 0, it: 0 };
-    const u = unitN(R, d); for (let i = 0; i < d; i++) J.th[i] = u[i] * lc;
-    let r; while ((r = skEF(J)) === 0);
-    if (r > 0 && J.neg === 0 && !mins.some((m) => Math.sqrt(m.th.reduce((s, v, i) => s + (v - J.th[i]) ** 2, 0)) < 1e-3 * lc)) mins.push(J);
+  // the walkers keep their place on the map if the previous view leaves them in its left half, so the ground changes
+  // around them instead of their jumping; otherwise they start again at (x₀, 0)
+  const S = SNK.sc * f.lc, c = new Float64Array(d), P = J.views[J.views.length - 1];
+  let px = SNK.x0, py = 0;
+  if (P) {
+    let a = 0, b = 0; for (let i = 0; i < d; i++) { const r = J.th[i] - P.c[i]; a += r * P.u[i]; b += r * P.v[i]; }
+    a /= P.S; b /= P.S;
+    if (a > X0 + 0.3 && a < 0.15 && Math.abs(b) < 0.55) { px = a; py = b; }
   }
-  mins.sort((a, b) => a.L - b.L); mins.length = Math.min(3, mins.length);
-  const c = new Float64Array(d), e1 = new Float64Array(d), e2 = new Float64Array(d);
-  if (mins.length) for (const m of mins) for (let i = 0; i < d; i++) c[i] += m.th[i] / mins.length;
-  if (mins.length >= 2) { for (let i = 0; i < d; i++) e1[i] = mins[1].th[i] - mins[0].th[i]; const l = normN(e1, d); for (let i = 0; i < d; i++) e1[i] /= l; }
-  else e1.set(unitN(R, d));
-  if (mins.length >= 3) for (let i = 0; i < d; i++) e2[i] = mins[2].th[i] - mins[0].th[i];
-  else e2.set(gaussN(R, d));
-  orthoN(e1, e2, d);
-  SNK.c = c; SNK.e1 = e1; SNK.e2 = e2; SNK.S = 1;
-  let S = 3 * lc;
-  for (const m of mins) { S = Math.max(S, Math.abs(skX(m.th)) / 1.3, Math.abs(skY(m.th)) / 0.8); }
-  SNK.S = S;
-  SNK.mins = mins.map((m, j) => ({ x: skX(m.th), y: skY(m.th), L: m.L / d, th: m.th, key: 'ABC'[j] }));
+  for (let i = 0; i < d; i++) c[i] = J.th[i] - S * (px * u[i] + py * v[i]);
+  J.views.push({ t0: t, t1: Infinity, c, u, v, S, neg, G: null, acc: null, k: 0, gw: 0, gh: 0, bottom: NaN, bx: 0, by: 0 });
 }
-// the loss per parameter on the plane, on a grid over the sheet with one cell of margin (angle addition along each row)
-function skSlice() {
-  const { K, d, W, B, amp, c, e1, e2, S, h } = SNK, gw = Math.round(MAPW / h) + 3, gh = Math.round(MAPH / h) + 3;
-  const G = new Float64Array(gw * gh), x0 = X0 - h, y0 = Y0 - h;
-  for (let k = 0; k < K; k++) {
-    const q = k * d; let A = B[k], P = 0, Q = 0;
-    for (let i = 0; i < d; i++) { A += W[q + i] * c[i]; P += W[q + i] * e1[i]; Q += W[q + i] * e2[i]; }
-    P *= S; Q *= S;
+// whether θ has drifted off view V's plane, or towards the edge of the sheet
+function skLeft(V, th, f) {
+  const d = f.d; let a = 0, b = 0, rr = 0;
+  for (let i = 0; i < d; i++) { const r = th[i] - V.c[i]; a += r * V.u[i]; b += r * V.v[i]; rr += r * r; }
+  const x = a / V.S, y = b / V.S;
+  return Math.sqrt(Math.max(0, rr - a * a - b * b)) > SNK.tol * f.lc || x < X0 + 0.12 || x > X1 - 0.12 || y < Y0 + 0.1 || y > Y1 - 0.1;
+}
+// more of the descent, for about ms milliseconds: gradient descent η = 0.1 until |∇L|/√d < SNK.rest (or 4000 steps)
+function skAdvance(J, ms) {
+  const f = J.f, d = f.d, t0 = performance.now();
+  while (!J.done && performance.now() - t0 < ms) for (let n = 0; n < 16 && !J.done; n++) {
+    const t = J.path.length, th = J.th, Lv = skGrad(f, th, J.g);
+    J.path.push(Float64Array.from(th)); J.L.push(Lv / d);
+    const V = J.views[J.views.length - 1];
+    if (!V || skLeft(V, th, f)) { if (V) V.t1 = t; skView(J, t); }
+    let gg = 0; for (let i = 0; i < d; i++) gg += J.g[i] * J.g[i];
+    if (Math.sqrt(gg / d) < SNK.rest || t >= 4000) { J.done = true; J.views[J.views.length - 1].t1 = t; break; }
+    for (let i = 0; i < d; i++) th[i] -= SNK.eta * J.g[i];
+  }
+}
+// a view's loss per parameter on a grid over the sheet with one cell of margin, a few features per call (angle
+// addition along each row); its lowest node inside the sheet is the bottom of the view. Returns true when done
+function skGridStep(f, V, ms) {
+  const { K, d, W, B, amp } = f, h = SNK.h, gw = Math.round(MAPW / h) + 3, gh = Math.round(MAPH / h) + 3, x0 = X0 - h, y0 = Y0 - h;
+  if (!V.acc) { V.acc = new Float64Array(gw * gh); V.gw = gw; V.gh = gh; V.k = 0; }
+  const G = V.acc, t0 = performance.now();
+  for (; V.k < K && performance.now() - t0 < ms; V.k++) {
+    const q = V.k * d; let A = B[V.k], P = 0, Q = 0;
+    for (let i = 0; i < d; i++) { A += W[q + i] * V.c[i]; P += W[q + i] * V.u[i]; Q += W[q + i] * V.v[i]; }
+    P *= V.S; Q *= V.S;
     const cr = Math.cos(h * P), sr = Math.sin(h * P);
     for (let j = 0; j < gh; j++) {
       const ph = A + x0 * P + (y0 + j * h) * Q, row = j * gw;
       let cc = Math.cos(ph), ss = Math.sin(ph);
-      for (let i = 0; i < gw; i++) { G[row + i] += cc; const t = cc * cr - ss * sr; ss = ss * cr + cc * sr; cc = t; }
+      for (let i = 0; i < gw; i++) { G[row + i] += cc; const tt = cc * cr - ss * sr; ss = ss * cr + cc * sr; cc = tt; }
     }
   }
+  if (V.k < K) return false;
   for (let q = 0; q < G.length; q++) G[q] *= amp / d;
-  SNK.G = G; SNK.gw = gw; SNK.gh = gh;
+  let b = Infinity, bi = 1, bj = 1;
+  for (let j = 1; j < gh - 1; j++) for (let i = 1; i < gw - 1; i++) { const v = G[j * gw + i]; if (v < b) { b = v; bi = i; bj = j; } }
+  Object.assign(V, { G, acc: null, bottom: b, bx: x0 + bi * h, by: y0 + bj * h });
+  return true;
 }
 const SNU = new Float64Array(4), SNV = new Float64Array(4);
 function skCR(t, o) { const t2 = t * t, t3 = t2 * t; o[0] = 0.5 * (-t3 + 2 * t2 - t); o[1] = 0.5 * (3 * t3 - 5 * t2 + 2); o[2] = 0.5 * (-3 * t3 + 4 * t2 + t); o[3] = 0.5 * (t3 - t2); }
-function skMap(x, y) {          // Catmull–Rom bicubic on the grid: the sheet's L(θ₁, θ₂)
+function skMap(x, y) {          // Catmull–Rom bicubic on the shown view's grid: the sheet's L(θ₁, θ₂); level at L/d = 0 before the first view
   const { G, gw, gh, h } = SNK;
+  if (!G) return 0;
   const fx = clamp((x - X0) / h + 1, 1, gw - 2.000001), fy = clamp((y - Y0) / h + 1, 1, gh - 2.000001), i = fx | 0, j = fy | 0;
   skCR(fx - i, SNU); skCR(fy - j, SNV);
   let s = 0;
@@ -5792,172 +5798,268 @@ function skMap(x, y) {          // Catmull–Rom bicubic on the grid: the sheet'
 }
 function sheetSinking(R) {
   sheetBase(R, { bk: 0, bk4: 0, na: 0 });
-  skLand(R, +SIM.dim || 2);
-  skPlane(R); skSlice();
-  const t0 = performance.now(); for (let k = 0; k < 20; k++) skGrad(SNK.c, SNK.pg); SNK.gradMs = (performance.now() - t0) / 20;
-  SNK.seed = (R() * 4294967296) >>> 0;
+  SNK.f = skField(+SIM.dim || 32); SNK.view = null; SNK.G = null; MIXF = 1;
   EXTRA = skMap;
-  sheetEnd(R);
+  noiseMean(R); Lofs = -SNK.shift; Lsc = 1; Lbase = 0;       // the height is L/d + shift in every view, so the views can be compared
 }
-// the fraction of eigenvalues below zero of a semicircle of radius 2 centred on −e: the index fraction of a critical point
-// at loss per parameter e when d → ∞ (the Hessian there is −e·I plus a GOE matrix of spectral radius 2)
-const skFsc = (e) => (e <= -2 ? 0 : e >= 2 ? 1 : 0.5 + e * Math.sqrt(4 - e * e) / (4 * Math.PI) + Math.asin(e / 2) / Math.PI);
-function skFeatures() {
-  const d = SNK.d, st = PL.st = { crit: [], done: 0, nS: d >= 32 ? 160 : 240, J: null, R: Frame.rng(SNK.seed), fin: [], typ: [], map: [] };
-  for (const m of SNK.mins) skAdd(st, { th: m.th, L: m.L * d, neg: 0 });
-  if (d === 2) {           // in two dimensions the sheet is the whole landscape: mark every critical point on it
-    const th = new Float64Array(2);
-    for (const c of findCritical(140, true)) {
-      if (SNK.mins.some((m) => Math.hypot(m.x - c.x, m.y - c.y) < 0.01)) continue;
-      for (let i = 0; i < 2; i++) th[i] = SNK.c[i] + SNK.S * (c.x * SNK.e1[i] + c.y * SNK.e2[i]);
-      const J = { th: Float64Array.from(th), k: c.type === 'min' ? 0 : c.type === 'saddle' ? 1 : 2, it: 0 };
-      let r; while ((r = skEF(J)) === 0);
-      if (r > 0) st.map.push({ x: skX(J.th), y: skY(J.th), L: J.L / 2, sym: J.neg === 0 ? 'min' : J.neg === 1 ? 'pass' : 'peak' });
+// the shown view's heights straight from its grid: what buildGrid computes on this sheet (L/d + shift), without the
+// per-node calls; bicubic weights per column are worked out once
+function skFill() {
+  const { G, gw, gh, h } = SNK, sh = SNK.shift, cx = new Float64Array(GW * 4), ix = new Int32Array(GW);
+  let mn = Infinity, mx = -Infinity;
+  for (let i = 0; i < GW; i++) { const fx = clamp(i * GDX / h + 1, 1, gw - 2.000001), i0 = fx | 0; ix[i] = i0 - 1; skCR(fx - i0, SNU); cx.set(SNU, 4 * i); }
+  for (let j = 0, k = 0; j < GH; j++) {
+    const fy = clamp(j * GDY / h + 1, 1, gh - 2.000001), j0 = fy | 0; skCR(fy - j0, SNV);
+    const r0 = (j0 - 1) * gw, r1 = r0 + gw, r2 = r1 + gw, r3 = r2 + gw, v0 = SNV[0], v1 = SNV[1], v2 = SNV[2], v3 = SNV[3];
+    for (let i = 0; i < GW; i++, k++) {
+      const c = ix[i], w = 4 * i; let z = sh;
+      for (let a = 0; a < 4; a++) { const q = c + a; z += cx[w + a] * (v0 * G[r0 + q] + v1 * G[r1 + q] + v2 * G[r2 + q] + v3 * G[r3 + q]); }
+      HG[k] = z; if (z < mn) mn = z; if (z > mx) mx = z;
+    }
+  }
+  HMIN = mn; HMAX = mx; LAKE.fill(0); LAKE_LEV = [0];
+}
+// put view V on the sheet: the terrain, its shading data, the names; earlier ink belongs to another plane, so it goes
+function skShow(V, morph) {
+  SNK.view = V; SNK.G = V.G; SNK.gw = V.gw; SNK.gh = V.gh;
+  skFill(); buildData(); uploadData();
+  NAMES = { areas: [], paths: [], marks: [] }; PL.names(NAMES);
+  if (!morph) { clearInk(false); printDirty = true; }
+  lightDirty = aoDirty = true;
+}
+// θ at fractional path index pos, projected on view V (map units, into SNK.D2), and the loss per parameter there
+function skPos(J, pos, V) {
+  const a = Math.floor(pos), b = Math.min(a + 1, J.path.length - 1), t = pos - a, P = J.path[a], Q = J.path[b], d = P.length;
+  let x = 0, y = 0;
+  for (let i = 0; i < d; i++) { const r = P[i] + t * (Q[i] - P[i]) - V.c[i]; x += r * V.u[i]; y += r * V.v[i]; }
+  SNK.D2[0] = x / V.S; SNK.D2[1] = y / V.S; return SNK.D2;
+}
+// the ground as drawn: during a change of view, the same blend of old and new heights the shaders draw
+function skGround(x, y) {
+  const h = hgrid(x, y); if (MIXF >= 1 || !SNK.HG0) return h;
+  const gx = clamp((x - X0) / GDX, 0, GW - 1.0001), gy = clamp((y - Y0) / GDY, 0, GH - 1.0001), i = gx | 0, j = gy | 0, fx = gx - i, fy = gy - j, k = j * GW + i, H = SNK.HG0;
+  const h0 = (H[k] * (1 - fx) + H[k + 1] * fx) * (1 - fy) + (H[k + GW] * (1 - fx) + H[k + GW + 1] * fx) * fy;
+  return h0 + (h - h0) * MIXF;
+}
+const skLossAt = (J, pos) => { const a = Math.floor(pos), b = Math.min(a + 1, J.L.length - 1); return J.L[a] + (pos - a) * (J.L[b] - J.L[a]); };
+// a new descent: from a random start θ ~ N(0, s₀²I), whose starts lie about 4.2 correlation lengths apart in every d, or from a clicked point of the shown view moved off its plane in the other d − 2 directions
+function skBegin(xy) {
+  const st = PL.st, f = SNK.f, d = f.d, th = gaussN(RREL, d), V = SNK.view;
+  for (let i = 0; i < d; i++) th[i] *= SNK.s0;
+  if (xy && V) {
+    const a = dotN(th, V.u, d), b = dotN(th, V.v, d);
+    for (let i = 0; i < d; i++) th[i] += V.c[i] - a * V.u[i] - b * V.v[i] + V.S * (xy[0] * V.u[i] + xy[1] * V.v[i]);
+  }
+  resetWalkers(); STAT.rest.length = 0; clearInk(false);
+  MIXF = 1;
+  Object.assign(st, { J: skJourney(f, th), vi: -1, pos: 0, started: false, hold: false, over: false, done: false, tick: -1, mix: 0 });
+  STAT.released++;
+}
+// move on along the journey, once per simulation step: one path step, slowed so that a view stays up for at least
+// SNK.dwell steps; at the end of a view, wait for the frame hook to show the next one
+function skTick(st, J) {
+  const V = J.views[st.vi], end = Math.min(V.t1, J.path.length - 1);
+  if (st.pos < end) { const n = V.t1 < Infinity ? V.t1 - V.t0 : SNK.dwell; st.pos = Math.min(end, st.pos + Math.min(1, Math.max(n, 1) / SNK.dwell)); }
+  else st.hold = true;
+}
+// gradient descent in all d coordinates, replayed: the walker moves to its group place on the projection of the path
+function skFn(i, x, y) {
+  const st = PL.st, J = st.J, D = SNK.D2;
+  if (!J || !st.started) { D[0] = 0; D[1] = 0; return D; }
+  if (st.tick !== STAT.steps) { st.tick = STAT.steps; skTick(st, J); }
+  const p = skPos(J, st.pos, J.views[st.vi]), o = SK_OFF[SER[i] % 3], nx = p[0] + o[0], ny = p[1] + o[1];
+  D[0] = nx - x; D[1] = ny - y; return D;
+}
+// show view k with a fresh group of walkers at their place on it (walkers are not carried across a change of plane)
+function skWalkers(st, k, morph) {
+  for (let i = 0; i < hiW; i++) if (Alive[i]) retire(i, false);
+  st.vi = k; st.started = true; st.hold = false; st.swT = STAT.time;
+  const V = st.J.views[k]; skShow(V, morph);
+  const p = skPos(st.J, st.pos, V), px = p[0], py = p[1];
+  for (let q = 0; q < (PHONE ? 2 : 3); q++) { const i = spawn(px + SK_OFF[q][0], py + SK_OFF[q][1], 0); if (i >= 0) Wl[i] = skLossAt(st.J, st.pos); }
+  if (k === 0) stamp(px, py, 0.006, 1, 0.12, 0.125, 0.14, 0.7, 0.0018);
+}
+// a change of view as a morph: the old view's shading data go to the second texture, the new view is put on the sheet,
+// and the drawn terrain blends from one to the other over SK_MORPH ms while the walkers walk on. The old trail and
+// printed names stay until the blend ends
+const SK_MORPH = 1100;
+function skMorph(st, k) {
+  uploadData2(DATA); SNK.HG0 = (SNK.HG0 && SNK.HG0.length === HG.length ? SNK.HG0 : new Float32Array(HG.length)); SNK.HG0.set(HG);
+  skWalkers(st, k, true);
+  MIXF = 0; st.mix = 1e-6;      // ms of blend so far, counted in simulation time so that a pause holds it
+}
+// the descent is over: the walkers come to rest (and camp) where they stand
+function skRest(st) {
+  for (let i = 0; i < hiW; i++) if (Alive[i]) { Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); }
+  st.over = true; st.done = true; nextRelease = STAT.steps + 300;
+}
+// the background: descents from random starts at every d, the current d first, run to rest
+function skStatsStep(ms) {
+  if (!SNK.stats || SNK.stats.seed !== F.seed) SNK.stats = { seed: F.seed, by: new Map(SNK.ds.map((d) => [d, []])), run: null };
+  const S = SNK.stats, t0 = performance.now(), cur = SNK.f.d;
+  while (performance.now() - t0 < ms) {
+    if (!S.run) {
+      const d = [cur, ...SNK.ds.filter((e) => e !== cur)].find((e) => S.by.get(e).length < SNK.runs[e]);
+      if (d == null) return;
+      const f = skField(d), R = Frame.rng((Math.imul(F.seed, 2654435761) ^ Math.imul(d, 40503) ^ Math.imul(S.by.get(d).length + 1, 97)) >>> 0);
+      const th = gaussN(R, d); for (let i = 0; i < d; i++) th[i] *= SNK.s0;
+      S.run = { d, f, th, g: new Float64Array(d), n: 0 };
+    }
+    const r = S.run, f = r.f, d = r.d;
+    for (let k = 0; k < 24; k++) {
+      const Lv = skGrad(f, r.th, r.g); let gg = 0; for (let i = 0; i < d; i++) gg += r.g[i] * r.g[i];
+      if (Math.sqrt(gg / d) < SNK.rest || ++r.n > 4000) { S.by.get(d).push(Lv / d); S.run = null; break; }
+      for (let i = 0; i < d; i++) r.th[i] -= SNK.eta * r.g[i];
     }
   }
 }
-function skAdd(st, J) {          // a critical point, unless it is one already found
-  const d = SNK.d, tol = 1e-4 * SNK.lc;
-  for (const p of st.crit) {
-    if (p.neg !== J.neg || Math.abs(p.L * d - J.L) > 1e-6 * d) continue;
-    let s = 0; for (let i = 0; i < d; i++) s += (p.th[i] - J.th[i]) ** 2;
-    if (s < tol * tol) return;
-  }
-  st.crit.push({ th: Float64Array.from(J.th), L: J.L / d, neg: J.neg, a: J.neg / d });
-}
-// the critical-point search, a few eigenvector-following steps per frame: it stops before a step would overrun the budget
-function skSearch(budget) {
-  const st = PL.st; if (!st || st.done >= st.nS) return;
-  const t0 = performance.now();
-  for (let n = 0; st.done < st.nS && (n === 0 || performance.now() - t0 + st.est < budget); n++) {
-    if (!st.J) { const k = st.R() < 1 / 3 ? 0 : 1 + Math.floor(st.R() * SNK.d); st.J = { th: skStart(st.R, null, null, new Float64Array(SNK.d)), k, it: 0 }; }
-    const a = performance.now(), r = skEF(st.J);
-    st.est = st.est ? 0.8 * st.est + 0.2 * (performance.now() - a) : performance.now() - a;
-    if (r !== 0) { if (r > 0) skAdd(st, st.J); st.J = null; st.done++; }
-  }
-}
-const skPush = (a, v) => { a.push(v); if (a.length > 5000) a.shift(); };      // the latest 5000 particles
-const skFresh = () => { if (STAT.released === 0) { PL.st.fin.length = 0; PL.st.typ.length = 0; } };   // the sheet was cleared: count afresh
-const skCap = () => Math.round((PHONE ? 0.5 : 1) * (SNK.d >= 32 ? 30 : SNK.d >= 16 ? 60 : 96));
-function skSpawn(th) {           // a particle at θ, drawn at its projection; false if that falls off the sheet
-  const x = skX(th), y = skY(th);
-  if (!(x > X0 + 0.03 && x < X1 - 0.03 && y > Y0 + 0.03 && y < Y1 - 0.03)) return -1;
-  const i = spawn(x, y, 0); if (i < 0) return -1;
-  SNK.P.set(th, i * SNK.dmax); SNK.PG[i] = Infinity;
-  SNK.PL[i] = skGrad(th, SNK.pg) / SNK.d; Wl[i] = SNK.PL[i]; skPush(PL.st.typ, SNK.PL[i]);
-  stamp(x, y, 0.006, 1, 0.12, 0.125, 0.14, 0.7, 0.0018);
-  return i;
-}
-// gradient descent in all d coordinates; the particle moves to the projection of its new θ
-function skFn(i, x, y, eta) {
-  const d = SNK.d, o = i * SNK.dmax, P = SNK.P, g = SNK.pg;
-  const Lv = skGrad(P, g, o);
-  let gg = 0; for (let k = 0; k < d; k++) { gg += g[k] * g[k]; P[o + k] -= eta * g[k]; }
-  SNK.PL[i] = Lv / d; SNK.PG[i] = Math.sqrt(gg / d);
-  SNK.D2[0] = skX(P, o) - x; SNK.D2[1] = skY(P, o) - y;
-  return SNK.D2;
-}
-const skN = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-function skStats(a) { let m = 0, lo = Infinity, hi = -Infinity; for (const v of a) { m += v; if (v < lo) lo = v; if (v > hi) hi = v; } m /= a.length; let s = 0; for (const v of a) s += (v - m) ** 2; return { m, sd: Math.sqrt(s / a.length), lo, hi }; }
-function skSummary() {
-  const st = PL.st, C = st.crit, mins = C.filter((p) => p.neg === 0).map((p) => p.L), out = { n: C.length, nMin: mins.length, nMax: C.filter((p) => p.neg === SNK.d).length };
-  if (C.length > 3) {
-    const L = skStats(C.map((p) => p.L)), A = skStats(C.map((p) => p.a));
-    let cv = 0; for (const p of C) cv += (p.L - L.m) * (p.a - A.m);
-    out.corr = A.sd > 0 ? cv / C.length / (L.sd * A.sd) : NaN;
-    out.dev = C.reduce((s, p) => s + Math.abs(p.a - skFsc(p.L)), 0) / C.length;
-  }
-  if (mins.length > 1) out.min = skStats(mins);
-  if (st.fin.length > 1) {
-    out.fin = skStats(st.fin); out.typ = skStats(st.typ).m;
-    out.low = Math.min(out.fin.lo, out.min ? out.min.lo : Infinity);
-    out.rel = out.fin.sd / (out.typ - out.low);
-  }
-  return out;
+function skStatsOf(d) {
+  const a = SNK.stats && SNK.stats.by.get(d); if (!a || a.length < 3) return null;
+  let m = 0; for (const v of a) m += v; m /= a.length; let s = 0; for (const v of a) s += (v - m) ** 2;
+  return { m, sd: Math.sqrt(s / a.length), n: a.length };
 }
 plate({
   id: 'sinking', ch: 8, seed: 3401,
   run: [
-    (T) => { T.set('dim', '2'); },
-    (T) => { T.set('dim', '32'); },
-    (T) => { T.set('dim', '2'); },
-    (T) => { T.set('dim', '4'); },
-    (T) => { T.set('dim', '32'); T.clear(); T.release(0.2, 0.1); },
+    (T) => { T.set('dim', '2'); T.release(SNK.x0, 0); },
+    (T) => { T.set('dim', '32'); T.release(SNK.x0, 0); },
+    null,
+    (T) => { T.set('dim', '8'); T.release(SNK.x0, 0); },
   ],
   status: 'established',
-  tribes: [{ k: 'gd', kind: K_FN, sigMul: 0, rest: 'never', maxAge: 8000, rule: 'θ ← θ − η∇L(θ) in all d coordinates, η = 0.1', fn: skFn }],
-  sim: { lr: 0.1, noise: 0, dim: '2' },
+  tribes: [{ k: 'gd', kind: K_FN, sigMul: 0, rest: 'never', maxAge: 1e9, rule: 'θ ← θ − η∇L(θ) in all d coordinates, η = 0.1', fn: skFn }],
+  sim: { lr: 0.1, noise: 0, dim: '32' },
   ctl: [{ type: 'select', key: 'dim', label: 'Parameters d', options: { 2: 'd = 2', 4: 'd = 4', 8: 'd = 8', 16: 'd = 16', 32: 'd = 32' } }],
-  view: { yaw: -8, pitch: 50 }, speed: 4, figH: 300,
+  view: { yaw: -8, pitch: 50 }, speed: 1, figH: 330, levShift: -SNK.shift, zmul: 2,      // heights are L/d, so twice the usual relief
   sheet: sheetSinking,
-  features: skFeatures,
+  features: () => { PL.st = { J: null, vi: -1, pos: 0, started: false, hold: false, over: false, done: false, tick: -1 }; },
   names: (S) => {
-    SNK.mins.forEach((m, j) => S.marks.push({ p: m, name: `Minimum ${m.key}`, sub: `L/d ${fmt(m.L, 2)}`, sym: 'min', pri: 9 - j }));
+    const V = SNK.view, st = PL.st; if (!V || !st) return;
+    const d = SNK.f.d, J = st.J, last = J && J.done && st.vi === J.views.length - 1, end = last ? J.L[J.L.length - 1] : NaN;
+    if (last) { const q = skPos(J, J.path.length - 1, V); S.marks.push({ p: { x: q[0], y: q[1] }, name: 'Where they stop', sub: `L/d ${fmt(end, 2)}`, sym: 'min', pri: 10 }); }
+    // the lowest point of the slice, unless that is where they stop: lower ground in the last view belongs to another basin
+    if (!last || V.bottom < end - 0.005) S.marks.push({ p: { x: V.bx, y: V.by }, name: 'Bottom of this view', sub: `L/d ${fmt(V.bottom, 2)}`, sym: 'min', pri: 9 });
+    S.areas.push({ x: X0 + 0.62, y: Y1 - 0.16, lines: [`View ${st.vi + 1}`, `${V.neg} of ${d} directions curve down`], size: 12.5, ls: 1.2 });
+    S.paths.push({ text: 'their direction of travel', pts: [X0 + 0.2, Y0 + 0.14, X1 - 0.2, Y0 + 0.14], size: 10.5, offset: 0 });
   },
-  print: () => { for (const m of PL.st.map) drawSymbol({ p: m, sym: m.sym }); },
   release: () => {
-    const n = PHONE ? 3 : 6;
-    if (!F.params.auto || STAT.alive + n > skCap()) { nextRelease = STAT.steps + 45; return; }
-    skFresh();
-    for (let q = 0; q < n; q++) skSpawn(skStart(RREL, null, null, SNK.tmp));
-    STAT.released++;
-    nextRelease = STAT.steps + 150;
+    const st = PL.st; nextRelease = STAT.steps + 45;
+    if (!F.params.auto || (st.J && !st.done)) return;
+    skBegin(null);
   },
-  click: (x, y) => {           // starts that share this projection, each moved off the plane in its own direction
-    const n = PHONE ? 3 : 6;
-    skFresh();
-    for (let q = 0; q < n; q++) skSpawn(skStart(RREL, x + RREL.normal() * 0.003, y + RREL.normal() * 0.003, SNK.tmp));
-    STAT.released++;
-    nextRelease = STAT.steps + 2400;
+  click: (x, y) => skBegin([x, y]),
+  frame: (dt) => {
+    const st = PL.st, J = st.J, t0 = performance.now(), left = () => (PHONE ? 2.4 : 3.2) - (performance.now() - t0);
+    if (J) {
+      if (!J.done) skAdvance(J, Math.min(1.2, left()));
+      for (let k = Math.max(0, st.vi); k < J.views.length && k <= st.vi + 3; k++) if (!J.views[k].G) { skGridStep(SNK.f, J.views[k], Math.max(0.3, left())); break; }
+      if (!st.started) { if (J.views.length && J.views[0].G) skWalkers(st, 0); }
+      else if (st.hold && !st.over && !st.mix) {
+        const N = J.views[st.vi + 1];
+        if (N && N.G) { if (REDUCED) skWalkers(st, st.vi + 1); else skMorph(st, st.vi + 1); }
+        else if (!N && J.done && st.pos >= J.path.length - 1) skRest(st);
+      }
+    }
+    if (st.mix) {               // a change of view under way: the drawn terrain blends from the old view to the new
+      st.mix += Math.min(dt, 0.1) * 1000; const u = st.mix / SK_MORPH;
+      MIXF = u >= 1 ? 1 : easeIO(u); lightDirty = aoDirty = true;
+      if (u >= 1) { st.mix = 0; clearInk(false); printDirty = true; }
+    }
+    if (left() > 0.3) skStatsStep(left());
   },
-  frame: (dt, n) => {          // the search gets what is left of about 3 ms (2.4 on a phone) after this frame's particle steps
-    const used = n * STAT.alive * SNK.gradMs;
-    skSearch(clamp((PHONE ? 2.4 : 3.2) - used, 0.4, PHONE ? 1.2 : 1.8));
-  },
-  step: (i) => {
-    Wl[i] = SNK.PL[i];
-    if (SNK.PG[i] < 1e-3) { skPush(PL.st.fin, SNK.PL[i]); Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); return false; }
+  step: (i) => { const st = PL.st; if (st.J && st.started) Wl[i] = skLossAt(st.J, st.pos); },
+  // a depth gauge at the walkers: a pole up to the loss they started from, notched at the bottom of every earlier view
+  overlay: (oc) => {
+    const st = PL.st, J = st.J, V = SNK.view; if (!J || !st.started || !V) return;
+    const p = skPos(J, st.pos, V), x = p[0], y = p[1]; if (x < X0 || x > X1 || y < Y0 || y > Y1) return;
+    const sh = SNK.shift, zb = skGround(x, y) * ZS, zt = (J.L[0] + sh) * ZS; if (zt <= zb + 0.004) return;
+    project(VP, x, y, zb, P0); const bx = P0[0], by = P0[1]; project(VP, x, y, zt, P1); const tx = P1[0], ty = P1[1];
+    if (P0[2] <= 0 || P1[2] <= 0) return;
+    oc.save(); oc.lineJoin = 'round';
+    // the floors of earlier views that the walkers have sunk below, as rings round them at each floor's height;
+    // the latest is labelled, and fades in when the view changes
+    let latest = true;
+    for (let k = st.vi - 1; k >= 0; k--) {
+      const Vk = J.views[k]; if (!Number.isFinite(Vk.bottom)) continue;
+      const z = (Vk.bottom + sh) * ZS; if (z <= zb + 0.004 || z >= zt) continue;
+      const a = latest ? clamp((STAT.time - (st.swT || 0)) / 0.7, 0, 1) : Math.max(0.18, 0.55 - 0.06 * (st.vi - 1 - k));
+      let ok = true, rx = -Infinity, ry = 0; oc.beginPath();
+      for (let q = 0; q <= 40; q++) {
+        const ang = q / 40 * TAU, qx = x + 0.2 * Math.cos(ang), qy = y + 0.12 * Math.sin(ang);
+        project(VP, qx, qy, z, P0); if (P0[2] <= 0) { ok = false; break; }
+        if (q) oc.lineTo(P0[0], P0[1]); else oc.moveTo(P0[0], P0[1]);
+        if (P0[0] > rx) { rx = P0[0]; ry = P0[1]; }
+      }
+      if (!ok) continue;
+      oc.fillStyle = `rgba(75,63,160,${(0.08 * a).toFixed(3)})`; oc.fill();
+      oc.strokeStyle = `rgba(75,63,160,${(0.75 * a).toFixed(3)})`; oc.lineWidth = latest ? 1.3 : 0.9; oc.stroke();
+      if (latest) {
+        oc.font = `400 ${PHONE ? 7.5 : 8.5}px ${MONO}`; oc.textAlign = 'left'; oc.textBaseline = 'middle';
+        const t = `floor of view ${k + 1} · L/d ${fmt(Vk.bottom, 2)}`;
+        oc.strokeStyle = `rgba(236,238,232,${(0.85 * a).toFixed(3)})`; oc.lineWidth = 2.4; oc.strokeText(t, rx + 6, ry);
+        oc.fillStyle = `rgba(58,48,128,${a.toFixed(3)})`; oc.fillText(t, rx + 6, ry);
+        latest = false;
+      }
+    }
+    oc.strokeStyle = 'rgba(236,238,232,0.85)'; oc.lineWidth = 3; oc.beginPath(); oc.moveTo(bx, by); oc.lineTo(tx, ty); oc.stroke();
+    oc.strokeStyle = 'rgba(36,38,43,0.8)'; oc.lineWidth = 1.4; oc.beginPath(); oc.moveTo(bx, by); oc.lineTo(tx, ty); oc.stroke();
+    for (let k = 0; k < st.vi; k++) {
+      const Vk = J.views[k]; if (!Number.isFinite(Vk.bottom)) continue;
+      const z = (Vk.bottom + sh) * ZS; if (z <= zb + 0.002 || z >= zt) continue;
+      project(VP, x, y, z, P0); oc.beginPath(); oc.moveTo(P0[0] - 4.5, P0[1]); oc.lineTo(P0[0] + 4.5, P0[1]); oc.stroke();
+    }
+    oc.font = `italic 400 ${PHONE ? 10.5 : 11.5}px ${SERIF}`; oc.textAlign = 'left'; oc.textBaseline = 'bottom';
+    const t = `start · L/d ${fmt(J.L[0], 2)}`;
+    oc.strokeStyle = 'rgba(236,238,232,0.9)'; oc.lineWidth = 3; oc.strokeText(t, tx + 5, ty); oc.fillStyle = INK; oc.fillText(t, tx + 5, ty);
+    oc.restore();
   },
   onSim: (k) => { if (k === 'dim') reshape(); },
   readouts: () => {
-    const st = PL.st, s = skSummary();
+    const st = PL.st, J = st.J, V = J && st.vi >= 0 ? J.views[st.vi] : null, d = SNK.f.d, s = skStatsOf(d), a = skStatsOf(2), b = skStatsOf(32);
     return [
-      ['critical points', `${s.n} · ${skN(s.nMin, 'minimum', 'minima')} · ${skN(s.n - s.nMin - s.nMax, 'saddle', 'saddles')}${s.nMax ? ` · ${skN(s.nMax, 'maximum', 'maxima')}` : ''}${st.done < st.nS ? ` · searching ${Math.round(100 * st.done / st.nS)}%` : ''}`],
-      ['index against loss', s.corr != null ? `correlation ${s.corr.toFixed(3)} · ${s.dev.toFixed(2)} off the d → ∞ curve` : '…'],
-      ['minima found', s.min ? `L/d ${fmt(s.min.lo, 2)} to ${fmt(s.min.hi, 2)} · sd ${s.min.sd.toFixed(2)}` : '…'],
-      ['descent at rest', s.fin ? `${st.fin.length} · L/d ${fmt(s.fin.m, 2)} ± ${s.fin.sd.toFixed(2)} · ${(100 * s.rel).toFixed(0)}% of the depth` : '…'],
+      ['view', V ? `${st.vi + 1}${J.done ? ` of ${J.views.length}` : ''} · ${V.neg} of ${d} directions curve down` : '…'],
+      ['walkers', V ? `L/d ${fmt(skLossAt(J, st.pos), 2)} · bottom of this view ${fmt(V.bottom, 2)}` : '…'],
+      [`descents end, d = ${d}`, s ? `L/d ${fmt(s.m, 2)} ± ${s.sd.toFixed(2)} (${s.n} runs)` : '…'],
+      ['spread at d = 2 and 32', a && b ? `± ${a.sd.toFixed(2)} and ± ${b.sd.toFixed(2)}` : '…'],
     ];
   },
   debug: () => {
-    const s = skSummary(), r = (v, k = 3) => (v == null || !Number.isFinite(v) ? null : +v.toFixed(k));
-    return { d: SNK.d, done: PL.st.done, nS: PL.st.nS, n: s.n, nMin: s.nMin, nMax: s.nMax, corr: r(s.corr), dev: r(s.dev), min: s.min && [r(s.min.lo), r(s.min.hi), r(s.min.sd)],
-      fin: s.fin && [PL.st.fin.length, r(s.fin.m), r(s.fin.sd), r(s.fin.lo), r(s.fin.hi)], typ: r(s.typ), rel: r(s.rel), plane: SNK.mins.map((m) => r(m.L)), S: r(SNK.S / SNK.lc) };
+    const st = PL.st, J = st.J, r = (v, k = 3) => (v == null || !Number.isFinite(v) ? null : +v.toFixed(k));
+    return { d: SNK.f.d, vi: st.vi, pos: r(st.pos, 1), done: !!st.done, path: J ? J.path.length : 0, views: J ? J.views.map((V) => [V.t0, V.neg, r(V.bottom)]) : [],
+      stats: SNK.ds.map((d) => { const s = skStatsOf(d); return s && [d, s.n, r(s.m), r(s.sd)]; }) };
   },
   fig: (c, w, h) => {
-    const st = PL.st, lo = -2.6, hi = 2.6, x0 = 30, x1 = w - 8, y0 = 22, y1 = Math.round(h * 0.58), y2 = y1 + 26, y3 = h - 28;
-    const tx = (v) => x0 + (x1 - x0) * (clamp(v, lo, hi) - lo) / (hi - lo), ty = (a) => y1 - (y1 - y0 - 12) * a;
-    FIG.axes(c, x0, y0, x1, y1, '', 'index fraction: negative curvatures ⁄ d');
-    c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 1; c.beginPath();
-    for (let k = 0; k <= 104; k++) { const v = lo + (hi - lo) * k / 104, X = tx(v), Y = ty(skFsc(v)); if (k) c.lineTo(X, Y); else c.moveTo(X, Y); }
-    c.stroke(); c.setLineDash([]);
-    FIG.note(c, tx(1.55) + 6, ty(0.86), 'd → ∞', 'rgba(36,38,43,0.6)');
-    c.fillStyle = 'rgba(36,38,43,0.5)';
-    for (const p of st.crit) if (p.neg > 0) { c.beginPath(); c.arc(tx(p.L), ty(p.a), 1.7, 0, TAU); c.fill(); }
-    c.fillStyle = TB.sgd.color;
-    for (const p of st.crit) if (p.neg === 0) { c.beginPath(); c.arc(tx(p.L), ty(0), 2.4, 0, TAU); c.fill(); }
-    for (const a of [0, 0.5, 1]) FIG.tick(c, x0 - 3, ty(a), String(a), 'right', 'middle');
-    // below: where the minima found by the search (outline) and the particles at rest (filled) sit in L/d
-    FIG.axes(c, x0, y2, x1, y3, 'loss per parameter L/d', 'minima');
-    const nb = 52, bw = (x1 - x0) / nb, hm = new Float64Array(nb), hf = new Float64Array(nb), bin = (v) => clamp(Math.floor((v - lo) / (hi - lo) * nb), 0, nb - 1);
-    for (const p of st.crit) if (p.neg === 0) hm[bin(p.L)]++;
-    for (const v of st.fin) hf[bin(v)]++;
-    const mm = Math.max(1, ...hm), mf = Math.max(1, ...hf), hh = y3 - y2 - 10;
-    c.fillStyle = rgba(TRIBES[0].color, 0.75);
-    for (let b = 0; b < nb; b++) if (hf[b]) { const H = hh * hf[b] / mf; c.fillRect(x0 + b * bw + 0.5, y3 - H, bw - 1, H); }
-    c.strokeStyle = INK; c.lineWidth = 0.9;
-    for (let b = 0; b < nb; b++) if (hm[b]) { const H = hh * hm[b] / mm; c.strokeRect(x0 + b * bw + 1, y3 - H + 0.5, bw - 2, H - 0.5); }
-    for (const v of [-2, -1, 0, 1, 2]) FIG.tick(c, tx(v), y3 + 4, String(v));
-    if (st.done < st.nS) FIG.note(c, x1, y2 + 6, `searching · ${st.done} of ${st.nS} starts`, 'rgba(36,38,43,0.55)', 'right');
+    const st = PL.st, J = st.J, x0 = 34, x1 = w - 8, y0 = 22, y1 = Math.round(h * 0.47), lo = -2.2, hi = 0.6;
+    const ty = (v) => y1 - (y1 - y0) * (clamp(v, lo, hi) - lo) / (hi - lo);
+    FIG.axes(c, x0, y0, x1, y1, 'steps', 'L/d: this descent, and the bottom of each view');
+    for (const v of [-2, -1, 0]) FIG.tick(c, x0 - 3, ty(v), String(v), 'right', 'middle');
+    if (J && st.started) {
+      const N = Math.max(40, J.done ? J.path.length - 1 : J.L.length - 1), tx = (t) => x0 + (x1 - x0) * Math.log1p(t) / Math.log1p(N);
+      for (const t of [1, 10, 100, 1000]) if (t <= N) FIG.tick(c, tx(t), y1 + 4, String(t));
+      c.strokeStyle = INK; c.lineWidth = 1.4;
+      for (let k = 0; k <= st.vi; k++) {
+        const V = J.views[k]; if (!Number.isFinite(V.bottom)) continue;
+        const a = V.t0, b = Math.max(Math.min(V.t1, st.pos), a + 0.6);
+        c.beginPath(); c.moveTo(tx(a), ty(V.bottom)); c.lineTo(tx(b), ty(V.bottom)); c.stroke();
+      }
+      c.strokeStyle = TRIBES[0].color; c.lineWidth = 1.6; c.beginPath();
+      for (let t = 0; t <= st.pos && t < J.L.length; t++) { const X = tx(t), Y = ty(J.L[t]); if (t) c.lineTo(X, Y); else c.moveTo(X, Y); }
+      c.stroke();
+      let lastX = -99;          // the number of directions that curve down, at the start of each view, where there is room
+      for (let k = 0; k <= st.vi; k++) { const V = J.views[k], X = tx(V.t0); if (X - lastX < 14 || !Number.isFinite(V.bottom)) continue; FIG.tick(c, X + 1, ty(V.bottom) + 3, String(V.neg), 'left', 'top'); lastX = X; }
+    } else FIG.note(c, x0 + 6, y0 + 10, 'working out the first view…', 'rgba(36,38,43,0.55)');
+    // below: where descents from random starts end, at each d
+    const y2 = y1 + 36, y3 = h - 26, row = (y3 - y2) / SNK.ds.length, tl = (v) => x0 + (x1 - x0) * (clamp(v, lo, hi) - lo) / (hi - lo);
+    FIG.axes(c, x0, y2, x1, y3, 'L/d where a descent from a random start comes to rest', '');
+    SNK.ds.forEach((dd, k) => {
+      const yc = y2 + row * (k + 0.5), a = (SNK.stats && SNK.stats.by.get(dd)) || [], s = skStatsOf(dd);
+      if (dd === SNK.f.d) { c.fillStyle = 'rgba(75,63,160,0.08)'; c.fillRect(x0 + 1, yc - row / 2, x1 - x0 - 1, row); }
+      FIG.tick(c, x0 - 3, yc, `d ${dd}`, 'right', 'middle');
+      c.fillStyle = rgba(TRIBES[0].color, 0.65);
+      a.forEach((v, j) => { c.beginPath(); c.arc(tl(v), yc + (((j * 7919) % 9) - 4) * row / 13, 1.7, 0, TAU); c.fill(); });
+      if (s) { c.strokeStyle = INK; c.lineWidth = 1; c.beginPath(); c.moveTo(tl(s.m - s.sd), yc); c.lineTo(tl(s.m + s.sd), yc); c.moveTo(tl(s.m), yc - row * 0.32); c.lineTo(tl(s.m), yc + row * 0.32); c.stroke(); }
+    });
+    for (const v of [-2, -1, 0]) FIG.tick(c, tl(v), y3 + 4, String(v));
   },
 });
 //
@@ -7179,7 +7281,8 @@ const ANISO = gl.ext.EXT_texture_filter_anisotropic;
 const MAXTEX = gl.getParameter(gl.MAX_TEXTURE_SIZE);
 const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\n';
 const HAT = `
-uniform highp sampler2D uData;
+uniform highp sampler2D uData, uData2;
+uniform float uMix;           // 1: the heights in uData; below 1, a blend from those in uData2 (a plate's terrain changing smoothly)
 uniform vec2 uGrid;
 uniform vec4 uMap;
 float hAt(vec2 xy) {
@@ -7188,7 +7291,13 @@ float hAt(vec2 xy) {
   vec2 f = g - vec2(i);
   float a = texelFetch(uData, i, 0).x, b = texelFetch(uData, i + ivec2(1, 0), 0).x;
   float c = texelFetch(uData, i + ivec2(0, 1), 0).x, d = texelFetch(uData, i + ivec2(1, 1), 0).x;
-  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  float h = mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  if (uMix < 1.) {
+    float a2 = texelFetch(uData2, i, 0).x, b2 = texelFetch(uData2, i + ivec2(1, 0), 0).x;
+    float c2 = texelFetch(uData2, i + ivec2(0, 1), 0).x, d2 = texelFetch(uData2, i + ivec2(1, 1), 0).x;
+    h = mix(mix(mix(a2, b2, f.x), mix(c2, d2, f.x), f.y), h, uMix);
+  }
+  return h;
 }
 uniform float uCut, uTerr, uIvL;
 float hDraw(vec2 xy) {           // the height drawn: while a plate is built, cards one contour interval thick, capped at uCut
@@ -7246,7 +7355,8 @@ void main() {
   vW = vec3(vXY, hDraw(vXY) * uZs);
   gl_Position = uVP * vec4(vW, 1.);
 }`, HEAD + LIGHT + HYPS + LAMPF + `
-uniform highp sampler2D uData;
+uniform highp sampler2D uData, uData2;
+uniform float uMix;
 uniform sampler2D uSheet, uMask, uInk;
 uniform vec4 uMap, uSheetR;
 uniform vec2 uGrid;
@@ -7272,6 +7382,8 @@ void main() {
   vec2 f = g - vec2(i);
   vec4 d = mix(mix(texelFetch(uData, i, 0), texelFetch(uData, i + ivec2(1, 0), 0), f.x),
                mix(texelFetch(uData, i + ivec2(0, 1), 0), texelFetch(uData, i + ivec2(1, 1), 0), f.x), f.y);
+  if (uMix < 1.) d.xyz = mix(mix(mix(texelFetch(uData2, i, 0), texelFetch(uData2, i + ivec2(1, 0), 0), f.x),
+                                 mix(texelFetch(uData2, i + ivec2(0, 1), 0), texelFetch(uData2, i + ivec2(1, 1), 0), f.x), f.y).xyz, d.xyz, uMix);
   float lake = max(texelFetch(uData, ivec2(floor(g + 0.5)), 0).w, uFlood);
   float h = d.x;
   // while the plate is built: the card this point lies on, and how far the drawn surface here is from it (a cut edge)
@@ -7886,7 +7998,8 @@ void main() {
   vXY = uMap.xy + aUV * uMap.zw;
   gl_Position = uVP * vec4(vXY, hDraw(vXY) * uZs + uLift, 1.);
 }`, HEAD + `
-uniform highp sampler2D uData;
+uniform highp sampler2D uData, uData2;
+uniform float uMix;
 uniform vec4 uMap;
 uniform vec2 uGrid;
 uniform vec3 uC1, uC2;
@@ -7902,6 +8015,8 @@ void main() {
   vec2 f = g - vec2(i);
   float h = mix(mix(texelFetch(uData, i, 0).x, texelFetch(uData, i + ivec2(1, 0), 0).x, f.x),
                 mix(texelFetch(uData, i + ivec2(0, 1), 0).x, texelFetch(uData, i + ivec2(1, 1), 0).x, f.x), f.y);
+  if (uMix < 1.) h = mix(mix(mix(texelFetch(uData2, i, 0).x, texelFetch(uData2, i + ivec2(1, 0), 0).x, f.x),
+                             mix(texelFetch(uData2, i + ivec2(0, 1), 0).x, texelFetch(uData2, i + ivec2(1, 1), 0).x, f.x), f.y), h, uMix);
   float e = max(0., h - uLmin);
   float w = uA * (0.72 + 0.56 * (0.62 * grain(vXY * 6. + uDrift * vec2(0.031, 0.017)) + 0.38 * grain(vXY * 17. - uDrift * vec2(0.022, 0.04))));
   // optical depth proportional to each density (relative to its peak at the lowest point), opacity by Beer–Lambert
@@ -7992,6 +8107,9 @@ function tex2D(w, h, internal, levels, filterMip) {
 }
 const mips = (w, h) => Math.floor(Math.log2(Math.max(w, h))) + 1;
 const dataTex = tex2D(GW, GH, gl.RGBA32F, 1, false);
+const dataTex2 = tex2D(GW, GH, gl.RGBA32F, 1, false);      // the heights a terrain is blending from, while MIXF < 1
+let MIXF = 1;
+function uploadData2(src) { gl.bindTexture(gl.TEXTURE_2D, dataTex2); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, GW, GH, gl.RGBA, gl.FLOAT, src); }
 const PXU = Math.min(PHONE ? 380 : 760, Math.floor(MAXTEX / SW));
 const SHW = Math.round(SW * PXU), SHH = Math.round(SH * PXU);
 const sheetTex = tex2D(SHW, SHH, gl.RGBA8, mips(SHW, SHH), true);
@@ -8142,7 +8260,7 @@ function contourFigures() {
   CLABELS = 0;
   for (const ch of chains) {
     if (CLABELS >= maxL || ch.len < 150) continue;
-    const txt = fmtLev(ch.li * iv, iv), w = c.measureText(txt).width + 6;
+    const txt = fmtLev(ch.li * iv + (PL.levShift || 0), iv), w = c.measureText(txt).width + 6;
     let last = -1e9;
     for (let s = 40; s < ch.len - 40 && CLABELS < maxL; s += 16) {
       if (s - last < 300) continue;
@@ -9397,7 +9515,7 @@ function drawOverlay(now, alpha) {
   oc.beginPath(); oc.moveTo(s0[0], s0[1]); oc.lineTo(P1[0], P1[1]);
   oc.moveTo(P1[0] - bx * 4 + by * 2.4, P1[1] - by * 4 - bx * 2.4); oc.lineTo(P1[0], P1[1]); oc.lineTo(P1[0] - bx * 4 - by * 2.4, P1[1] - by * 4 + bx * 2.4);
   oc.stroke();
-  const txt = `θ ${fmt(hp[0], 2)}, ${fmt(hp[1], 2)} · L ${Lh.toFixed(3)} · |∇L| ${g.toFixed(2)}`;
+  const txt = `θ ${fmt(hp[0], 2)}, ${fmt(hp[1], 2)} · L ${(Lh + (PL.levShift || 0)).toFixed(3)} · |∇L| ${g.toFixed(2)}`;
   project(VP, hp[0], hp[1], hp[2], P0);
   oc.font = `400 ${PHONE ? 8 : 8.5}px ${MONO}`; oc.textBaseline = 'middle';
   const right = P0[0] > region()[2] - 230;
@@ -9418,7 +9536,7 @@ const LAMP = new Float32Array([-0.6, 0.6, 0.53]), FOGC = new Float32Array(BG), S
 const LIGHTR = new Float32Array([SX0 - LMB, SY0 - LMB, SW + 2 * LMB, SH + 2 * LMB]);
 const LAMPU = { uLight: lightTex, uLightR: LIGHTR, uLamp: LAMP, uEye: EYE, uFogC: FOGC, uLampOn: 1, uAo: 0.5, uFog: 0, uDusk: 0 };
 const U_BK = { uData: dataTex, uGrid: GRIDU, uMap: MAPU, uLightR: LIGHTR, uSheetR: SHEETU, uRes: new Float32Array([LMW, LMH]), uZs: 0, uTh: TH, uCut: 0, uTerr: 0, uIvL: 0.05 };
-function terrU(U) { U.uCut = CUT; U.uTerr = TERR; U.uIvL = F.params.interval; return U; }
+function terrU(U) { U.uCut = CUT; U.uTerr = TERR; U.uIvL = F.params.interval; U.uMix = MIXF; U.uData2 = dataTex2; return U; }
 let lampShown = -1e9;
 function setLamp() {
   const az = F.params.lampAz * DEG, el = F.params.lampEl * DEG;
@@ -10430,7 +10548,7 @@ function rebuild() {
   startWalkers();
   leaveWalk();
   if (SECT.on) toggleSection(false);
-  ZT = ZS0 * F.params.exag; ZS = ZT; RISE = 0; CUT = 0; TERR = 1; riseT0 = Infinity; built = true; lightDirty = aoDirty = true;
+  ZT = ZS0 * F.params.exag * (PL.zmul || 1); ZS = ZT; RISE = 0; CUT = 0; TERR = 1; MIXF = 1; riseT0 = Infinity; built = true; lightDirty = aoDirty = true;
   for (const [k] of prevReadouts) F.readout(k, null);
   prevReadouts = [];
   renderCard();
@@ -10475,7 +10593,7 @@ function onParam(k, v) {
   else if (k === 'interval') { printDirty = true; }
   else if (k === 'scaffold') { if (v !== SCAF.on) toggleScaffold(v); }
   else if (k === 'dusk') { if (v !== DUSK) toggleDusk(v); }
-  else if (k === 'exag') { const z = ZS0 * v, r = z / Math.max(1e-6, ZT); ZT = z; GOAL.tz *= r; CAM.tz *= r; aoDirty = lightDirty = true; }
+  else if (k === 'exag') { const z = ZS0 * v * (PL.zmul || 1), r = z / Math.max(1e-6, ZT); ZT = z; GOAL.tz *= r; CAM.tz *= r; aoDirty = lightDirty = true; }
   else if (k === 'lamp' || k === 'lampAz' || k === 'lampEl') { setLamp(); aoDirty = true; if (k !== 'lamp' || v) lampShown = performance.now(); }
 }
 let resizeTimer = 0;
