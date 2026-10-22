@@ -156,3 +156,14 @@ body.hl-clean .pl-modes { display: none; }
   .pl-title { font-size: 22px; }
   .pl-tab, .pl-tab.pl-show { display: none; }
 }
+/* Try steps that can be set up with one click */
+.pl-try li .pl-run { appearance: none; margin: 0 7px 0 0; padding: 1px 6px 2px; vertical-align: 1px; border: 1px solid rgba(75, 63, 160, .45); border-radius: 3px;
+  background: none; color: #4b3fa0; font: 400 9px/1.2 var(--hl-mono); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.pl-try li .pl-run:hover { background: rgba(75, 63, 160, .08); }
+.pl-try li .pl-run:focus-visible { outline: 1.5px solid #4b3fa0; outline-offset: 1px; }
+.pl-try li.pl-ran { animation: pl-ran 1.4s ease-out; }
+@keyframes pl-ran { from { background: rgba(75, 63, 160, .12); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .pl-try li.pl-ran { animation: none; } }
+/* chapter introductions: in the contents list, and above the first plate of a chapter */
+.pl-toc .pl-chi { margin: 0 0 6px; font: italic 400 12.5px/1.45 var(--hl-serif); color: rgba(36, 38, 43, .7); }
+.pl-chintro { margin: 0 0 10px; font: italic 400 13px/1.5 var(--hl-serif); color: rgba(36, 38, 43, .72); }

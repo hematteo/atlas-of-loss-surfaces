@@ -24,7 +24,7 @@ Benchmark from many starts and report the distribution of outcomes, i.e. how oft
 1. Watch the figure → about 52% of the particles that come [[to rest|rest]] reach the global minima, A and B.
    This holds for each of [[gradient descent|gd]], the [[heavy ball|hb]] and [[Adam|adam]].
    The share is set mostly by how much of the high-loss region lies in the basins of A and B.
-2. Click the saddle at the origin → every optimizer’s six particles split between A and B.
+2. Click the saddle at the origin → every optimizer’s particles split between A and B.
    The release point lies on the boundary of their [[basins|basin]].
    The particles start only slightly apart, and on a boundary that is enough.
 3. Raise the heavy ball’s momentum β to 0.99 → over 600 races, its share at E and F falls from 12% to 6%.

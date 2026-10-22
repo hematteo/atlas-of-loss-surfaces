@@ -17,7 +17,7 @@ The gradient, and the Hessian at a critical point, are multiplied by `AH/(H + f)
 This factor is smallest where f is large.
 
 After any fixed starts a plate lists, races start at random points of high loss, at the interval the plate gives.
-Each race releases six particles per optimizer from one point, scattered by about 0.006.
+Each race releases six particles per optimizer (four on a phone) from one point, scattered by about 0.006.
 So a start on a basin boundary shows up as a split race.
 A particle retires when it comes to rest or after the number of steps the plate gives.
 

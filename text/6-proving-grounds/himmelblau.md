@@ -24,7 +24,7 @@ So compare where runs end, as well as how low.
 
 1. Let the races run → in 600 races, the minimum where most of [[Adam|adam]]’s particles came to rest differed from [[gradient descent|gd]]’s in one race in twelve.
    For the [[heavy ball|hb]] it differed in one race in 120.
-2. Click the peak → gradient descent’s six particles split, almost always between C and D, which lie along the peak’s direction of fastest descent.
+2. Click the peak → gradient descent’s particles split, almost always between C and D, which lie along the peak’s direction of fastest descent.
    Near the peak, small offsets grow fastest along the direction of most negative curvature.
 3. Click the peak again and watch Adam’s particles → they usually reach three or four minima (54 of 60 clicks).
    Adam’s first steps are about η·sign(∇L), so each particle moves diagonally into the quadrant it starts in.

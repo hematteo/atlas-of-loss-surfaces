@@ -49,8 +49,16 @@ try {
     await page.evaluate((k) => gotoPlate(k), i);
     await page.waitForFunction((k) => PL.index === k, i, { timeout: 30000 });
     await wait(1800);
+    // every Set up button runs without error, and no plate has more buttons than Try steps
+    const r = await page.evaluate(async () => {
+      const run = PL.run || [], errs = [], tries = (TEXT.plates[PL.id].try.match(/<li>/g) || []).length;
+      for (let k = 0; k < run.length; k++) { if (!run[k]) continue; try { runStep(k); } catch (e) { errs.push(`step ${k + 1}: ${e.message}`); } await new Promise((res) => setTimeout(res, 300)); }
+      if (run.length > tries) errs.push(`${run.length} run entries for ${tries} Try steps`);
+      return errs;
+    });
+    for (const e of r) failures.push(`plate ${i + 1}: Set up ${e}`);
     const s = await page.evaluate(() => ({ id: PL.id, nan: window.__debug.nan, broken: !!document.querySelector('.hl-error') }));
-    const bad = s.nan > 0 || s.broken;
+    const bad = s.nan > 0 || s.broken || r.length > 0;
     if (s.nan > 0) failures.push(`plate ${i + 1} (${s.id}): ${s.nan} non-finite particles`);
     if (s.broken) failures.push(`plate ${i + 1} (${s.id}): error screen`);
     console.log(`${bad ? 'FAIL' : 'ok  '}  ${String(i + 1).padStart(2)}  ${s.id}`);

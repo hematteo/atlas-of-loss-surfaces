@@ -40,7 +40,8 @@ Particles that never came to rest are not counted.
    Some of them chatter near a curve where det H = 0 (see Limits).
 4. Raise α to 1 → saddles still take most of Newton’s rings.
    The shares shift only a little toward minima and summits.
-   Over four minutes on this seed, about 27% are at minima, 60% at saddles and 13% at summits, against 20%, 70% and 10% at α = 0.1.
+   Over four minutes on this seed, about 27% are at minima, 60% at saddles and 13% at summits, against 20%, 70% and 10% at α = 0.1 over the same four minutes.
+   The saddles' share falls from the first minute's 95% as later rings arrive.
    Steps are capped at 0.02, so the two step sizes differ only where the Newton step is shorter than 0.2.
    That happens close to a critical point, so α changes mostly the last stretch of each approach.
 

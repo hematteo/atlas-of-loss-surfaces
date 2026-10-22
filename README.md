@@ -59,6 +59,8 @@ round a fire at rest points. How they sit depends on how sharp the minimum is fo
 
 - Drag to turn the model, right-drag to pan, scroll to approach, click to release a cohort.
 - **↑ ↓** move between plates; **E** opens the plate card; **I** the about panel, with every key.
+- **Set up** beside a Try step sets the instruments and releases the particles that step describes.
+- The address bar keeps the plate, the seed and any instrument you have moved, so a link reopens the same experiment.
 - The toolbar along the bottom (on a phone, at the top of the plate card) holds the modes: walk with a stick man
   (**W**), cross-section (**X**), flood (**D**), plan view (**T**), dusk (**N**) and watch a few stick men up close
   (**O**).
@@ -83,7 +85,8 @@ editing, run `npm run text` (it needs only Node 20 or later). It rebuilds `js/te
   - the surfaces: seeded noise, the loss `L(θ₁, θ₂)`, the height grid, critical points (grid scan, Newton
     refinement, Hessian classification), cross-sections and the disconnectivity scaffold;
   - the optimizers and the forty plates. Each plate is one object, `plate({ … })`, holding its sheet builder, names,
-    experiments and figure; `plate()` adds its text from `TEXT.plates[id]`. Plates sit in blocks marked
+    experiments, figure and `run`, the functions behind its Try steps' **Set up** buttons (one entry per step, `null`
+    for none); `plate()` adds its text from `TEXT.plates[id]`. Plates sit in blocks marked
     `// <<chN … // chN>>`, which group them roughly in the order they were written, not by chapter; a plate's chapter
     is its `ch` field, and the reading order is the `ORDER` list;
   - the WebGL renderer (relief, ink, baked shadows, and the stick men, drawn as signed-distance figures in a

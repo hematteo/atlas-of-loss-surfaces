@@ -952,6 +952,16 @@ const plate = (p) => { plateText(p); p.index = PLATES.length; PLATES.push(p); re
 
 plate({
   id: 'survey', ch: 0, seed: 1938,
+  run: [
+    (T) => {
+      T.set('lr', PL.sim.lr); T.clear();
+      const a = arcPt(-0.8)[2]; let b = null;
+      for (let k = -16; k <= 16; k++) { const r = RVR + k * RVw * 0.1, x = RVcx + r * Math.cos(a), y = RVcy + r * Math.sin(a), v = L(x, y); if (!b || v < b[2]) b = [x, y, v]; }
+      T.release(b[0], b[1]);
+    },
+    null,
+    (T) => { T.set('lr', 1.3 * 2 / NAMED.sharp.l2); T.clear(); T.release('Sharp Minimum'); },
+  ],
   tribes: [{ k: 'sgd' }, { k: 'hb' }, { k: 'adam' }],
   sim: { lr: 0.004, noise: 0.25, beta: 0.9, beta2: 0.999 },
   ctl: ['lr', 'noise', 'beta'],
@@ -1002,6 +1012,11 @@ function restSharpFlat(i, ring) {
 }
 plate({
   id: 'sharpflat', ch: 0, seed: 2207,
+  run: [
+    (T) => { T.set('stretch', 2); },
+    null,
+    (T) => { T.set('stretch', 1); T.set('lr', 7.5 * 2 / PL.st.sharp.l2); T.release('Sharp minimum'); },
+  ],
   status: 'contested',
   tribes: [{ k: 'sgd' }, { k: 'gd' }],
   sim: { lr: 0.003, noise: 0.3, stretch: 1 },
@@ -1119,6 +1134,12 @@ function singFill() {
 function singReset() { const st = PL.st; st.sum = [0, 0, 0, 0]; st.cnt = [0, 0, 0, 0]; st.t0 = STAT.steps; }
 plate({
   id: 'singular', ch: 4, seed: 2309,
+  run: [
+    null,
+    null,
+    (T) => { T.set('temp', PL.sim.temp); },
+    (T) => { T.set('temp', 0.02); },
+  ],
   status: 'established',
   tribes: [{ k: 'sgd', name: 'Langevin particles', rule: 'θ ← θ − η∇L + √(2ηT) ξ', rest: 'never', maxAge: 1e9, inkA: 0.03 }],
   sim: { lr: 0.002, temp: 0.004 },
@@ -1205,6 +1226,12 @@ function pgdNoise(i, x, y, s, R, out) {
 }
 plate({
   id: 'saddles', ch: 0, seed: 3121,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.set('lr', PL.sim.lr); T.set('noise', 0); },
+  ],
   status: 'established',
   tribes: [{ k: 'gd' }, { k: 'gd', name: 'Perturbed GD', color: '#2b2c31', rule: 'if ‖∇L‖ < 0.05: θ ← θ + ξ', noise: N_FN, sigMul: 1, noiseFn: pgdNoise }, { k: 'sgd', color: '#cf6d0c' }],
   sim: { lr: 0.04, noise: 0.05 },
@@ -1308,6 +1335,11 @@ function plateauRelease(x, y) {
 }
 plate({
   id: 'plateaus', ch: 0, seed: 4407,
+  run: [
+    null,
+    (T) => { T.set('lr', PL.sim.lr); T.set('noise', 0.5); T.release(...PL.st.rel); },
+    (T) => { T.set('lr', PL.sim.lr); T.set('noise', 1.5); T.release(...PL.st.rel); },
+  ],
   status: 'established',
   tribes: [{ k: 'sgd' }, { k: 'rms' }, { k: 'adam' }],
   sim: { lr: 0.004, noise: 0.02 },
@@ -1372,6 +1404,12 @@ function sheetRavine(R) {
 }
 plate({
   id: 'ravines', ch: 0, seed: 5101,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.set('beta', PL.sim.beta); T.set('lr', 1.2 / PL.st.floor.l2); T.clear(); T.release(...RELEASES[0]); },
+  ],
   status: 'established',
   tribes: [{ k: 'gd' }, { k: 'hb' }, { k: 'nag' }],
   sim: { lr: 0.008, noise: 0, beta: 0.9 },
@@ -1449,6 +1487,12 @@ function sheetCliff(R) {
 const cliffY = (x) => { const c = FEAT.cliff; return c.c0 + c.A * Math.sin(c.om * x + c.ph); };
 plate({
   id: 'cliffs', ch: 0, seed: 6203,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.set('noise', PL.sim.noise); T.set('lr', 0.02); T.release('Terrace'); T.release(X0 + 0.4, cliffY(X0 + 0.4) + 0.25); },
+  ],
   status: 'established',
   tribes: [{ k: 'sgd' }, { k: 'sgd', name: 'SGD, clipped', color: '#23708f', clip: 1.2, rule: 'g̃ ← g̃ · min(1, c ⁄ ‖g̃‖)' }, { k: 'adam' }],
   sim: { lr: 0.004, noise: 0.2 },
@@ -1511,6 +1555,12 @@ plate({
 // --- catchments
 plate({
   id: 'catchments', ch: 0, seed: 7311,
+  run: [
+    null,
+    null,
+    (T) => { T.set('noise', PL.sim.noise); T.set('lr', 0.02); },
+    (T) => { T.set('noise', PL.sim.noise); T.set('lr', 0.05); },
+  ],
   status: 'open',
   tribes: [{ k: 'gd' }, { k: 'sgd', color: '#4b3fa0' }],
   sim: { lr: 0.004, noise: 0.6 },
@@ -1599,6 +1649,11 @@ function sheetCrater(R) {
 }
 plate({
   id: 'momentum', ch: 2, seed: 8102,
+  run: [
+    (T) => { T.set('lr', 0.01); T.set('beta', 0.9); T.clear(); const st = PL.st, a = st.k++ * 2.4 + 0.5, r = 0.44; caravanAt([FEAT.crater[0] + r * Math.cos(a), FEAT.crater[1] + 0.8 * r * Math.sin(a)], PHONE ? 6 : 10, st); nextRelease = STAT.steps + 405; },
+    (T) => { T.set('lr', 0.01); T.set('beta', 0.5); T.clear(); const st = PL.st, a = st.k++ * 2.4 + 0.5, r = 0.44; caravanAt([FEAT.crater[0] + r * Math.cos(a), FEAT.crater[1] + 0.8 * r * Math.sin(a)], PHONE ? 6 : 10, st); nextRelease = STAT.steps + 405; },
+    (T) => { T.set('lr', 0.01); T.set('beta', 0.99); T.clear(); const st = PL.st, a = st.k++ * 2.4 + 0.5, r = 0.44; caravanAt([FEAT.crater[0] + r * Math.cos(a), FEAT.crater[1] + 0.8 * r * Math.sin(a)], PHONE ? 6 : 10, st); nextRelease = STAT.steps + 405; },
+  ],
   status: 'established',
   tribes: [{ k: 'gd' }, { k: 'hb' }, { k: 'nag' }],
   sim: { lr: 0.01, noise: 0, beta: 0.9 },
@@ -1672,6 +1727,15 @@ function rotationSweep() {
 }
 plate({
   id: 'adam', ch: 2, seed: 9011,
+  run: [
+    (T) => { T.set('lr', 0.009); T.set('rot', 45); },
+    (T) => {
+      T.set('lr', 0.009); T.set('rot', 45);
+      const go = () => { T.clear(); const al = SIM.rot * DEG, c = Math.cos(al), s = Math.sin(al), u = 0.4, v = 0.04; caravanAt([u * c - v * s, u * s + v * c], PHONE ? 4 : 6, PL.st, 0.004); nextRelease = STAT.steps + 315; };
+      if (reshapeWait) reshapeWait.push(go); else go();
+    },
+    null,
+  ],
   status: 'open',
   tribes: [{ k: 'gd' }, { k: 'adam' }, { k: 'sign' }, { k: 'lion' }],
   sim: { lr: 0.009, noise: 0.005, rot: 0 },
@@ -1758,6 +1822,12 @@ function wdStats() {                 // the followed cohort once it has settled,
 }
 plate({
   id: 'wd', ch: 2, seed: 1607,
+  run: [
+    null,
+    (T) => { T.set('il', 4e-4); T.set('noise', 4); T.clear(); const p = FEAT.sinv[0].p - 0.9; T.release(0.45 * Math.cos(p), 0.45 * Math.sin(p)); nextRelease = STAT.steps + 3000; },
+    (T) => { T.set('il', 4e-4); T.set('noise', 0.3); T.clear(); const p = FEAT.sinv[0].p - 0.9; T.release(0.45 * Math.cos(p), 0.45 * Math.sin(p)); nextRelease = STAT.steps + 3000; },
+    (T) => { T.set('il', 4e-4); T.set('noise', 0); T.clear(); const p = FEAT.sinv[0].p - 0.9; T.release(0.45 * Math.cos(p), 0.45 * Math.sin(p)); nextRelease = STAT.steps + 3000; },
+  ],
   status: 'established',
   tribes: [
     { k: 'sgd', name: 'SGD', noise: N_FN, noiseFn: wdNoise, rule: 'θ ← θ − η g̃', rest: 'never', maxAge: WD_T },
@@ -1868,6 +1938,12 @@ function sheetNewton(R) {
 }
 plate({
   id: 'newton', ch: 2, seed: 1117,
+  run: [
+    (T) => { T.set('lr', 0.004); T.set('alpha', 0.1); },
+    null,
+    null,
+    (T) => { T.set('lr', 0.004); T.set('alpha', 1); },
+  ],
   status: 'established',
   tribes: [{ k: 'newton' }, { k: 'sfn' }, { k: 'gd' }],
   sim: { lr: 0.004, noise: 0, alpha: 0.1 },
@@ -1935,6 +2011,12 @@ function samField() {
 }
 plate({
   id: 'sam', ch: 2, seed: 1213,
+  run: [
+    (T) => { T.set('lr', 0.003); T.set('noise', 0.25); T.set('rho', 0.09); },
+    null,
+    null,
+    (T) => { T.set('lr', 0.003); T.set('noise', 0.25); T.set('rho', 0.02); },
+  ],
   status: 'contested',
   tribes: [{ k: 'sgd' }, { k: 'sam' }],
   sim: { lr: 0.003, noise: 0.25, rho: 0.09 },
@@ -2004,6 +2086,12 @@ function sheetTwoBasins(R) {
 }
 plate({
   id: 'averaging', ch: 2, seed: 1301,
+  run: [
+    null,
+    (T) => { T.set('noise', 2); T.set('lr', 0.006); },
+    (T) => { T.set('noise', 2); T.set('lr', 0.04); },
+    null,
+  ],
   status: 'established',
   tribes: [{ k: 'sgd', avg: 120, rest: 'never', maxAge: 1600, rule: 'θ ← θ − η g̃,  θ̄ ← θ̄ + (θ − θ̄) ⁄ n' }],
   sim: { lr: 0.02, noise: 2 },
@@ -2128,6 +2216,19 @@ function fireFan(x, y) {
 }
 plate({
   id: 'stability', ch: 1, seed: 1409,
+  run: [
+    null,
+    null,
+    (T) => {
+      const ring = PL.st.wells.filter((m) => m !== PL.st.mid), w = ring.filter((m) => PL.sim.lr * m.l2 < 2).sort((a, b) => b.l2 - a.l2)[0];
+      T.set('noise', PL.sim.noise); T.set('lr', 2.3 / w.l2);
+      T.clear(); T.release(w.x, w.y);
+    },
+    (T) => {
+      T.set('noise', PL.sim.noise); T.set('lr', Math.min(0.07, 1.8 / PL.st.mid.l2));
+      for (const m of PL.st.wells) if (m !== PL.st.mid && SIM.lr * m.l2 > 7) T.release(m.x, m.y);
+    },
+  ],
   status: 'established',
   tribes: [
     { k: 'gd', name: 'Fans, η = c · 2/λ', rule: 'θ ← θ − c (2/λ) ∇L', rest: 'never', maxAge: 360, color: '#4b3fa0', absEta: true },
@@ -2250,6 +2351,12 @@ function adamPreSharp(i) {
 }
 plate({
   id: 'eos', ch: 1, seed: 1511,
+  run: [
+    (T) => { T.set('lr', 0.01); T.set('beta2', 0.99); T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    (T) => { T.set('lr', 0.02); T.set('beta2', 0.99); T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    null,
+    (T) => { T.set('lr', 0.01); T.set('beta2', 0.999); T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+  ],
   status: 'established',
   tribes: [
     { k: 'sgd', name: 'Gradient descent', rule: 'θ ← θ − η∇L, plus σ = 0.01', color: '#c22a40', avg: 1800 },
@@ -2363,6 +2470,12 @@ function fillTemperature() {
 }
 plate({
   id: 'temperature', ch: 1, seed: 1709,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.set('noise', 14); },
+  ],
   status: 'established',
   mist: () => { const T = SIM.lr * (SIM.noise ** 2) / 2; return [{ T, color: TRIBES[0].color }, { T: T / 4, color: TRIBES[1].color }]; },
   tribes: [
@@ -2448,6 +2561,12 @@ function kmCurve(times, alive, tmax, n = 60) {
 }
 plate({
   id: 'anisotropic', ch: 1, seed: 1801,
+  run: [
+    null,
+    (T) => { T.set('noise', 7); },
+    null,
+    null,
+  ],
   status: 'established',
   tribes: [
     { k: 'sgd', name: 'Isotropic noise', rule: 'ξ ~ N(0, σ²I)', rest: 'never', maxAge: 1e9 },
@@ -2541,6 +2660,12 @@ function htMedian(t, c) {
 }
 plate({
   id: 'heavytail', ch: 1, seed: 1823,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.set('noise', 12); T.set('tail', 1.5); T.set('depth', Math.abs(SIM.depth - 0.3) < 0.025 ? 1.2 : 0.3); },
+  ],
   status: 'contested',
   tribes: [
     { k: 'sgd', name: 'Gaussian noise', rule: 'σξ, ξ ~ N(0, I)', rest: 'never', maxAge: 1e9 },
@@ -2628,6 +2753,12 @@ function hypPrint() {
 const IGR_STARTS = [[0.18, 0.92], [1.45, 0.12], [-0.35, 0.95], [1.5, -0.25], [-0.15, -0.9], [-1.45, -0.1], [0.55, -0.85], [-1.2, 0.6]];
 plate({
   id: 'igr', ch: 1, seed: 1907,
+  run: [
+    (T) => { T.set('lr', 0.42); },
+    null,
+    (T) => { T.set('lr', 0.2); },
+    (T) => { T.set('lr', 0.55); },
+  ],
   status: 'established',
   tribes: [{ k: 'gd', color: '#c22a40' }],
   sim: { lr: 0.42, noise: 0 },
@@ -2697,6 +2828,11 @@ function sheetModes(R) {
 const s2sPred = (s, d) => (d * d >= s / 2 ? 0 : Math.log(s / (d * d) - 1) / (2 * Math.log(1 + 2 * SIM.lr * s)));   // steps until θ² reaches s/2: the logistic solution of the flow at gradient descent’s growth rate per step
 plate({
   id: 'staircase', ch: 3, seed: 2027,
+  run: [
+    (T) => { T.clear(); T.set('delta', Math.max(1e-7, +(SIM.delta / 10).toPrecision(6))); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    (T) => { T.clear(); T.set('delta', 1e-7); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    (T) => { T.clear(); T.set('delta', 0.3); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+  ],
   status: 'established',
   tribes: [{ k: 'gd', color: '#c22a40', rest: 'never', maxAge: 2000 }],
   sim: { lr: 0.02, noise: 0, delta: 1e-4 },
@@ -2778,6 +2914,12 @@ function sheetGorge(R) {
 const gorgeLam = (x) => { const g = FEAT.gorge; return g.l0 * Math.exp(-g.k * (x - g.x0)) + 0.2; };
 plate({
   id: 'warmup', ch: 3, seed: 2003,
+  run: [
+    (T) => { T.clear(); T.set('lr', 0.02); PL.onSim('lr', SIM.lr); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    null,
+    null,
+    (T) => { T.clear(); T.set('lr', 0.04); PL.onSim('lr', SIM.lr); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+  ],
   status: 'contested',
   tribes: [
     { k: 'sgd', name: 'No warmup', rule: 'η(t) = η', maxAge: 1800, rest: 'never' },
@@ -2861,6 +3003,12 @@ function riverBatchNoise(i, x, y, s, R, o) {      // the Hessian-shaped noise of
 }
 plate({
   id: 'river', ch: 3, seed: 2111,
+  run: [
+    (T) => { T.clear(); if (SIM.noise !== 1.4) { T.set('noise', 1.4); PL.st.fin = TRIBES.map(() => []); } const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    null,
+    null,
+    (T) => { T.clear(); if (SIM.noise !== 0) { T.set('noise', 0); PL.st.fin = TRIBES.map(() => []); } const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+  ],
   status: 'open',
   tribes: [
     { k: 'sgd', name: 'Constant', rule: 'η(t) = η', maxAge: RIVER_T, rest: 'never', noise: N_HESS },
@@ -2941,6 +3089,11 @@ function connectReset() { const st = PL.st; st.C = [(st.A.x + st.B.x) / 2, (st.A
 function barrierOf(fn) { let mx = -Infinity; const P = [0, 0]; for (let k = 0; k <= 100; k++) { fn(k / 100, P); mx = Math.max(mx, L(P[0], P[1])); } return mx; }
 plate({
   id: 'connect', ch: 4, seed: 2203,
+  run: [
+    (T) => { PL.ctl.find((c) => c.type === 'button').buttons[0][1](); },
+    null,
+    null,
+  ],
   status: 'established',
   tribes: [{ k: 'sgd', color: '#c22a40' }],
   sim: { lr: 0.004, noise: 0.3 },
@@ -3048,6 +3201,12 @@ const FORK_K = [0, 10, 25, 50, 100, 200, 400], FORK_N = 1100;
 function lineBarrier(ax, ay, bx, by) { let mx = -Infinity; for (let k = 0; k <= 60; k++) { const t = k / 60; mx = Math.max(mx, L(ax + (bx - ax) * t, ay + (by - ay) * t)); } return mx - 0.5 * (L(ax, ay) + L(bx, by)); }
 plate({
   id: 'forks', ch: 4, seed: 2309,
+  run: [
+    null,
+    null,
+    (T) => { T.set('noise', 0.5); },
+    (T) => { T.set('noise', 2); },
+  ],
   status: 'established',
   tribes: [{ k: 'sgd', rest: 'never', maxAge: FORK_N, color: '#4b3fa0' }],
   sim: { lr: 0.004, noise: 1.0 },
@@ -3132,6 +3291,11 @@ function minibatchNoise(i, x, y, s, R, out) {
 }
 plate({
   id: 'symmetry', ch: 4, seed: 2411,
+  run: [
+    null,
+    null,
+    (T) => { T.set('lr', 0.05); },
+  ],
   status: 'open',
   tribes: [{ k: 'sgd', name: 'SGD, batches of 4', noise: N_FN, noiseFn: minibatchNoise, rule: 'g̃ = ∇L on 4 of 16 points', color: '#4b3fa0' }],
   sim: { lr: 0.5, noise: 1 },
@@ -3187,6 +3351,12 @@ function labelNoise(i, x, y, s, R, out) {
 const LN_STARTS = [[1.45, 0.306], [0.47, 0.946], [-1.45, -0.306], [-0.47, -0.946], [1.2, 0.37], [-1.2, -0.37]];
 plate({
   id: 'labelnoise', ch: 1, seed: 2503,
+  run: [
+    (T) => { T.set('noise', 0.3); T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    null,
+    (T) => { T.set('noise', 0.6); T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+    (T) => { T.set('noise', 1.2); T.clear(); const a = F.params.auto; F.params.auto = true; try { PL.release(); } finally { F.params.auto = a; } },
+  ],
   status: 'established',
   tribes: [
     { k: 'gd', color: '#c22a40', rest: 'never', maxAge: 5000 },
@@ -3328,6 +3498,12 @@ const PG_TRIBES = [{ k: 'gd', maxAge: 3000 }, { k: 'hb', name: 'Heavy ball', sig
 
 provingPlate({
   id: 'rosenbrock', seed: 3101,
+  run: [
+    (T) => { T.set('lr', 0.003); T.set('beta', 0.9); T.clear(); T.release(pgX(-1.2), pgY(1)); },
+    null,
+    null,
+    (T) => { T.set('beta', 0.9); T.set('lr', 0.006); T.clear(); T.release(pgX(-1.2), pgY(1)); },
+  ],
   pg: { f: (u, v) => (1 - u) ** 2 + 100 * (v - u * u) ** 2, fmin: 0, s: 1.25, u0: 0, v0: 1, H: 6, race: 3000, gap: 3100,
     starts: [[-1.2, 1], [1.5, 2.2], [-1.6, 2], [0.4, -0.2]],
     path: { text: 'The Banana Valley', pts: [[-1.45, 2.1], [-1.1, 1.21], [-0.7, 0.49], [-0.3, 0.09], [0.1, 0.01], [0.5, 0.25]] } },
@@ -3338,6 +3514,12 @@ provingPlate({
 });
 provingPlate({
   id: 'himmelblau', seed: 3102, arrivals: true,
+  run: [
+    null,
+    (T) => { T.set('lr', 0.02); T.set('beta', 0.9); T.clear(); const c = PL.st.crit.find((q) => q.type === 'max'); T.release(c.x, c.y); },
+    (T) => { T.set('lr', 0.02); T.set('beta', 0.9); T.clear(); const c = PL.st.crit.find((q) => q.type === 'max'); T.release(c.x, c.y); },
+    (T) => { T.set('beta', 0.9); const D = PL.st.mins.find((m) => m.letter === 'D'); T.set('lr', 1.1 * 2 / D.l2); },
+  ],
   pg: { f: (u, v) => (u * u + v - 11) ** 2 + (u + v * v - 7) ** 2, fmin: 0, s: 3.6, u0: 0, v0: 0, H: 60, letters: true, labels: 'all', gap: 900 },
   tribes: PG_TRIBES.map((t) => Object.assign({}, t, { maxAge: 1600 })),
   sim: { lr: 0.02, noise: 0, beta: 0.9 },
@@ -3346,6 +3528,11 @@ provingPlate({
 });
 provingPlate({
   id: 'rastrigin', seed: 3103,
+  run: [
+    (T) => { T.set('lr', 0.004); T.set('beta', 0.9); T.set('noise', 6); T.clear(); T.release(...pgStart()); },
+    (T) => { T.set('lr', 0.004); T.set('beta', 0.9); T.set('noise', 8); T.clear(); T.release(...pgStart()); },
+    (T) => { T.set('lr', 0.004); T.set('noise', 6); T.set('beta', 0.99); T.clear(); T.release(...pgStart()); },
+  ],
   pg: { f: (u, v) => 20 + u * u - 10 * Math.cos(TAU * u) + v * v - 10 * Math.cos(TAU * v), fmin: 0, s: 3.2, u0: 0, v0: 0, H: 200, A: 6, race: 2400, gap: 2500, grid: 260,
     area: { u: 0, v: 2.55, lines: ['The Egg Crate'], size: 15, ls: 3.2 } },
   tribes: [{ k: 'gd', maxAge: 2400 }, { k: 'hb', name: 'Heavy ball', sigMul: 0, maxAge: 2400 }, { k: 'adam', name: 'Adam', sigMul: 0, maxAge: 2400 },
@@ -3356,6 +3543,12 @@ provingPlate({
 });
 provingPlate({
   id: 'ackley', seed: 3104,
+  run: [
+    (T) => { T.set('lr', 0.012); T.set('beta', 0.9); T.clear(); const s = PL.pg.starts[0]; T.release(pgX(s[0]), pgY(s[1])); PL.st.k = 1; },
+    (T) => { T.set('lr', 0.012); T.set('beta', 0.9); T.clear(); const s = PL.pg.starts[1]; T.release(pgX(s[0]), pgY(s[1])); PL.st.k = 2; },
+    (T) => { T.set('lr', 0.012); T.set('beta', 0.9); T.clear(); const a = Math.PI / 18; T.release(pgX(1.6 * Math.cos(a)), pgY(1.6 * Math.sin(a))); },
+    (T) => { T.set('lr', 0.012); T.set('beta', 0.9); T.clear(); const a = Math.PI / 18; T.release(pgX(1.0 * Math.cos(a)), pgY(1.0 * Math.sin(a))); },
+  ],
   pg: { f: (u, v) => -20 * Math.exp(-0.2 * Math.sqrt(0.5 * (u * u + v * v) + 0.0025)) - Math.exp(0.5 * (Math.cos(TAU * u) + Math.cos(TAU * v))) + Math.E + 20 * Math.exp(-0.01),
     fmin: 0.0, s: 2, u0: 0, v0: 0, H: 10, A: 2.2, race: 2400, gap: 2500, grid: 200,
     starts: [[1.3, 0.95], [-1.5, -0.6], [2.2, 0.5], [0.4, -1.55], [-2.6, 1.3]] },
@@ -3366,6 +3559,12 @@ provingPlate({
 });
 provingPlate({
   id: 'camel', seed: 3105, arrivals: true,
+  run: [
+    null,
+    (T) => { T.set('lr', 0.03); T.set('beta', 0.9); T.clear(); const o = PL.st.crit.filter((q) => q.type === 'saddle').sort((p, q) => Math.hypot(p.x - pgX(0), p.y - pgY(0)) - Math.hypot(q.x - pgX(0), q.y - pgY(0)))[0]; T.release(o.x, o.y); },
+    (T) => { T.set('lr', 0.03); T.set('beta', 0.99); },
+    null,
+  ],
   pg: { f: (u, v) => (4 - 2.1 * u * u + u ** 4 / 3) * u * u + u * v + (-4 + 4 * v * v) * v * v, fmin: -1.031628453, s: 1.25, u0: 0, v0: 0, H: 6, letters: true, labels: 'all', gap: 900 },
   tribes: PG_TRIBES.map((t) => Object.assign({}, t, { maxAge: 1600 })),
   sim: { lr: 0.03, noise: 0, beta: 0.9 },
@@ -3391,6 +3590,33 @@ function sculptAt(x, y) {
 }
 plate({
   id: 'sculpt', ch: 5, seed: 3106,
+  run: [
+    (T) => {
+      const n = () => ({ x: BX + 0.45, y: BY, a: -0.3, r: 0.06 }), want = [n(), n(), n(), { x: BX, y: BY, a: -0.3, r: 0.3 }];
+      if (JSON.stringify(SCULPT) !== JSON.stringify(want)) { SCULPT.length = 0; SCULPT.push(...want); reshape(40); }
+      T.set('lr', 0.004); T.set('noise', 0.25); T.set('brush', 0.3); T.set('tool', 'dig');
+    },
+    (T) => {
+      const n = () => ({ x: BX + 0.45, y: BY, a: -0.3, r: 0.06 }), want = [n(), n(), n(), { x: BX, y: BY, a: -0.3, r: 0.3 }];
+      if (JSON.stringify(SCULPT) !== JSON.stringify(want)) { SCULPT.length = 0; SCULPT.push(...want); reshape(40); }
+      T.set('noise', 0.25); T.set('tool', 'walk'); T.clear();
+      const go = () => T.set('lr', 1.3 * 2 / NAMED.sharp.l2);
+      if (reshapeWait) reshapeWait.push(go); else go();
+      T.release('Sharp Minimum');
+    },
+    (T) => {
+      const n = () => ({ x: BX + 0.45, y: BY, a: -0.3, r: 0.06 }), want = [n(), n(), n(), { x: BX, y: BY, a: -0.3, r: 0.3 }];
+      if (JSON.stringify(SCULPT) !== JSON.stringify(want)) { SCULPT.length = 0; SCULPT.push(...want); reshape(40); }
+      T.set('noise', 0.25); T.set('lr', 0.03); T.set('tool', 'walk'); T.clear();
+      T.release('Sharp Minimum');
+    },
+    (T) => {
+      const want = [{ x: BX, y: BY, a: -0.3, r: 0.3 }, { x: BX + 0.45, y: BY, a: -0.3, r: 0.06 }];
+      if (JSON.stringify(SCULPT) !== JSON.stringify(want)) { SCULPT.length = 0; SCULPT.push(...want); reshape(40); }
+      T.set('noise', 0.25); T.set('lr', 0.03); T.set('brush', 0.06); T.set('tool', 'walk'); T.clear();
+      T.release('Sharp Minimum');
+    },
+  ],
   tribes: [{ k: 'sgd' }, { k: 'hb' }, { k: 'adam' }],
   sim: { lr: 0.004, noise: 0.25, beta: 0.9, tool: 'dig', brush: 0.16 },
   ctl: [{ type: 'select', key: 'tool', label: 'Tool (click the relief)', options: { dig: 'Dig a well', raise: 'Raise a hill', walk: 'Release a cohort' } },
@@ -3441,6 +3667,12 @@ const GAME_TRIBES = [
 ];
 plate({
   id: 'games', ch: 6, seed: 3201,
+  run: [
+    (T) => { T.clear(); T.set('lr', 0.1); T.release(0.35 * Math.SQRT1_2, 0.35 * Math.SQRT1_2); },
+    null,
+    null,
+    (T) => { T.clear(); T.set('lr', 0.3); T.release(0.35 * Math.SQRT1_2, 0.35 * Math.SQRT1_2); },
+  ],
   status: 'established',
   tribes: GAME_TRIBES,
   sim: { lr: 0.1, noise: 0 },
@@ -3514,6 +3746,13 @@ const BANDIT_TRIBES = [
 ];
 plate({
   id: 'softmax', ch: 6, seed: 3202,
+  run: [
+    null,
+    null,
+    null,
+    null,
+    null,
+  ],
   status: 'established',
   tribes: BANDIT_TRIBES,
   sim: { lr: 0.4, noise: 0 },
@@ -3631,6 +3870,12 @@ const MM_TRIBES = [
 const mmQ = (r) => Math.log(1 + r / MM.r0) / MM.K;
 plate({
   id: 'margin', ch: 6, seed: 3203,
+  run: [
+    (T) => { T.clear(); T.release('Origin'); },
+    null,
+    null,
+    (T) => { T.clear(); const a = RPLAN.range(0, TAU), q = RPLAN.range(0.12, 0.25); T.release(q * Math.cos(a), q * Math.sin(a)); },
+  ],
   status: 'established',
   tribes: MM_TRIBES,
   sim: { lr: 1, noise: 0 },
@@ -3764,6 +4009,12 @@ function dpxRace(p) {
 }
 plate({
   id: 'displace', ch: 7, seed: 3301,
+  run: [
+    (T) => { T.clear(); T.release(...bMap(DPX.h0[0], DPX.h0[1], [0, 0])); },
+    null,
+    null,
+    (T) => { T.clear(); DPX.rej = DPX.word.indexOf('Unsure'); dpxRace(bMap(DPX.h0[0], DPX.h0[1], [0, 0])); },
+  ],
   status: 'established',
   tribes: DPX_TRIBES,
   sim: { lr: 0.05, noise: 0 },
@@ -3882,6 +4133,12 @@ function entRace(p) {
 }
 plate({
   id: 'entropy', ch: 7, seed: 3302,
+  run: [
+    null,
+    null,
+    null,
+    (T) => { T.clear(); const th = entLogits(ENT.starts.find((q) => q[2] === 0.65)); T.release(...bMap(th[0], th[1], [0, 0])); },
+  ],
   status: 'contested',
   tribes: ENT_TRIBES,
   sim: { lr: 0.15, noise: 0 },
@@ -3959,6 +4216,12 @@ function rzRace(p) {
 }
 plate({
   id: 'razor', ch: 7, seed: 3303,
+  run: [
+    (T) => { T.clear(); const q = RZ.starts[0]; T.release(...bMap(Math.log(q[0] / q[2]), Math.log(q[1] / q[2]), [0, 0])); },
+    null,
+    null,
+    null,
+  ],
   status: 'open',
   tribes: RZ_TRIBES,
   sim: { lr: 0.05, noise: 0 },
@@ -4041,6 +4304,11 @@ function safRace(p) {
 }
 plate({
   id: 'safety', ch: 7, seed: 3304,
+  run: [
+    null,
+    null,
+    (T) => { T.set('noise', 1); T.clear(); T.release('Aligned model'); },
+  ],
   status: 'open',
   tribes: SAF_TRIBES,
   sim: { lr: 0.01, noise: 0.3 },
@@ -5821,12 +6089,25 @@ function resetView(animate) {
   if (!animate) Object.assign(CAM, c);
   camK = 4;
 }
-function introView() {
+// the camera glides to a new plate's view in step with the rise, holding still while the sheet is still flat.
+// After a page turn it starts from where the last plate's camera was, so the view never jumps
+const INTRO = { on: false, t0: 0, from: null };
+function introView(keep) {
   planOn = false;
   const c = plateView();
   Object.assign(GOAL, c); baseYaw = c.yaw;
-  Object.assign(CAM, c, REDUCED ? {} : { dist: c.dist * 1.28, pitch: Math.min(1.45, c.pitch + 0.2), yaw: c.yaw - 0.32 });
+  if (REDUCED) { Object.assign(CAM, c); INTRO.on = false; return; }
+  if (!keep) Object.assign(CAM, c, { dist: c.dist * 1.28, pitch: Math.min(1.45, c.pitch + 0.2), yaw: c.yaw - 0.32 });
+  Object.assign(INTRO, { on: true, t0: performance.now(), from: Object.assign({}, CAM) });
   camK = 1.7;
+}
+function introGlide(now) {         // false once the glide is over or the reader has taken the camera
+  if (gesture || dragging || FOL.on || planOn || lastInteract > INTRO.t0) return (INTRO.on = false);
+  const u = easeIO(clamp((now - riseT0 - RISE_DELAY) / RISE_MS, 0, 1)), A = INTRO.from;
+  CAM.yaw = A.yaw + wrapAngle(GOAL.yaw - A.yaw) * u; CAM.pitch = A.pitch + (GOAL.pitch - A.pitch) * u; CAM.dist = A.dist + (GOAL.dist - A.dist) * u;
+  CAM.tx = A.tx + (GOAL.tx - A.tx) * u; CAM.ty = A.ty + (GOAL.ty - A.ty) * u; CAM.tz = A.tz + (GOAL.tz - A.tz) * u;
+  if (u >= 1) INTRO.on = false;
+  return true;
 }
 function planView() {
   leaveWalk();
@@ -5838,10 +6119,12 @@ function wrapAngle(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += 
 let lastInteract = 0;
 function camUpdate(dt, now) {
   if (F.params.spin && !planOn && !FOL.on && now - lastInteract > 9000 && !dragging) GOAL.yaw = baseYaw + 0.2 * Math.sin((now - lastInteract - 9000) / 1000 * 0.045);
-  const k = REDUCED && !gesture && !FOL.on ? 1 : 1 - Math.exp(-Math.min(dt, 0.1) * camK);
-  CAM.yaw += wrapAngle(GOAL.yaw - CAM.yaw) * k; CAM.pitch += (GOAL.pitch - CAM.pitch) * k; CAM.dist += (GOAL.dist - CAM.dist) * k;
-  CAM.tx += (GOAL.tx - CAM.tx) * k; CAM.ty += (GOAL.ty - CAM.ty) * k; CAM.tz += (GOAL.tz - CAM.tz) * k;
-  camK += (7 - camK) * Math.min(1, dt * 0.6);
+  if (!(INTRO.on && introGlide(now))) {
+    const k = REDUCED && !gesture && !FOL.on ? 1 : 1 - Math.exp(-Math.min(dt, 0.1) * camK);
+    CAM.yaw += wrapAngle(GOAL.yaw - CAM.yaw) * k; CAM.pitch += (GOAL.pitch - CAM.pitch) * k; CAM.dist += (GOAL.dist - CAM.dist) * k;
+    CAM.tx += (GOAL.tx - CAM.tx) * k; CAM.ty += (GOAL.ty - CAM.ty) * k; CAM.tz += (GOAL.tz - CAM.tz) * k;
+    camK += (7 - camK) * Math.min(1, dt * 0.6);
+  }
   viewProj(CAM, VP, EYE, CR, CU, CFW);
 }
 // walking with a stick man: a low chase camera behind one particle, a wider lens and haze on the distance.
@@ -6943,6 +7226,7 @@ function cardAct(a, b) {
   else if (a === 'plate') { card.classList.remove('pl-toc-open'); card.querySelector('[data-a="toc"]').setAttribute('aria-pressed', 'false'); gotoPlate(+b.dataset.i); }
 }
 card.addEventListener('click', (e) => { const b = e.target.closest('[data-a]'); if (b) cardAct(b.dataset.a, b); });
+card.addEventListener('click', (e) => { const b = e.target.closest('.pl-run'); if (b) runStep(+b.dataset.r); });
 tools.addEventListener('click', (e) => { const b = e.target.closest('[data-a]'); if (!b) return; e.stopPropagation(); cardAct(b.dataset.a, b); });
 card.querySelector('.pl-head').addEventListener('click', (e) => { if (innerWidth < 700 && !e.target.closest('[data-a]')) toggleCard(cardShut); });
 tab.addEventListener('click', () => toggleCard(true));
@@ -7136,7 +7420,7 @@ function buildToc() {
   let h = '';
   CHAPTERS.forEach((ch, ci) => {
     const ps = PLATES.filter((p) => p.ch === ci); if (!ps.length) return;
-    h += `<div class="pl-chh">${ROMAN[ci]} · ${ch}</div>`;
+    h += `<div class="pl-chh">${ROMAN[ci]} · ${ch}</div>${TEXT.chapterIntros && TEXT.chapterIntros[ci] ? `<p class="pl-chi">${gloss(TEXT.chapterIntros[ci])}</p>` : ''}`;
     for (const p of ps) h += `<button type="button" data-a="plate" data-i="${p.index}"><b>${p.index + 1}</b><span>${p.title}</span></button>`;
   });
   cardToc.innerHTML = h;
@@ -7177,6 +7461,8 @@ cardEntry.addEventListener('pointerout', (e) => { const g = e.target.closest('[d
 cardEntry.addEventListener('focusin', (e) => { const g = e.target.closest('[data-g], [data-m]'); if (g) tipShow(g); });
 cardEntry.addEventListener('focusout', tipHide);
 cardScroll.addEventListener('scroll', tipHide, { passive: true });
+// the first plate of a chapter opens with the chapter's introduction
+const chapterLead = (p) => (TEXT.chapterIntros && TEXT.chapterIntros[p.ch] && PLATES.find((q) => q.ch === p.ch) === p ? `<p class="pl-chintro">${gloss(TEXT.chapterIntros[p.ch])}</p>` : '');
 const OPENSEC = new Set();      // which card sections are open; kept from plate to plate
 function renderCard() {
   const p = PL;
@@ -7190,16 +7476,17 @@ function renderCard() {
   const sec = (k, t, h) => (h ? `<details class="pl-sec" data-sec="${k}"${OPENSEC.has(k) ? ' open' : ''}><summary>${t}</summary>${k === 'refs' ? `<div class="pl-refs">${h}</div>` : `<div class="pl-body">${gloss(h)}</div>`}</details>` : '');
   // new-style cards: a lead and a Try always visible, the rest in sections; older cards keep text, how and look
   cardEntry.innerHTML = p.lead
-    ? `<div class="pl-noline"><div class="pl-no">Plate ${p.index + 1}</div>${p.status ? `<span class="pl-status" data-s="${p.status}" data-g="st-${p.status}" tabindex="0">${p.status}</span>` : ''}</div>
+    ? `${chapterLead(p)}<div class="pl-noline"><div class="pl-no">Plate ${p.index + 1}</div>${p.status ? `<span class="pl-status" data-s="${p.status}" data-g="st-${p.status}" tabindex="0">${p.status}</span>` : ''}</div>
     <h2 class="pl-title">${p.title}</h2>${p.deck ? `<div class="pl-deck">${gloss(p.deck)}</div>` : ''}
     <div class="pl-body pl-lead">${gloss(p.lead)}</div>${p.take ? `<div class="pl-body pl-take"><div class="pl-h">In practice</div>${gloss(p.take)}</div>` : ''}
-    ${fig}${p.try ? `<div class="pl-h">Try</div><div class="pl-body">${gloss(p.try)}</div>` : ''}
+    ${fig}${p.try ? `<div class="pl-h">Try</div><div class="pl-body pl-try">${gloss(p.try)}</div>` : ''}
     <div class="pl-secs">${sec('bg', 'Background', p.bg)}${sec('method', 'Method', p.method)}${sec('limits', 'Limits', p.limits)}${sec('refs', 'References', refs)}</div>`
     : `<div class="pl-no">Plate ${p.index + 1}</div><h2 class="pl-title">${p.title}</h2>
     <div class="pl-body">${gloss(p.text)}${p.how ? `<div class="pl-h">How it works</div>${gloss(p.how)}` : ''}${p.look ? `<div class="pl-h">Try</div><p>${gloss(p.look)}</p>` : ''}</div>
     ${fig}
     <div class="pl-h">References</div><div class="pl-refs">${refs}</div>`;
   cardEntry.querySelectorAll('details.pl-sec').forEach((d) => d.addEventListener('toggle', () => { if (d.open) OPENSEC.add(d.dataset.sec); else OPENSEC.delete(d.dataset.sec); }));
+  cardEntry.querySelectorAll('.pl-try > ol > li').forEach((li, k) => { if (p.run && p.run[k]) li.insertAdjacentHTML('afterbegin', `<button type="button" class="pl-run" data-r="${k}" title="Set the instruments and release particles for this step">Set up</button>`); });
   figCv = cardEntry.querySelector('.pl-fig'); figCtx = figCv.getContext('2d');
   if (p.figH) figCv.style.height = p.figH + 'px';
   // wire the instruments to SIM
@@ -7225,6 +7512,58 @@ function setSim(k, v) {
   SIM[k] = v; lastInteract = performance.now();
   if (k === 'lr') printDirty = true;
   if (PL.onSim) PL.onSim(k, v);
+  clearTimeout(urlTimer); urlTimer = setTimeout(writeURL, 250);
+}
+// set an instrument as if its control had been moved
+function setCtl(k, v) {
+  if (SIM[k] === v) return;
+  const d = (PL._ctls || []).find((c) => c.key === k), el = d && cardEntry.querySelector(`[data-k="${k}"]`);
+  if (el) { if (d.type === 'toggle') el.checked = !!v; else if (d.type === 'select') el.value = v; else if (d.sync) d.sync(v); }
+  setSim(k, v);
+}
+// the instruments' settings live in the query string, so a link reopens the same experiment
+const SIM0 = { lr: 0.004, noise: 0.25, beta: 0.9, beta2: 0.999, rho: 0.05, alpha: 0.1 };
+const simFor = (p) => Object.assign({}, SIM0, p.sim);
+let urlTimer = 0, URLSTATE = null;
+const urlCtls = () => (PL._ctls || []).filter((d) => d.key && d.type !== 'button');
+const urlValue = (d, v) => (d.type === 'toggle' ? (v ? '1' : '0') : d.type === 'select' ? String(v) : String(+(+v).toPrecision(4)));
+function parseValue(d, s) {
+  if (d.type === 'toggle') return s === '1';
+  if (d.type === 'select') return Object.prototype.hasOwnProperty.call(d.options, s) ? s : undefined;
+  const v = parseFloat(s); return Number.isFinite(v) ? clamp(v, d.min, d.max) : undefined;
+}
+function writeURL() {
+  try {
+    const u = new URL(location.href), q = new URLSearchParams({ plate: PL.id }), s0 = simFor(PL);
+    if (u.searchParams.get('scaffold') === '1') q.set('scaffold', '1');
+    for (const d of urlCtls()) if (SIM[d.key] != null && urlValue(d, SIM[d.key]) !== urlValue(d, s0[d.key])) q.set(d.key, urlValue(d, SIM[d.key]));
+    history.replaceState(null, '', u.pathname + '?' + q + '#' + F.seed);
+  } catch (_) { /* file:// may refuse */ }
+}
+function applyURLState() {        // once, after the first plate is built
+  const st = URLSTATE; URLSTATE = null;
+  for (const [k, v] of st || []) { const d = urlCtls().find((c) => c.key === k), x = d && parseValue(d, v); if (x !== undefined) setCtl(k, x); }
+}
+// Try steps that can be set up with one click: PL.run[i] is null or a function of the helpers in STEP
+const STEP = {
+  set: setCtl,
+  sim: setSim,
+  at(name) { const m = mapTarget(name); if (!m) throw new Error(`no map label '${name}' on ${PL.id}`); return [m.x, m.y]; },
+  release(x, y) {
+    if (reshapeWait) { reshapeWait.push(() => STEP.release(x, y)); return; }      // a label moves when the terrain is reshaped
+    if (typeof x === 'string') [x, y] = STEP.at(x);
+    RIPPLES.push([x, y, performance.now()]); if (RIPPLES.length > 6) RIPPLES.shift();
+    if (PL.click) PL.click(x, y); else releaseCaravan(x, y);
+  },
+  clear() { resetWalkers(); clearInk(false); },
+};
+function runStep(i) {
+  const f = PL.run && PL.run[i]; if (!f) return;
+  leaveWalk(); if (planOn) planView(); if (SECT.on) toggleSection(false);
+  lastInteract = performance.now();
+  f(STEP);
+  const li = cardEntry.querySelectorAll('.pl-try > ol > li')[i];
+  if (li) { li.classList.remove('pl-ran'); void li.offsetWidth; li.classList.add('pl-ran'); }
 }
 // figures in the card share one small vocabulary: axes, ticks in mono, curves in the optimizer inks
 const FIG = {
@@ -7303,6 +7642,7 @@ function riseUpdate(now) {
     if (u >= 1) { const fn = sinkFn; sinkFn = null; turning = true; try { F.rand = Frame.rng(F.seed); fn(); } finally { turning = false; } RISE = 0; PRINTK = 0; cut = 0; terr = 1; }
   } else if (REDUCED) { cut = top; terr = 0; RISE = 1; }
   else {
+    if (riseT0 === Infinity) riseT0 = now;      // the rise clock starts on the first frame after the build, so the build's own time never eats into it
     const t = now - riseT0 - RISE_DELAY;
     cut = layer(easeIO(clamp(t / RISE_MS, 0, 1)) * top);
     terr = 1 - easeIO(clamp((t - RISE_MS) / SMOOTH_MS, 0, 1));
@@ -7343,20 +7683,22 @@ function rebuild() {
   startWalkers();
   leaveWalk();
   if (SECT.on) toggleSection(false);
-  ZT = ZS0 * F.params.exag; ZS = ZT; RISE = 0; CUT = 0; TERR = 1; riseT0 = performance.now(); built = true; lightDirty = aoDirty = true;
+  ZT = ZS0 * F.params.exag; ZS = ZT; RISE = 0; CUT = 0; TERR = 1; riseT0 = Infinity; built = true; lightDirty = aoDirty = true;
   for (const [k] of prevReadouts) F.readout(k, null);
   prevReadouts = [];
   renderCard();
-  introView(); fitDistSaved = GOAL.dist;
+  introView(turning); fitDistSaved = GOAL.dist;
   sheetFadeT = 0; introT0 = performance.now(); printAt = Infinity; STAT.time = 0;
   if (fontsOK) { printSheet(); printAt = introT0 + 350; }
   else { printSheet(); fontsReady.then(() => { fontsOK = true; if (my !== token) return; printSheet(); printAt = Math.max(performance.now(), introT0 + 350); }); }
+  if (URLSTATE) applyURLState();
   buildMs = performance.now() - t0;
 }
 // an instrument changed the terrain itself: rebuild the sheet with the same seed, keep the view
-let reshapeTimer = 0;
+let reshapeTimer = 0, reshapeWait = null;      // reshapeWait: what to do once the new terrain is in (a Try step's release)
 function reshape(delay = 220) {
   clearTimeout(reshapeTimer);
+  reshapeWait = reshapeWait || [];
   reshapeTimer = setTimeout(() => {
     const t0 = performance.now();
     F.rand = Frame.rng(F.seed);
@@ -7364,6 +7706,7 @@ function reshape(delay = 220) {
     STAT.time = 0; printSheet(); printAt = Math.min(printAt, performance.now());
     GOAL.tz = clamp(GOAL.tz, 0, HMAX * ZT);
     buildMs = performance.now() - t0;
+    const w = reshapeWait; reshapeWait = null; for (const f of w) f();
   }, delay);
 }
 function gotoPlate(i, seed) {
@@ -7373,9 +7716,9 @@ function gotoPlate(i, seed) {
 }
 function switchPlate(i, seed) {
   PL = PLATES[i];
-  SIM = Object.assign({ lr: 0.004, noise: 0.25, beta: 0.9, beta2: 0.999, rho: 0.05, alpha: 0.1 }, PL.sim);
+  SIM = simFor(PL);
   F.setParam('plate', PL.id, true);
-  try { const u = new URL(location.href); u.searchParams.set('plate', PL.id); history.replaceState(null, '', u.pathname + u.search + '#' + (seed != null ? seed : PL.seed)); } catch (_) { /* file:// may refuse */ }
+  try { const u = new URL(location.href), q = new URLSearchParams({ plate: PL.id }); if (u.searchParams.get('scaffold') === '1') q.set('scaffold', '1'); history.replaceState(null, '', u.pathname + '?' + q + '#' + (seed != null ? seed : PL.seed)); } catch (_) { /* file:// may refuse */ }
   F.setSeed(seed != null ? seed : PL.seed, true);
   card.classList.remove('pl-toc-open');
 }
@@ -7399,7 +7742,8 @@ layoutCard();
   try { if (new URL(location.href).searchParams.get('scaffold') === '1') { SCAF.on = true; F.setParam('scaffold', true, true); } } catch (_) { /* ignore */ }
   const i = PLATES.findIndex((p) => p.id === id);
   PL = PLATES[i >= 0 ? i : 0];
-  SIM = Object.assign({ lr: 0.004, noise: 0.25, beta: 0.9, beta2: 0.999, rho: 0.05, alpha: 0.1 }, PL.sim);
+  SIM = simFor(PL);
+  try { URLSTATE = [...new URL(location.href).searchParams].filter(([k]) => k !== 'plate' && k !== 'scaffold'); } catch (_) { /* ignore */ }
   F.setParam('plate', PL.id, true);
   if (!/^#s?\d{1,10}$/.test(location.hash || '')) { F.seed = PL.seed >>> 0; F.rand = Frame.rng(F.seed); const si = document.getElementById('hl-seed'); if (si) si.value = F.seed; }
 }

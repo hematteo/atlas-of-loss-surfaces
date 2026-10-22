@@ -75,11 +75,11 @@ Andreyev and Beneventano (2024) found that it settles at 2/η, while λ<sub>max<
 ## Method
 
 Across the valley the loss is `H_c s/(1 + s) + 0.12v²`, where v is the distance from the floor.
-Here `s = λ(θ₁)v²/(2H_c)` and H<sub>c</sub> = 2.6.
-The first term is a parabola near the floor and levels off at H<sub>c</sub> away from it, so the walls soften.
+Here `s = λ₀(θ₁)v²/(2H_c)`, with `λ₀(θ₁) = 4e^{1.85(θ₁ + 1.4)}` and H<sub>c</sub> = 2.6.
+The first term is a parabola of curvature λ₀ near the floor and levels off at H<sub>c</sub> away from it, so the walls soften.
 
 Along the valley the loss falls by 0.14 per unit, and the curvature across the floor rises.
-That curvature is `λ(θ₁) = 4e^{1.85(θ₁ + 1.4)} + 0.24`, which grows tenfold every 1.25 units.
+That curvature is `λ(θ₁) = λ₀(θ₁) + 0.24`, where the 0.24 comes from the `0.12v²` term, and it grows tenfold every 1.25 units.
 It is ticked along the [[Valley of Rising Sharpness|@Valley of Rising Sharpness]].
 
 Each cohort has 8 gradient-descent particles, released 0.12 off the floor with noise σ = 0.01 to seed the oscillation.

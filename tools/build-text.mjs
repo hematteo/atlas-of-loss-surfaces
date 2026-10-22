@@ -130,13 +130,16 @@ function plateFile(file) {
 }
 
 function build() {
-  const T = { chapters: [], chapterOf: {}, plates: {}, gloss: {}, about: '' };
+  const T = { chapters: [], chapterIntros: [], chapterOf: {}, plates: {}, gloss: {}, about: '' };
   const chf = join(DIR, 'chapters.md');
+  let ci = -1;      // a chapter is a numbered line; its introduction, if any, is the indented lines under it
   for (const l of lines(chf)) {
     const m = l.s.match(/^(\d+)\. (.+)$/);
-    if (m) T.chapters[+m[1] - 1] = m[2].trim();
-    else if (l.s.trim() && !l.s.startsWith('#')) fail(chf, l.n, "each chapter is a numbered line, '1. Landforms'");
+    if (m) { ci = +m[1] - 1; T.chapters[ci] = m[2].trim(); }
+    else if (/^\s/.test(l.s) && l.s.trim() && ci >= 0) T.chapterIntros[ci] = (T.chapterIntros[ci] ? T.chapterIntros[ci] + ' ' : '') + l.s.trim();
+    else if (l.s.trim() && !l.s.startsWith('#')) fail(chf, l.n, "each chapter is a numbered line, '1. Landforms', with its introduction indented on the lines below");
   }
+  T.chapterIntros = T.chapters.map((_, i) => (T.chapterIntros[i] ? inline(T.chapterIntros[i], chf, 0) : ''));
   for (const d of readdirSync(DIR).sort()) {
     const dir = join(DIR, d);
     if (!statSync(dir).isDirectory()) continue;
