@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 341 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 345 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -524,9 +524,18 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Zhang, F. and Pilanci, M. (2024). Riemannian preconditioned LoRA for fine-tuning foundation models. ICML. *Preconditions each factor’s gradient with an r × r matrix built from the other factor.*
 - Biderman, D., Portes, J., Gonzalez Ortiz, J. J., Paul, M., Greengard, P., Jennings, C., King, D., Havens, S., Chiley, V., Frankle, J., Blakeney, C. and Cunningham, J. P. (2024). LoRA learns less and forgets less. TMLR. *Against full fine-tuning, LoRA learns less of the target domain and forgets less; full fine-tuning’s weight changes have far higher rank.*
 
+**46. [Task arithmetic and merging](https://matteohe.com/atlas-of-loss-surfaces/?plate=merging)**
+
+- Frankle, J., Dziugaite, G. K., Roy, D. M. and Carbin, M. (2020). Linear mode connectivity and the lottery ticket hypothesis. ICML. *Runs from one initialization with different minibatch orders are often separated by a loss barrier.*
+- Wortsman, M., Ilharco, G., Gadre, S. Y., Roelofs, R., Gontijo-Lopes, R., Morcos, A. S., Namkoong, H., Farhadi, A., Carmon, Y., Kornblith, S. and Schmidt, L. (2022). Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time. ICML. *Averaging the weights of fine-tunes of one pretrained model works because they share a basin.*
+- Ilharco, G., Ribeiro, M. T., Wortsman, M., Gururangan, S., Schmidt, L., Hajishirzi, H. and Farhadi, A. (2023). Editing models with task arithmetic. ICLR. *Task vectors; adding them builds multi-task models, negating one forgets a task; vectors of different tasks are nearly orthogonal.*
+- Ortiz-Jimenez, G., Favero, A. and Frossard, P. (2023). Task arithmetic in the tangent space: improved editing of pre-trained models. NeurIPS. *Weight disentanglement explains task arithmetic and is acquired in pretraining; fine-tuning in the tangent space strengthens it.*
+- Yadav, P., Tam, D., Choshen, L., Raffel, C. and Bansal, M. (2023). TIES-Merging: resolving interference when merging models. NeurIPS. *Interference from redundant changes and sign conflicts; trim, elect a sign, then merge only agreeing values.*
+- Zhang, C., Theus, A., Teney, D., Orvieto, A., Pang, J. and Mauw, S. (2026). How does the optimizer implicitly bias the model merging loss landscape? ICLR. *One effective noise scale gathers the optimizer’s settings; merging works best at an intermediate value of it.*
+
 ### IX · Beyond two dimensions
 
-**46. [Minima in many dimensions](https://matteohe.com/atlas-of-loss-surfaces/?plate=sinking)**
+**47. [Minima in many dimensions](https://matteohe.com/atlas-of-loss-surfaces/?plate=sinking)**
 
 - Bray, A. J. and Dean, D. S. (2007). Statistics of critical points of Gaussian fields on large-dimensional spaces. Physical Review Letters 98(15), 150201. *At a critical point of a high-dimensional Gaussian field, the Hessian is a shifted semicircle, so the index is set by the loss.*
 - Fyodorov, Y. V. (2004). Complexity of random energy landscapes, glass transition, and absolute value of the spectral determinant of random matrices. Physical Review Letters 92(24), 240601. *Counts the critical points of a random field in a bowl, and finds them exponentially many when the bowl is shallow.*
@@ -541,7 +550,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Frye, C. G., Simon, J., Wadia, N. S., Ligeralde, A., DeWeese, M. R. and Bouchard, K. E. (2021). Critical point-finding methods reveal gradient-flat regions of deep network losses. Neural Computation 33(6). *The methods used to find critical points of network losses often stop at gradient-flat points instead.*
 - Huang, J., Loureiro, B. and Sarao Mannelli, S. (2026). Sharp description of local minima in the loss landscape of high-dimensional two-layer ReLU neural networks. arXiv:2604.09412. *In a teacher–student ReLU network, local minima described exactly by summary statistics; overparameterization helps reach the global ones.*
 
-**47. [What a slice hides](https://matteohe.com/atlas-of-loss-surfaces/?plate=slices)**
+**48. [What a slice hides](https://matteohe.com/atlas-of-loss-surfaces/?plate=slices)**
 
 - Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS. *Random two-dimensional slices; their curvatures are weighted averages of the Hessian’s eigenvalues, so a convex-looking slice need not be convex.*
 - Goodfellow, I. J., Vinyals, O. and Saxe, A. M. (2015). Qualitatively characterizing neural network optimization problems. ICLR. *The loss along the straight line from initialization to solution usually falls monotonically.*
@@ -552,7 +561,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Böttcher, L. and Wheeler, G. (2024). Visualizing high-dimensional loss landscapes with Hessian directions. Journal of Statistical Mechanics: Theory and Experiment 2024, 023401. *Random projections see the normalized trace of the Hessian and rarely show saddles as saddles; Hessian directions do.*
 - Chen, H., Wei, Z., Huang, Y., Zhang, Y., Dong, Y. and Zhu, J. (2026). Unveiling the basin-like loss landscape in large language models. ICLR. *Language models sit in basins that are broad along random perturbations and sharp along worst-case directions.*
 
-**48. [Trajectories in PCA](https://matteohe.com/atlas-of-loss-surfaces/?plate=pca)**
+**49. [Trajectories in PCA](https://matteohe.com/atlas-of-loss-surfaces/?plate=pca)**
 
 - Lorch, E. (2016). Visualizing deep network training trajectories with PCA. ICML Workshop on Visualization for Deep Learning. *Introduces PCA plots of training trajectories; PC1 changes monotonically and PC2 rises and falls once.*
 - Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS. *Draws optimizer paths on PCA directions over loss contours; two components hold 40% to 90% of the variation.*
@@ -560,7 +569,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754. *The gradient soon lies mostly in the span of the Hessian’s top eigenvectors, about one per class.*
 - Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR. *Updates projected onto that subspace barely lower the loss; removing them trains about as well.*
 
-**49. [Double descent](https://matteohe.com/atlas-of-loss-surfaces/?plate=ddescent)**
+**50. [Double descent](https://matteohe.com/atlas-of-loss-surfaces/?plate=ddescent)**
 
 - Belkin, M., Hsu, D., Ma, S. and Mandal, S. (2019). Reconciling modern machine-learning practice and the classical bias–variance trade-off. PNAS 116(32). *Names double descent and shows it for random features and other models; the norm of the fit peaks at the interpolation threshold.*
 - Nakkiran, P., Kaplun, G., Bansal, Y., Yang, T., Barak, B. and Sutskever, I. (2020). Deep double descent: where bigger models and more data hurt. ICLR. *Model-wise and epoch-wise double descent in CNNs, ResNets and transformers, strongest with label noise; more data can hurt.*
@@ -574,7 +583,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Loog, M., Viering, T., Mey, A., Krijthe, J. H. and Tax, D. M. J. (2020). A brief prehistory of double descent. PNAS 117(20). *The peak was observed for minimum-norm linear classifiers from 1989 onwards.*
 - Curth, A., Jeffares, A. and van der Schaar, M. (2023). A U-turn on double descent: rethinking parameter counting in statistical learning. NeurIPS. *In classical methods the second descent marks a change in how parameters are added; in effective parameters the curves are U-shaped.*
 
-**50. [Learning rates across widths](https://matteohe.com/atlas-of-loss-surfaces/?plate=mup)**
+**51. [Learning rates across widths](https://matteohe.com/atlas-of-loss-surfaces/?plate=mup)**
 
 - Yang, G. and Hu, E. J. (2021). Tensor Programs IV: Feature learning in infinite-width neural networks. ICML. *In SP, training stays stable at large width only with a learning rate of order 1/width, and the limit then learns no features; μP learns features.*
 - Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W. and Gao, J. (2021). Tensor Programs V: Tuning large neural networks via zero-shot hyperparameter transfer. NeurIPS. *μTransfer: under μP the best hyperparameters stay put as width grows; the per-layer rules, defined relative to a base width where μP equals SP.*
@@ -720,6 +729,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Huang, J., Loureiro, B. and Sarao Mannelli, S. (2026). Sharp description of local minima in the loss landscape of high-dimensional two-layer ReLU neural networks. arXiv:2604.09412.
 - Huang, W. R., Emam, Z., Goldblum, M., Fowl, L., Terry, J. K., Huang, F. and Goldstein, T. (2020). Understanding generalization through visualizations. NeurIPS Workshop “I Can’t Believe It’s Not Better!”, PMLR 137.
 - Huang, Y., Gokaslan, A., Kuleshov, V. and Tompkin, J. (2024). The GAN is dead; long live the GAN! A modern GAN baseline. NeurIPS.
+- Ilharco, G., Ribeiro, M. T., Wortsman, M., Gururangan, S., Schmidt, L., Hajishirzi, H. and Farhadi, A. (2023). Editing models with task arithmetic. ICLR.
 - Imhof, E. (1965). Kartographische Geländedarstellung. De Gruyter. English edition: Cartographic Relief Presentation (1982).
 - Imkeller, P. and Pavlyukevich, I. (2006). First exit times of SDEs driven by stable Lévy processes. Stochastic Processes and their Applications 116(4).
 - Islamov, R., Crawshaw, M., Cohen, J. and Gower, R. (2026). Non-Euclidean gradient descent operates at the edge of stability. arXiv:2603.05002.
@@ -827,6 +837,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Nikishin, E., Schwarzer, M., D’Oro, P., Bacon, P.-L. and Courville, A. (2022). The primacy bias in deep reinforcement learning. ICML.
 - Nocedal, J. and Wright, S. J. (2006). Numerical Optimization, 2nd edition, chapters 3 and 4. Springer.
 - Noci, L., Meterez, A., Hofmann, T. and Orvieto, A. (2024). Super consistency of neural network landscapes and learning rate transfer. NeurIPS.
+- Ortiz-Jimenez, G., Favero, A. and Frossard, P. (2023). Task arithmetic in the tangent space: improved editing of pre-trained models. NeurIPS.
 - Pagliardini, M., Ablin, P. and Grangier, D. (2025). The AdEMAMix optimizer: better, faster, older. ICLR.
 - Pang, R. Y., Yuan, W., Cho, K., He, H., Sukhbaatar, S. and Weston, J. (2024). Iterative reasoning preference optimization. NeurIPS.
 - Panigrahi, A., Somani, R., Goyal, N. and Netrapalli, P. (2019). Non-Gaussianity of stochastic gradient noise. arXiv:1910.09626.
@@ -910,6 +921,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Xie, Z., Sato, I. and Sugiyama, M. (2021). A diffusion theory for deep learning dynamics: stochastic gradient descent exponentially favors flat minima. ICLR.
 - Xu, Y. (2026a). Low-dimensional and transversely curved optimization dynamics in grokking. arXiv:2602.16746.
 - Xu, Y. (2026b). The geometry of multi-task grokking: transverse instability, superposition, and weight decay phase structure. arXiv:2602.18523.
+- Yadav, P., Tam, D., Choshen, L., Raffel, C. and Bansal, M. (2023). TIES-Merging: resolving interference when merging models. NeurIPS.
 - Yang, G. and Hu, E. J. (2021). Tensor Programs IV: Feature learning in infinite-width neural networks. ICML.
 - Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W. and Gao, J. (2021). Tensor Programs V: Tuning large neural networks via zero-shot hyperparameter transfer. NeurIPS.
 - Yang, S., Zhang, Q., Liu, Y., Huang, Y., Jia, X., Ning, K., Yao, J., Wang, J., Dai, H., Song, Y. and Yuan, L. (2026). AsFT: anchoring safety during LLM fine-tuning within narrow safety basin. AAAI.
@@ -918,6 +930,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Yue, Y., Chen, Z., Lu, R., Zhao, A., Wang, Z., Yue, Y., Song, S. and Huang, G. (2025). Does reinforcement learning really incentivize reasoning capacity in LLMs beyond the base model? NeurIPS.
 - Zhang, B., Zheng, Z., Chen, Z. and Li, J. (2025). Beyond the permutation symmetry of transformers: the role of rotation for model fusion. ICML.
 - Zhang, C., Bengio, S., Hardt, M., Recht, B. and Vinyals, O. (2017). Understanding deep learning requires rethinking generalization. ICLR.
+- Zhang, C., Theus, A., Teney, D., Orvieto, A., Pang, J. and Mauw, S. (2026). How does the optimizer implicitly bias the model merging loss landscape? ICLR.
 - Zhang, C., Zou, D. and Cao, Y. (2024). The implicit bias of Adam on separable data. NeurIPS.
 - Zhang, F. and Pilanci, M. (2024). Riemannian preconditioned LoRA for fine-tuning foundation models. ICML.
 - Zhang, G., Li, L., Nado, Z., Martens, J., Sachdeva, S., Dahl, G., Shallue, C. and Grosse, R. (2019). Which algorithmic choices matter at which batch sizes? Insights from a noisy quadratic model. NeurIPS.

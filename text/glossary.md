@@ -713,6 +713,27 @@ With more parameters than examples it has dimension at least p − n, and gradie
 Ending training before the training loss reaches its minimum, at the point where held-out error is lowest.
 For gradient descent on least squares it leaves the flattest directions, which are learned last, mostly unfitted.
 
+## taskvec: Task vector
+
+The change that fine-tuning on one task makes to a pretrained model's weights, `τ = θ_task − θ₀`.
+Adding it back with a scaling factor gives `θ₀ + ατ`, which at α = 1 is the fine-tuned model itself.
+
+## taskarith: Task arithmetic
+
+Editing a pretrained model by adding scaled task vectors to its weights, `θ₀ + α(τ_A + τ_B + …)`, with no further training.
+Adding vectors builds a multi-task model, and subtracting one makes the model worse at that task.
+With two task vectors and α = ½ it is the plain average of the two fine-tuned models.
+
+## disent: Weight disentanglement
+
+The property that each task vector changes a model's outputs only on its own task's inputs.
+Adding another task's vector then leaves the first task's performance unchanged, which is what task arithmetic needs.
+
+## noisescale: Effective noise scale
+
+The size of SGD's noise relative to its average step, roughly the learning rate divided by the batch size, `η/B`, and by 1 − μ with momentum μ.
+Settings that change η, B or μ but keep this ratio give SGD noise of about the same strength.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.

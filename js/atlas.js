@@ -5376,6 +5376,288 @@ plate({
     FIG.tick(c, x1, y1 + 4, String(xm), 'right');
   },
 });
+
+// --- task arithmetic and merging. Two tasks' losses on one sheet, which shows their sum. Each loss is a straight valley
+// along its own direction inside a flat-floored basin that both share (outside it both losses rise: what pretraining
+// supplied), plus a narrow pocket part-way down from the pretrained model and a basin of its own near the random
+// initialization. Cohorts fine-tune on L_A or on L_B from θ₀; a merge adds their task vectors τ = θ_task − θ₀
+const MRG = { ang: 48, J: [0.05, 0.05], rho: 0.8, cS: 0.35, dS: 0.06, D: 0.08, w: 0.12, ph: 0.026, pw: 0.025, pf: 0.4, a: 0.42, qd: 1.25, wd: 0.32, wr: 30, wf: 0.02, wh: [0, 0], ww: 0.13,
+  eta: 0.01, T: 300, lev: 0.05, N: 24, NM: 16, SIG: Array.from({ length: 16 }, (_, k) => k * 0.2), AL: 1.5 };
+{
+  const J = MRG.J, aA = MRG.ang * DEG, pd = [Math.cos(aA + 135 * DEG), Math.sin(aA + 135 * DEG)];
+  const nrm = (a) => { const n = [-Math.sin(a), Math.cos(a)]; return n[0] * pd[0] + n[1] * pd[1] < 0 ? [-n[0], -n[1]] : n; };
+  const nA = nrm(aA), nB = nrm(aA - Math.PI / 2), q = MRG.qd / Math.SQRT2;     // unit normals of the valleys, pointing into the pretrained model's sector
+  MRG.n = [nA, nB];
+  MRG.P = [J[0] + MRG.a * (nA[0] + nB[0]), J[1] + MRG.a * (nA[1] + nB[1])];
+  MRG.Q = [J[0] - q * (nA[0] + nB[0]), J[1] - q * (nA[1] + nB[1])];
+  MRG.pc = MRG.n.map((n) => [MRG.P[0] - MRG.pf * MRG.a * n[0], MRG.P[1] - MRG.pf * MRG.a * n[1]]);
+  const cr = Math.cos(MRG.wr * DEG), sr = Math.sin(MRG.wr * DEG);      // each task's own basin near the random init, turned so that no α lines a merge up with the crossing
+  MRG.wc = MRG.n.map((n) => [MRG.Q[0] + MRG.wd * (cr * n[0] - sr * n[1]), MRG.Q[1] + MRG.wd * (sr * n[0] + cr * n[1])]);
+}
+const mrgSp = (z) => (z > 30 ? z : z < -30 ? 0 : Math.log1p(Math.exp(z)));
+const mrgBump = (x, y, c, h, s) => { const ex = x - c[0], ey = y - c[1], q = (ex * ex + ey * ey) / (2 * s * s); return q > 30 ? 0 : h * Math.exp(-q); };
+function mrgL(t, x, y) {      // task t's loss, 0 on its valley floor inside the shared basin
+  const M = MRG, n = M.n[t], dx = x - M.J[0], dy = y - M.J[1], rp = M.dS * mrgSp((Math.sqrt(dx * dx + dy * dy) - M.rho) / M.dS), f = (n[0] * dx + n[1] * dy) / M.w;
+  return M.cS * rp * rp + M.D * Math.log1p(f * f) - mrgBump(x, y, M.pc[t], M.ph, M.pw) - mrgBump(x, y, M.wc[t], M.wh[t], M.ww);
+}
+function mrgSum(x, y) {       // L_A + L_B, the sheet; the texture is calmed inside the shared basin
+  const M = MRG, dx = x - M.J[0], dy = y - M.J[1], r = Math.sqrt(dx * dx + dy * dy), rp = M.dS * mrgSp((r - M.rho) / M.dS);
+  EXCALM = clamp((M.rho + 0.1 - r) / 0.2, 0, 1) / 0.88;
+  let z = 2 * M.cS * rp * rp;
+  for (let t = 0; t < 2; t++) { const n = M.n[t], f = (n[0] * dx + n[1] * dy) / M.w; z += M.D * Math.log1p(f * f) - mrgBump(x, y, M.pc[t], M.ph, M.pw) - mrgBump(x, y, M.wc[t], M.wh[t], M.ww); }
+  return z;
+}
+function mrgG(t, x, y, o) {
+  const M = MRG, n = M.n[t], dx = x - M.J[0], dy = y - M.J[1], r = Math.sqrt(dx * dx + dy * dy) || 1e-9, z = (r - M.rho) / M.dS, rp = M.dS * mrgSp(z);
+  const cs = 2 * M.cS * rp / (1 + Math.exp(-z)) / r, f = (n[0] * dx + n[1] * dy) / M.w, cv = 2 * M.D * f / (1 + f * f) / M.w;
+  const p = M.pc[t], q = M.wc[t], ex = x - p[0], ey = y - p[1], wx = x - q[0], wy = y - q[1];
+  const ep = M.ph * Math.exp(-(ex * ex + ey * ey) / (2 * M.pw * M.pw)) / (M.pw * M.pw), ew = M.wh[t] * Math.exp(-(wx * wx + wy * wy) / (2 * M.ww * M.ww)) / (M.ww * M.ww);
+  o[0] = cs * dx + cv * n[0] + ep * ex + ew * wx; o[1] = cs * dy + cv * n[1] + ep * ey + ew * wy;
+  return o;
+}
+MRG.wh = MRG.wc.map((q, t) => mrgL(t, q[0], q[1]) - MRG.wf);      // each basin's centre sits at L = wf
+function sheetMerging(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0.01 });
+  EXTRA = mrgSum;
+  sheetEnd(R, true);
+}
+// the learning rate is cosine-decayed to zero over the run, then the fine-tuned model stands still
+const mrgDecay = (k) => 0.5 * (1 + Math.cos(Math.PI * Math.min(k, MRG.T) / MRG.T));
+const MGS = [0, 0], MGP = [0, 0];
+function mrgTune(t, s, sig, R, out, o) {      // one fine-tuning run as the cohorts take it, for the figure's sweep over σ
+  let x = s[0], y = s[1];
+  for (let k = 0; k < MRG.T; k++) { mrgG(t, x, y, MGS); const e = MRG.eta * mrgDecay(k); x -= e * (MGS[0] + sig * R.normal()); y -= e * (MGS[1] + sig * R.normal()); }
+  if (!(Number.isFinite(x) && Number.isFinite(y))) { x = s[0]; y = s[1]; }
+  out[o] = x; out[o + 1] = y;
+  return out;
+}
+const mrgStep = (t) => (i, x, y, eta) => { mrgG(t, x, y, MGP); const e = eta * mrgDecay(Age[i]), s = SIM.noise; return [-e * (MGP[0] + s * NR.normal()), -e * (MGP[1] + s * NR.normal())]; };
+const MRG_TRIBES = [
+  { k: 'sgd', name: 'Fine-tuning on task A', color: '#c22a40', kind: K_FN, sigMul: 0, rest: 'never', maxAge: MRG.T + 130, rule: 'θ ← θ − η(∇L_A + σξ), η = 0.01 cosine-decayed over 300 steps', fn: mrgStep(0) },
+  { k: 'sgd', name: 'Fine-tuning on task B', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: MRG.T + 130, rule: 'θ ← θ − η(∇L_B + σξ), η = 0.01 cosine-decayed over 300 steps', fn: mrgStep(1) },
+];
+const mrgFrom = (p) => (Math.hypot(p[0] - MRG.P[0], p[1] - MRG.P[1]) < 0.02 ? 'the pretrained model' : Math.hypot(p[0] - MRG.Q[0], p[1] - MRG.Q[1]) < 0.02 ? 'the random init' : `θ₀ = (${fmt(p[0], 2)}, ${fmt(p[1], 2)})`);
+function mrgSweepReset(st) { st.sw = { s: st.s0.slice(), j: 0, k: 0, E: new Float64Array(MRG.SIG.length * MRG.N * 4) }; }
+// mean losses over the sweep's pairs at each noise level done so far: task arithmetic at α, the average, the fine-tuned models
+function mrgCurve(st, al) {
+  const sw = st.sw, s = sw.s, N = MRG.N, E = sw.E, out = { xs: [], ta: [], av: [], ft: [] };
+  for (let j = 0; j < sw.j; j++) {
+    let ta = 0, av = 0, ft = 0;
+    for (let k = 0; k < N; k++) {
+      const o = (j * N + k) * 4, tx = E[o] + E[o + 2] - 2 * s[0], ty = E[o + 1] + E[o + 3] - 2 * s[1];
+      ta += mrgL(0, s[0] + al * tx, s[1] + al * ty) + mrgL(1, s[0] + al * tx, s[1] + al * ty);
+      av += mrgL(0, s[0] + 0.5 * tx, s[1] + 0.5 * ty) + mrgL(1, s[0] + 0.5 * tx, s[1] + 0.5 * ty);
+      ft += mrgL(0, E[o], E[o + 1]) + mrgL(1, E[o + 2], E[o + 3]);
+    }
+    out.xs.push(MRG.SIG[j]); out.ta.push(ta / (2 * N)); out.av.push(av / (2 * N)); out.ft.push(ft / (2 * N));
+  }
+  return out;
+}
+// the merges of the latest cohort, pairing the k-th particle on A with the k-th on B
+function mrgMerge(st) {
+  const n = st.n, s = st.s0, al = SIM.ta, NM = MRG.NM;
+  if (!n) { st.m = null; return; }
+  const m = { ta: [0, 0], av: [0, 0], ft: [0, 0], cos: 0, tA: [0, 0], tB: [0, 0] };
+  let cn = 0;
+  for (let k = 0; k < n; k++) {
+    const ax = st.px[k] - s[0], ay = st.py[k] - s[1], bx = st.px[NM + k] - s[0], by = st.py[NM + k] - s[1];
+    const mx = s[0] + al * (ax + bx), my = s[1] + al * (ay + by), vx = s[0] + 0.5 * (ax + bx), vy = s[1] + 0.5 * (ay + by);
+    m.ta[0] += mrgL(0, mx, my); m.ta[1] += mrgL(1, mx, my); m.av[0] += mrgL(0, vx, vy); m.av[1] += mrgL(1, vx, vy);
+    m.ft[0] += mrgL(0, st.px[k], st.py[k]); m.ft[1] += mrgL(1, st.px[NM + k], st.py[NM + k]);
+    const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+    if (la > 1e-6 && lb > 1e-6) { m.cos += (ax * bx + ay * by) / (la * lb); cn++; }
+    m.tA[0] += ax; m.tA[1] += ay; m.tB[0] += bx; m.tB[1] += by;
+  }
+  for (const k of ['ta', 'av', 'ft', 'tA', 'tB']) { m[k][0] /= n; m[k][1] /= n; }
+  m.cos = cn ? m.cos / cn : NaN;
+  st.m = m;
+}
+function mrgRace(p) {
+  const st = PL.st, NM = MRG.NM, per = PHONE ? 5 : 8;
+  st.cid++; st.s0 = [p[0], p[1]]; st.from = mrgFrom(p); st.sig0 = SIM.noise; st.n = 0; st.left = 0; st.done = false;
+  if (Math.hypot(p[0] - st.sw.s[0], p[1] - st.sw.s[1]) > 1e-9) mrgSweepReset(st);
+  stamp(p[0], p[1], 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  for (let k = 0; k < per; k++) {      // every fine-tuning run starts from θ₀ itself
+    const a = spawn(p[0], p[1], 0, { tag: st.cid }); if (a < 0) break;
+    const b = spawn(p[0], p[1], 1, { tag: st.cid }); if (b < 0) { Tag[a] = 0; break; }
+    An[a] = An[b] = k; st.px[k] = st.px[NM + k] = p[0]; st.py[k] = st.py[NM + k] = p[1]; st.n = k + 1; st.left += 2;
+  }
+  STAT.released++;
+  nextRelease = STAT.steps + MRG.T + 140;
+  mrgMerge(st); linesDirty = true;
+}
+plate({
+  id: 'merging', ch: 7, seed: 3305,
+  run: [
+    (T) => { T.set('noise', 0.8); T.set('ta', 1); T.clear(); T.release('Pretrained model'); },
+    (T) => { T.set('noise', 0); T.set('ta', 1); T.clear(); T.release('Pretrained model'); },
+    (T) => { T.set('noise', 2.5); T.set('ta', 1); T.clear(); T.release('Pretrained model'); },
+    (T) => { T.set('noise', 0.8); T.set('ta', 1); T.clear(); T.release('Random init'); },
+    (T) => { T.set('noise', 0.8); T.set('ta', 0.5); T.clear(); T.release('Pretrained model'); },
+  ],
+  status: 'open',
+  tribes: MRG_TRIBES,
+  sim: { lr: MRG.eta, noise: 0.8, ta: 1 },
+  ctl: [{ key: 'noise', label: 'Gradient noise σ', min: 0, max: 3, step: 0.05 }, { key: 'ta', label: 'Scaling α', min: 0, max: MRG.AL, step: 0.05 }],
+  view: { yaw: -6, pitch: 50 }, speed: 2, figH: 260,
+  sheet: sheetMerging,
+  features: () => {
+    const st = PL.st = { cid: 0, n: 0, left: 0, done: true, s0: MRG.P.slice(), from: 'the pretrained model', sig0: NaN, m: null,
+      px: new Float64Array(2 * MRG.NM), py: new Float64Array(2 * MRG.NM), base: (F.seed ^ 0x3c6ef372) >>> 0 };
+    mrgSweepReset(st);
+    if (!MRG.trap) {         // where gradient descent (σ = 0) stops from each start: the pockets and the basins of their own
+      const R = Frame.rng(1), o = [0, 0];
+      MRG.trap = [MRG.P, MRG.Q].map((s) => [0, 1].map((t) => { const e = mrgTune(t, s, 0, R, o, 0); return { x: e[0], y: e[1], L: mrgL(t, e[0], e[1]) }; }));
+    }
+  },
+  names: (S) => {
+    const M = MRG, f = (p) => `L_A ${mrgL(0, p[0], p[1]).toFixed(2)} · L_B ${mrgL(1, p[0], p[1]).toFixed(2)}`, u = (t, s) => { const n = M.n[t]; return [M.J[0] - s * n[1], M.J[1] + s * n[0]]; };
+    S.areas.push({ x: M.J[0] + 0.02, y: M.J[1] + 0.56, lines: ['Shared Basin'], size: 14, ls: 2.6 });
+    S.marks.push({ p: { x: M.P[0], y: M.P[1] }, name: 'Pretrained model', sub: f(M.P), sym: 'x', pri: 9 });
+    S.marks.push({ p: { x: M.Q[0], y: M.Q[1] }, name: 'Random init', sub: f(M.Q), sym: 'x', pri: 8 });
+    S.marks.push({ p: { x: M.J[0], y: M.J[1] }, name: 'Both tasks', sub: 'L_A = L_B = 0', sym: 'min', pri: 7 });
+    const a0 = u(0, -0.2), a1 = u(0, -0.72), b0 = u(1, 0.2), b1 = u(1, 0.72);      // on the arms away from the pretrained model
+    S.paths.push({ text: 'valley of task A', pts: [a0[0], a0[1], a1[0], a1[1]], size: 11, offset: 0.045, color: '#c22a40' });
+    S.paths.push({ text: 'valley of task B', pts: [b0[0], b0[1], b1[0], b1[1]], size: 11, offset: 0.045, color: '#23708f' });
+  },
+  print0: () => {        // each task's low-loss region, L < 0.05: hatched one way for A, the other for B
+    if (!MRG.ch) MRG.ch = [0, 1].map((t) => {
+      const G = fieldGrid((x, y) => mrgL(t, x, y), 192), W = G.W, H = G.H;
+      for (let i = 0; i < W; i++) { G.G[i] = G.G[(H - 1) * W + i] = 1; }
+      for (let j = 0; j < H; j++) { G.G[j * W] = G.G[j * W + W - 1] = 1; }
+      return isoChains(G.G, W, H, X0, Y0, G.dx, G.dy, MRG.lev);
+    });
+    hatchChains(MRG.ch[0], 'rgba(194,42,64,0.34)', 3.4, -0.8, 0.5); strokeChains(MRG.ch[0], 'rgba(194,42,64,0.8)', 0.8);
+    hatchChains(MRG.ch[1], 'rgba(35,112,143,0.34)', 3.4, 0.8, 0.5); strokeChains(MRG.ch[1], 'rgba(35,112,143,0.8)', 0.8);
+  },
+  print: () => {         // where gradient descent stops: a narrow pocket on the way down from θ₀, and each task's basin near the random init
+    const c = sc; c.save(); c.font = `400 ${6.9 * FS}px ${MONO}`; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    ['A', 'B'].forEach((nm, t) => {
+      for (const [q, txt, dx, dy] of [[MRG.trap[0][t], `${nm}: narrow pocket · L_${nm} ${MRG.trap[0][t].L.toFixed(2)}`, -1, t ? -1 : 1], [MRG.trap[1][t], `${nm} only · L_${nm} ${MRG.trap[1][t].L.toFixed(2)}`, 1, 0]]) {
+        const x = ox(q.x), y = oy(q.y), lx = x + dx * 9, ly = y + dy * 9;
+        c.fillStyle = INK; c.beginPath(); c.arc(x, y, 1.7, 0, TAU); c.fill();
+        c.textAlign = dx < 0 ? 'right' : 'left'; c.strokeStyle = 'rgba(233,236,230,0.85)'; c.lineWidth = 2.4; c.strokeText(txt, lx, ly);
+        c.fillStyle = 'rgba(36,38,43,0.85)'; c.fillText(txt, lx, ly);
+      }
+    });
+    c.restore();
+  },
+  release: () => {
+    if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
+    mrgRace(PL.st.s0);
+  },
+  click: (x, y) => mrgRace([x, y]),
+  onSim: (k) => { const st = PL.st; if (k === 'noise' && !st.done) st.sig0 = NaN; if (k === 'ta') { mrgMerge(st); linesDirty = true; } },
+  step: (i) => {
+    const st = PL.st; if (Tag[i] !== st.cid) return;
+    const k = An[i] + (Tr[i] ? MRG.NM : 0); st.px[k] = Wx[i]; st.py[k] = Wy[i];
+    if (Age[i] === MRG.T && --st.left <= 0) { st.done = true; linesDirty = true; }
+  },
+  frame: () => {
+    const st = PL.st, sw = st.sw, L = MRG.SIG.length, N = MRG.N, t0 = performance.now();
+    ch8Wait();
+    while (sw.j < L && performance.now() - t0 < 2.5) {     // the sweep over σ, a pair of runs at a time; pair k reuses one noise stream at every σ
+      const R = Frame.rng((st.base + sw.k * 7919) >>> 0), o = (sw.j * N + sw.k) * 4, sig = MRG.SIG[sw.j];
+      mrgTune(0, sw.s, sig, R, sw.E, o); mrgTune(1, sw.s, sig, R, sw.E, o + 2);
+      if (++sw.k === N) { sw.k = 0; sw.j++; }
+    }
+    mrgMerge(st);
+    if (!st.done && F.frame % 3 === 0) linesDirty = true;     // the drawn task vectors follow the cohort's means
+  },
+  lines: () => {
+    const st = PL.st, m = st.m; if (!m) return;
+    const s = st.s0, cl = (x, y) => [clamp(x, X0, X1), clamp(y, Y0, Y1)], e = Math.max(1, SIM.ta);
+    const A = cl(s[0] + m.tA[0], s[1] + m.tA[1]), B = cl(s[0] + m.tB[0], s[1] + m.tB[1]), S2 = cl(s[0] + m.tA[0] + m.tB[0], s[1] + m.tA[1] + m.tB[1]), E = cl(s[0] + e * (m.tA[0] + m.tB[0]), s[1] + e * (m.tA[1] + m.tB[1]));
+    line(drape([A[0], A[1], S2[0], S2[1]]), '#23708f', 0.9, 0.014, true, 0.55);
+    line(drape([B[0], B[1], S2[0], S2[1]]), '#c22a40', 0.9, 0.014, true, 0.55);
+    line(drape([s[0], s[1], E[0], E[1]]), '#167a5b', 1.2, 0.01, true, 0.85);
+    line(drape([s[0], s[1], A[0], A[1]]), '#c22a40', 1.7, 0, true, 0.9);
+    line(drape([s[0], s[1], B[0], B[1]]), '#23708f', 1.7, 0, true, 0.9);
+  },
+  overlay: (oc) => {
+    const st = PL.st, m = st.m; if (!m) return;
+    const s = st.s0, al = SIM.ta, NM = MRG.NM, inS = (x, y) => x > X0 && x < X1 && y > Y0 && y < Y1;
+    const dot = (x, y, fill) => {
+      if (!inS(x, y)) return; project(VP, x, y, hgrid(x, y) * ZS, P0); if (P0[2] <= 0) return;
+      oc.beginPath(); oc.arc(P0[0], P0[1], 2.3, 0, TAU);
+      if (fill) { oc.fillStyle = fill; oc.fill(); } else { oc.strokeStyle = INK; oc.lineWidth = 1; oc.stroke(); }
+    };
+    for (let k = 0; k < st.n; k++) {
+      const tx = st.px[k] + st.px[NM + k] - 2 * s[0], ty = st.py[k] + st.py[NM + k] - 2 * s[1];
+      dot(s[0] + al * tx, s[1] + al * ty, '#167a5b'); dot(s[0] + 0.5 * tx, s[1] + 0.5 * ty, null);
+    }
+    oc.font = `400 ${PHONE ? 8 : 8.5}px ${MONO}`; oc.textBaseline = 'top'; oc.lineJoin = 'round';
+    const scr = (x, y) => { if (!inS(x, y)) return null; project(VP, x, y, hgrid(x, y) * ZS, P0); return P0[2] > 0 ? [P0[0], P0[1]] : null; };
+    const lab = (p, t, col, side, dy) => {      // side +1: to the right of the point, −1: to its left (flipped if it would leave the screen)
+      if (!p) return; const tw = oc.measureText(t).width;
+      if (side > 0 && p[0] + 9 + tw > F.cssWidth - 4) side = -1; else if (side < 0 && p[0] - 9 - tw < 4) side = 1;
+      const xx = p[0] + side * 9, yy = p[1] + dy; oc.textAlign = side > 0 ? 'left' : 'right';
+      oc.strokeStyle = 'rgba(236,238,232,0.9)'; oc.lineWidth = 3; oc.strokeText(t, xx, yy); oc.fillStyle = col; oc.fillText(t, xx, yy);
+    };
+    const tx = m.tA[0] + m.tB[0], ty = m.tA[1] + m.tB[1], pt = scr(s[0] + al * tx, s[1] + al * ty), pv = scr(s[0] + 0.5 * tx, s[1] + 0.5 * ty);
+    const side = pt && pv && pt[0] < pv[0] ? -1 : 1;      // the two labels point away from each other
+    lab(pt, PHONE ? 'task arithmetic' : `task arithmetic · L_A ${m.ta[0].toFixed(3)} · L_B ${m.ta[1].toFixed(3)}`, '#167a5b', side, 3);
+    lab(pv, PHONE ? 'average' : `average · L_A ${m.av[0].toFixed(3)} · L_B ${m.av[1].toFixed(3)}`, INK, -side, 12);
+    if (!/^the /.test(st.from)) lab(scr(s[0], s[1]), 'θ₀', INK, -1, 3);
+  },
+  readouts: () => {
+    const st = PL.st, f = (v) => v.toFixed(3), rows = [['fine-tuning from', st.from]];
+    mrgMerge(st); const m = st.m;
+    if (!m) return rows;
+    return rows.concat([
+      ['fine-tuned, own task', `L_A ${f(m.ft[0])} · L_B ${f(m.ft[1])}`],
+      [`task arithmetic, α = ${SIM.ta.toFixed(2)}`, `L_A ${f(m.ta[0])} · L_B ${f(m.ta[1])}`],
+      ['average (α = ½)', `L_A ${f(m.av[0])} · L_B ${f(m.av[1])}`],
+      ['cos(τ_A, τ_B)', Number.isFinite(m.cos) ? fmt(m.cos, 2) : '—'],
+    ]);
+  },
+  debug: () => {
+    const st = PL.st, m = st.m, f = (v) => +v.toFixed(4), c = mrgCurve(st, SIM.ta);
+    return { from: st.from, done: st.done, n: st.n, m: m && { ta: m.ta.map(f), av: m.av.map(f), ft: m.ft.map(f), cos: f(m.cos) }, sweep: st.sw.j,
+      curve: { xs: c.xs, ta: c.ta.map(f), av: c.av.map(f), ft: c.ft.map(f) }, trap: MRG.trap.map((r) => r.map((q) => ({ x: f(q.x), y: f(q.y), L: f(q.L) }))) };
+  },
+  fig: (c, w, h) => {
+    const st = PL.st, al = SIM.ta, x0 = 30, x1 = w - 6, hh = (h - 12) / 2, G = '#167a5b', cv = mrgCurve(st, al);
+    // above: loss after merging against σ, from the sweep (24 pairs of runs at each σ)
+    let y0 = 8, y1 = hh - 22;
+    FIG.axes(c, x0, y0, x1, y1, 'gradient noise σ', 'mean of L_A and L_B');
+    let ym = 0.05; for (const a of [cv.ta, cv.av, cv.ft]) for (const v of a) if (v > ym) ym = v;
+    const fin = st.done && Number.isFinite(st.sig0) && st.m ? (st.m.ta[0] + st.m.ta[1]) / 2 : NaN;
+    if (fin > ym) ym = fin;
+    ym = Math.ceil(ym * 1.35 * 20) / 20;
+    const r = figSeries(c, x0, y0, x1, y1, [{ xs: cv.xs, ys: cv.ft, color: 'rgba(36,38,43,0.55)', w: 1, dash: [1.5, 2] }, { xs: cv.xs, ys: cv.av, color: INK, w: 1.1, dash: [4, 2] }, { xs: cv.xs, ys: cv.ta, color: G, w: 1.7 }], { xmax: 3, ymin: 0, ymax: ym });
+    const xn = r.tx(SIM.noise); c.setLineDash([2, 2]); c.strokeStyle = 'rgba(36,38,43,0.45)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(xn, y0); c.lineTo(xn, y1); c.stroke(); c.setLineDash([]);
+    if (Number.isFinite(fin)) { c.fillStyle = G; c.beginPath(); c.arc(r.tx(st.sig0), r.ty(fin), 3, 0, TAU); c.fill(); }
+    for (const v of [0, 1, 2, 3]) FIG.tick(c, r.tx(v), y1 + 4, String(v));
+    FIG.tick(c, x0 - 3, r.ty(0), '0', 'right', 'middle'); FIG.tick(c, x0 - 3, r.ty(ym), ym.toFixed(2), 'right', 'middle');
+    let kx = x1 - 2;           // a key along the top: each entry's sample line, then its name
+    c.font = `400 8.5px ${MONO}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+    for (const [nm, col, dash, lw] of [['fine-tuned', 'rgba(36,38,43,0.55)', [1.5, 2], 1], ['average', INK, [4, 2], 1.1], ['task arithmetic', G, [], 1.7]]) {
+      c.fillStyle = 'rgba(36,38,43,0.7)'; c.fillText(nm, kx, y0 + 10); kx -= c.measureText(nm).width + 4;
+      c.strokeStyle = col; c.lineWidth = lw; c.setLineDash(dash); c.beginPath(); c.moveTo(kx - 14, y0 + 10); c.lineTo(kx, y0 + 10); c.stroke(); c.setLineDash([]); kx -= 24;
+    }
+    if (st.sw.j < MRG.SIG.length) FIG.note(c, x1 - 4, y0 + 24, 'computing…', 'rgba(36,38,43,0.5)', 'right');
+    // below: each task's loss along θ₀ + α(τ_A + τ_B), over the latest cohort's pairs
+    y0 = hh + 14; y1 = h - 28;
+    FIG.axes(c, x0, y0, x1, y1, 'scaling α', 'L at θ₀ + α(τ_A + τ_B)');
+    if (!st.n) return;
+    const NM = MRG.NM, s = st.s0, as = [], la = [], lb = [];
+    for (let q = 0; q <= 30; q++) {
+      const a = MRG.AL * q / 30; let va = 0, vb = 0;
+      for (let k = 0; k < st.n; k++) { const x = s[0] + a * (st.px[k] + st.px[NM + k] - 2 * s[0]), y = s[1] + a * (st.py[k] + st.py[NM + k] - 2 * s[1]); va += mrgL(0, x, y); vb += mrgL(1, x, y); }
+      as.push(a); la.push(va / st.n); lb.push(vb / st.n);
+    }
+    let lm = 0.05; for (const v of la.concat(lb)) if (v > lm) lm = v;
+    lm = Math.ceil(lm * 1.05 * 20) / 20;
+    const r2 = figSeries(c, x0, y0, x1, y1, [{ xs: as, ys: la, color: TRIBES[0].color, w: 1.5 }, { xs: as, ys: lb, color: TRIBES[1].color, w: 1.5 }], { xmax: MRG.AL, ymin: 0, ymax: lm });
+    const xa = r2.tx(al), xh = r2.tx(0.5);
+    c.strokeStyle = G; c.lineWidth = 1; c.beginPath(); c.moveTo(xa, y0); c.lineTo(xa, y1); c.stroke();
+    c.setLineDash([2, 2]); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.beginPath(); c.moveTo(xh, y0 + 10); c.lineTo(xh, y1); c.stroke(); c.setLineDash([]);
+    for (const v of [0, 0.5, 1, 1.5]) FIG.tick(c, r2.tx(v), y1 + 4, String(v));
+    FIG.tick(c, x0 - 3, r2.ty(0), '0', 'right', 'middle'); FIG.tick(c, x0 - 3, r2.ty(lm), lm.toFixed(2), 'right', 'middle');
+    FIG.note(c, xh + 3, y1 - 7, 'average', 'rgba(36,38,43,0.6)', 'left');
+  },
+});
 // ch8>>
 // <<ch9
 // ---------------------------------------------------------------------------------------------
