@@ -5,7 +5,7 @@ You can edit it without touching the code.
 
 ```
 text/
-  chapters.md              the eight chapter titles, each with its introduction indented below it
+  chapters.md              the nine chapter titles, each with its introduction indented below it
   1-landforms/survey.md    one file per plate, in its chapter's folder, named after the plate's id
   …
   6-proving-grounds/_shared.md   text shared by the proving-ground plates

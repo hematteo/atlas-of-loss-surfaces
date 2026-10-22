@@ -566,31 +566,13 @@ function catchments(sub = 3, smooth = true) {
   noiseOn = smooth ? 0 : 1;
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) G[j * W + i] = smooth ? L(X0 + i * sub * GDX, Y0 + j * sub * GDY) : HG[j * sub * GW + i * sub];
   noiseOn = save;
-  const dn = new Int32Array(N), dx = GDX * sub, dy = GDY * sub, dd = Math.hypot(dx, dy);
-  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-    const k = j * W + i; let best = k, bs = 0;
-    for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) {
-      if (!a && !b) continue;
-      const ii = i + a, jj = j + b; if (ii < 0 || jj < 0 || ii >= W || jj >= H) continue;
-      const kk = jj * W + ii, sl = (G[k] - G[kk]) / (a && b ? dd : a ? dx : dy);
-      if (sl > bs) { bs = sl; best = kk; }
-    }
-    dn[k] = best;
-  }
-  const lab = new Int32Array(N).fill(-2), basins = [], stack = [];
-  for (let k = 0; k < N; k++) {
-    let q = k; stack.length = 0;
-    while (lab[q] === -2 && dn[q] !== q) { stack.push(q); q = dn[q]; }
-    if (lab[q] === -2) {
-      const i = q % W, j = (q / W) | 0;
-      if (i === 0 || j === 0 || i === W - 1 || j === H - 1) lab[q] = -1;
-      else { lab[q] = basins.length; basins.push({ x: X0 + i * dx, y: Y0 + j * dy, L: G[q], n: 0 }); }
-    }
-    for (const r of stack) lab[r] = lab[q];
-  }
-  for (let k = 0; k < N; k++) if (lab[k] >= 0) basins[lab[k]].n++;
-  for (const b of basins) b.area = b.n / N;
-  return { lab, W, H, sub, basins, dx, dy };
+  const C = catchGrid(G, W, H, GDX * sub, GDY * sub), basins = [];
+  const to = C.sinks.map((s) => {      // a sink on the grid's edge is not a basin: its cells are labelled −1
+    const i = s.k % W, j = (s.k / W) | 0;
+    if (i === 0 || j === 0 || i === W - 1 || j === H - 1) return -1;
+    basins.push({ x: s.x, y: s.y, L: G[s.k], n: s.n, area: s.n / N }); return basins.length - 1;
+  });
+  return { lab: C.lab.map((l) => to[l]), W, H, sub, basins, dx: C.dx, dy: C.dy };
 }
 function labelAt(C, x, y) { const i = clamp(Math.round((x - X0) / C.dx), 0, C.W - 1), j = clamp(Math.round((y - Y0) / C.dy), 0, C.H - 1); return C.lab[j * C.W + i]; }
 // a field sampled on a coarse grid over the map, for printed iso-lines of derived surfaces
@@ -976,7 +958,7 @@ plate({
 
 // <<ch1
 // ---------------------------------------------------------------------------------------------
-// I · Landforms
+// I · Landforms, with two plates of chapter V that share their sheets (singular minima, same loss)
 // ---------------------------------------------------------------------------------------------
 function sheetSharpFlat(R, o = {}) {
   sheetBase(R, { bk: 0.2, bk4: 0.022 });
@@ -1837,7 +1819,7 @@ plate({
 
 // <<ch2
 // ---------------------------------------------------------------------------------------------
-// II · Particles
+// optimizers (chapter III)
 // ---------------------------------------------------------------------------------------------
 function caravanAt(p, n, st, spread = 0.008) {
   if (st && st.C) curveReset(st.C);
@@ -2387,7 +2369,7 @@ plate({
 
 // <<ch3
 // ---------------------------------------------------------------------------------------------
-// III · Weather: step size and noise
+// step size and noise (chapter II)
 // ---------------------------------------------------------------------------------------------
 // steepest-descent catchments of any gridded field (row 0 = south)
 function catchGrid(G, W, H, dx, dy) {
@@ -2406,7 +2388,7 @@ function catchGrid(G, W, H, dx, dy) {
   for (let k = 0; k < N; k++) {
     let q = k; stack.length = 0;
     while (lab[q] === -2 && dn[q] !== q) { stack.push(q); q = dn[q]; }
-    if (lab[q] === -2) { lab[q] = sinks.length; sinks.push({ x: X0 + (q % W) * dx, y: Y0 + ((q / W) | 0) * dy, n: 0 }); }
+    if (lab[q] === -2) { lab[q] = sinks.length; sinks.push({ x: X0 + (q % W) * dx, y: Y0 + ((q / W) | 0) * dy, k: q, n: 0 }); }
     for (const r of stack) lab[r] = lab[q];
   }
   for (let k = 0; k < N; k++) sinks[lab[k]].n++;
@@ -2548,7 +2530,7 @@ function sheetFunnel(R) {
   EXTRA = (x, y) => {
     const lam = f.l0 * Math.exp(f.k * (x + 1.4)), v = y - f.cy, s = lam * v * v / (2 * f.Hc);
     EXCALM = s < 30 ? Math.exp(-s) : 0;
-    let z = -f.a * x + f.Hc * s / (1 + s) + 0.12 * v * v;
+    let z = -f.a * x + f.Hc * s / Math.sqrt(1 + s * s) + 0.12 * v * v;      // softens at order v⁶, so the walls the particles bounce on keep the floor's curvature
     if (x > 1.3) z += 4 * (x - 1.3) * (x - 1.3);
     if (x < -1.45) z += 4 * (x + 1.45) * (x + 1.45);
     return z;
@@ -2558,6 +2540,7 @@ function sheetFunnel(R) {
 }
 const funLam = (x) => { const f = FEAT.fun; return f.l0 * Math.exp(f.k * (x + 1.4)) + 0.24; };
 const funX = (lam) => { const f = FEAT.fun; return -1.4 + Math.log(Math.max(1e-9, (lam - 0.24) / f.l0)) / f.k; };
+const eosLmax = (x, y) => { hess(x, y); return eig2()[1]; };      // λ_max of the Hessian where the particle stands, as Cohen et al. measure it
 function eosFlow() {
   const st = PL.st, f = FEAT.fun, xs = funX(2 / SIM.lr), cf = new Float64Array(st.C.len);
   let x = -1.28;
@@ -2631,11 +2614,11 @@ plate({
   },
   step: (i) => {
     const st = PL.st; if (An[i] !== st.C.cid) return;
-    curveAdd(st.C, Tr[i], Age[i], funLam(Wx[i]));
+    curveAdd(st.C, Tr[i], Age[i], eosLmax(Wx[i], Wy[i]));
     if (Tr[i] === 1) curveAdd(st.P, 0, Age[i], adamPreSharp(i));
   },
   debug: () => {
-    const a = [], g = [], d = []; for (let i = 0; i < hiW; i++) if (Alive[i] && Age[i] > 1700) { if (Tr[i] === 1) { d.push(funLam(Wx[i])); continue; } a.push(funLam(Wx[i])); if (An[i] > 200) g.push(funLam(Ax[i])); }
+    const a = [], g = [], d = []; for (let i = 0; i < hiW; i++) if (Alive[i] && Age[i] > 1700) { if (Tr[i] === 1) { d.push(eosLmax(Wx[i], Wy[i])); continue; } a.push(eosLmax(Wx[i], Wy[i])); if (An[i] > 200) g.push(eosLmax(Ax[i], Ay[i])); }
     const m = (q) => (q.length ? +(q.reduce((p, r) => p + r, 0) / q.length).toFixed(1) : null), P = curveMean(PL.st.P, 0).slice(1200).filter(Number.isFinite);
     return { twoOverEta: 2 / SIM.lr, lamAtWalkers: m(a), lamAtAverage: m(g), n: a.length, adam: { beta2: SIM.beta2, lamAtWalkers: m(d), n: d.length, preSharpMean: m(Array.from(P)), preSharpMax: P.length ? +Math.max(...P).toFixed(1) : null } };
   },
@@ -2643,15 +2626,15 @@ plate({
   readouts: () => {
     const st = PL.st, m = curveMean(st.C, 0), ma = curveMean(st.C, 1), mp = curveMean(st.P, 0);
     const last = (q) => { for (let k = q.length - 1; k >= 0; k--) if (Number.isFinite(q[k])) return q[k]; return NaN; };
-    const g = []; for (let i = 0; i < hiW; i++) if (Alive[i] && Tr[i] === 0 && An[i] > 200) g.push(funLam(Ax[i]));
+    const g = []; for (let i = 0; i < hiW; i++) if (Alive[i] && Tr[i] === 0 && An[i] > 200) g.push(eosLmax(Ax[i], Ay[i]));
     const f1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : '—');
-    return [['2/η', (2 / SIM.lr).toFixed(0)], ['λ at particles', f1(last(m))], ['λ at their time average', g.length ? (g.reduce((p, q) => p + q, 0) / g.length).toFixed(1) : '…'],
-      ['λ at Adam particles', f1(last(ma))], ['0.15η·λ_max(P⁻¹H), Adam (edge 38)', f1(last(mp))]];
+    return [['2/η', (2 / SIM.lr).toFixed(0)], ['λ_max at particles', f1(last(m))], ['λ_max at their time average', g.length ? (g.reduce((p, q) => p + q, 0) / g.length).toFixed(1) : '…'],
+      ['λ_max at Adam particles', f1(last(ma))], ['0.15η·λ_max(P⁻¹H), Adam (edge 38)', f1(last(mp))]];
   },
   fig: (c, w, h) => {
     const st = PL.st, x0 = 30, x1 = w - 6, hh = (h - 12) * 0.56;
     let y0 = 8, y1 = hh - 22;
-    FIG.axes(c, x0, y0, x1, y1, '', 'log₁₀ λ at the particles');
+    FIG.axes(c, x0, y0, x1, y1, '', 'log₁₀ λ_max at the particles');
     const r = figSeries(c, x0, y0, x1, y1, [{ ys: curveMean(st.C, 0, (v) => Math.log10(v)), color: TRIBES[0].color, w: 1.4 }, { ys: curveMean(st.C, 1, (v) => Math.log10(v)), color: TRIBES[1].color, w: 1.4 }, { ys: Array.from(st.cf, (x) => Math.log10(funLam(x))), color: INK, w: 1.2, dash: [4, 2] }], { xmax: st.C.len, ymin: 0.5, ymax: 3 });
     const yl = r.ty(Math.log10(2 / SIM.lr));
     c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.6)'; c.beginPath(); c.moveTo(x0, yl); c.lineTo(x1, yl); c.stroke(); c.setLineDash([]);
@@ -3252,7 +3235,7 @@ plate({
 
 // <<ch4
 // ---------------------------------------------------------------------------------------------
-// IV · Itineraries: schedules, paths between solutions, symmetries
+// trajectories (chapter IV), then paths between solutions and symmetries (chapter V) and label noise (chapter II)
 // ---------------------------------------------------------------------------------------------
 // --- saddle to saddle: the exact loss of a balanced two-layer diagonal linear network, w_i = θ_i², with two
 // target strengths. Each coordinate grows geometrically from a small start; the stronger one goes first.
@@ -4560,6 +4543,13 @@ function sheetBandit(R) {
   EXTRA = (x, y) => { bTheta(x, y, BTH); return BAND.A * (1 - banditJ(banditPi(BTH[0], BTH[1], BPI))); };
   sheetEnd(R, true);
 }
+function rimPrint(rays) {      // the rim of the projection, and dashed rays where two answers are equally likely
+  const c = sc, R = BAND.R; c.save(); c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 0.8; c.setLineDash([5, 3]);
+  c.beginPath(); for (const a of rays) { c.moveTo(ox(0), oy(0)); c.lineTo(ox(R * Math.cos(a)), oy(R * Math.sin(a))); } c.stroke();
+  c.setLineDash([]); c.lineWidth = 1; c.beginPath(); c.arc(ox(0), oy(0), R * OPU, 0, TAU); c.stroke();
+  c.font = `italic 400 ${11 * FS}px ${SERIF}`; c.fillStyle = 'rgba(36,38,43,0.75)'; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText('∞', ox(R * 0.995) + 6, oy(0)); c.restore();
+}
 // each optimizer returns its step in logits; the particle moves to where that lands on the projected sheet
 const bStep = (dth) => (i, x, y, eta) => { bTheta(x, y, BTH); const d = dth(BTH[0], BTH[1], eta); bMap(BTH[0] + d[0], BTH[1] + d[1], BXY); return [BXY[0] - x, BXY[1] - y]; };
 const BANDIT_TRIBES = [
@@ -4598,13 +4588,7 @@ plate({
     const t = BAND.tau, th = [(BAND.r[0] - BAND.r[2]) / t, (BAND.r[1] - BAND.r[2]) / t], o = at(th[0], th[1]);
     S.marks.push({ p: { x: o[0], y: o[1] }, name: 'Regularized optimum', sub: `π ∝ exp(r/τ) · π₁ ${banditPi(th[0], th[1], [0, 0, 0])[0].toFixed(2)}`, sym: 'min', pri: 9 });
   },
-  print: () => {             // where two arms are equally likely (rays from the origin), and the rim, which is infinity
-    const c = sc, R = BAND.R, k = Math.SQRT1_2; c.save(); c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 0.8; c.setLineDash([5, 3]);
-    c.beginPath(); c.moveTo(ox(0), oy(0)); c.lineTo(ox(R * k), oy(R * k)); c.moveTo(ox(0), oy(0)); c.lineTo(ox(0), oy(-R)); c.moveTo(ox(0), oy(0)); c.lineTo(ox(-R), oy(0)); c.stroke();
-    c.setLineDash([]); c.lineWidth = 1; c.beginPath(); c.arc(ox(0), oy(0), R * OPU, 0, TAU); c.stroke();
-    c.font = `italic 400 ${11 * FS}px ${SERIF}`; c.fillStyle = 'rgba(36,38,43,0.75)'; c.textAlign = 'left'; c.textBaseline = 'middle';
-    c.fillText('∞', ox(R * 0.995) + 6, oy(0)); c.restore();
-  },
+  print: () => rimPrint([Math.PI / 4, -Math.PI / 2, Math.PI]),      // where two arms are equally likely (rays from the origin), and the rim, which is infinity
   release: () => {
     const st = PL.st;
     if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
@@ -4763,18 +4747,11 @@ function mmRace(p) {
 // ch7>>
 // <<ch8
 // ---------------------------------------------------------------------------------------------
-// VIII · After pretraining: preference optimization, reinforcement learning from verifiable rewards and safety
-// fine-tuning, each on a sheet small enough to be exact. Three plates draw an unbounded space (a hidden state, or a
+// VIII · After pretraining: preference optimization, reinforcement learning from verifiable rewards, safety
+// fine-tuning, low-rank adapters and merging, each on a sheet small enough to be exact. Three plates draw an unbounded space (a hidden state, or a
 // policy's logits) in the projection of 'The pull of softmax' (bMap, bTheta: directions true, the rim is infinity);
 // the safety plate is a slice of weight space
 // ---------------------------------------------------------------------------------------------
-function rimPrint(rays) {      // the rim of the projection, and dashed rays where two answers are equally likely
-  const c = sc, R = BAND.R; c.save(); c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 0.8; c.setLineDash([5, 3]);
-  c.beginPath(); for (const a of rays) { c.moveTo(ox(0), oy(0)); c.lineTo(ox(R * Math.cos(a)), oy(R * Math.sin(a))); } c.stroke();
-  c.setLineDash([]); c.lineWidth = 1; c.beginPath(); c.arc(ox(0), oy(0), R * OPU, 0, TAU); c.stroke();
-  c.font = `italic 400 ${11 * FS}px ${SERIF}`; c.fillStyle = 'rgba(36,38,43,0.75)'; c.textAlign = 'left'; c.textBaseline = 'middle';
-  c.fillText('∞', ox(R * 0.995) + 6, oy(0)); c.restore();
-}
 function isoPrint(G, levs, color, dash, fmt, frac = 0.5) {   // iso-lines of a derived field, each labelled on its longest chain
   const c = sc;
   for (const lev of levs) {
@@ -4916,15 +4893,17 @@ const entLog = (v) => Math.log(Math.max(v, 1e-300));
 const entH = (p) => -(p[0] * entLog(p[0]) + p[1] * entLog(p[1]) + p[2] * entLog(p[2]));
 const entLogits = (p) => [Math.log(p[0] / p[2]), Math.log(p[1] / p[2])];
 const ENT_A = new Uint8Array(16), ENT_R = new Float64Array(16);
+// each direction is a gradient in all three logits, re-centred so that θ₃ stays 0, as in 'The pull of softmax'
 function entGrpo(p, o) {      // one GRPO step's direction: a group of G rollouts on each kind of problem, advantage (r − mean)/std
-  o[0] = o[1] = 0;
+  o[0] = o[1] = 0; let o2 = 0;
   for (let j = 0; j < 2; j++) {
     let m = 0;
     for (let g = 0; g < ENT.G; g++) { const u = NR(), a = u < p[0] ? 0 : u < p[0] + p[1] ? 1 : 2; ENT_A[g] = a; ENT_R[g] = NR() < ENT.P[a][j] ? 1 : 0; m += ENT_R[g]; }
     m /= ENT.G; let v = 0; for (let g = 0; g < ENT.G; g++) v += (ENT_R[g] - m) ** 2;
     const sd = Math.sqrt(v / ENT.G); if (sd < 1e-9) continue;                 // a group that all passed or all failed teaches nothing
-    for (let g = 0; g < ENT.G; g++) { const adv = ENT.w[j] * (ENT_R[g] - m) / sd / ENT.G; o[0] += adv * ((ENT_A[g] === 0) - p[0]); o[1] += adv * ((ENT_A[g] === 1) - p[1]); }
+    for (let g = 0; g < ENT.G; g++) { const adv = ENT.w[j] * (ENT_R[g] - m) / sd / ENT.G; o[0] += adv * ((ENT_A[g] === 0) - p[0]); o[1] += adv * ((ENT_A[g] === 1) - p[1]); o2 += adv * ((ENT_A[g] === 2) - p[2]); }
   }
+  o[0] -= o2; o[1] -= o2;
   return o;
 }
 function sheetEntropy(R) {
@@ -4948,11 +4927,11 @@ const ENT_TRIBES = [
   { k: 'sgd', name: 'GRPO', color: '#c22a40', kind: K_FN, sigMul: 0, rest: 'never', maxAge: ENT.T, rule: 'groups of 8, advantage (r − r̄)/σ',
     fn: entStep((p, o) => entGrpo(p, o)) },
   { k: 'sgd', name: 'GRPO + entropy bonus', color: '#167a5b', kind: K_FN, sigMul: 0, rest: 'never', maxAge: ENT.T, rule: 'adds τ∇H, τ = 0.2',
-    fn: entStep((p, o) => { entGrpo(p, o); const h = entH(p); o[0] -= ENT.tau * p[0] * (entLog(p[0]) + h); o[1] -= ENT.tau * p[1] * (entLog(p[1]) + h); return o; }) },
+    fn: entStep((p, o) => { entGrpo(p, o); const h = entH(p), g2 = p[2] * (entLog(p[2]) + h); o[0] -= ENT.tau * (p[0] * (entLog(p[0]) + h) - g2); o[1] -= ENT.tau * (p[1] * (entLog(p[1]) + h) - g2); return o; }) },
   { k: 'sgd', name: 'Pass@16 objective', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: ENT.T, rule: 'θ ← θ + η∇pass@16, exact',
     fn: entStep((p, o) => {
       entQ(p, EQ); o[0] = o[1] = 0;
-      for (let j = 0; j < 2; j++) { const c = ENT.w[j] * ENT.k * (1 - EQ[j]) ** (ENT.k - 1); for (let b = 0; b < 2; b++) o[b] += c * p[b] * (ENT.P[b][j] - EQ[j]); }
+      for (let j = 0; j < 2; j++) { const c = ENT.w[j] * ENT.k * (1 - EQ[j]) ** (ENT.k - 1), g2 = c * p[2] * (ENT.P[2][j] - EQ[j]); for (let b = 0; b < 2; b++) o[b] += c * p[b] * (ENT.P[b][j] - EQ[j]) - g2; }
       return o;
     }) },
 ];
@@ -5018,7 +4997,8 @@ plate({
 });
 
 // --- RL's razor: a policy over three answers to a new task's prompt, logits (θ₁, θ₂, 0); answers A and B are right
-// and C is wrong. Every policy with π(C) → 0 solves the task; the sheet is the error, π(C)
+// and C is wrong. Every policy with π(C) → 0 solves the task; the sheet is the error, π(C). As in 'The pull of softmax',
+// each optimizer's gradient is taken in all three logits, then re-centred so that θ₃ stays 0: dth returns (g₁ − g₃, g₂ − g₃)
 const RZ = { A: 1.5, starts: [[0.3, 0.1, 0.6], [0.12, 0.28, 0.6], [0.4, 0.15, 0.45], [0.2, 0.06, 0.74]], p0: [0.3, 0.1, 0.6], teach: 1, T: 4000 };
 const RPI = [0, 0, 0], RTH = [0, 0], RXY = [0, 0], RPI2 = [0, 0, 0], RTH2 = [0, 0];
 const rzKL = (p) => { const q = RZ.p0; let s = 0; for (let k = 0; k < 3; k++) s += q[k] * Math.log(q[k] / Math.max(p[k], 1e-300)); return s; };   // KL(π₀ ‖ π)
@@ -5030,13 +5010,13 @@ function sheetRazor(R) {
 }
 const RZ_TRIBES = [
   { k: 'sgd', name: 'Policy gradient', color: '#c22a40', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'θ ← θ + η∇E_π[r]',
-    fn: rzStep((p) => { const j = p[0] + p[1]; return [p[0] * (1 - j), p[1] * (1 - j)]; }) },
+    fn: rzStep((p) => { const j = p[0] + p[1], g3 = -p[2] * j; return [p[0] * (1 - j) - g3, p[1] * (1 - j) - g3]; }) },
   { k: 'sgd', name: 'Natural policy gradient', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'θₐ ← θₐ + η rₐ, so π ∝ π₀·exp(ηt r)',
     fn: rzStep(() => [1, 1]) },
   { k: 'sgd', name: 'SFT on a teacher', color: '#cf6d0c', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'θ ← θ + η∇log π(the teacher’s answer)',
-    fn: rzStep((p) => (RZ.teach === 1 ? [-p[0], 1 - p[1]] : [1 - p[0], -p[1]])) },
+    fn: rzStep((p) => (RZ.teach === 1 ? [p[2] - p[0], 1 - p[1] + p[2]] : [1 - p[0] + p[2], p[2] - p[1]])) },
   { k: 'sgd', name: 'SFT on π₀ given success', color: '#167a5b', kind: K_FN, sigMul: 0, rest: 'never', maxAge: RZ.T, rule: 'cross-entropy towards π₀ restricted to right answers',
-    fn: rzStep((p) => { const q = RZ.p0, s = q[0] + q[1]; return [q[0] / s - p[0], q[1] / s - p[1]]; }) },
+    fn: rzStep((p) => { const q = RZ.p0, s = q[0] + q[1]; return [q[0] / s - p[0] + p[2], q[1] / s - p[1] + p[2]]; }) },
 ];
 function rzRace(p) {
   const st = PL.st; curveReset(st.K); curveReset(st.E); st.cid = st.K.cid;
@@ -7118,6 +7098,10 @@ plate({
 });
 //
 // ch9>>
+// the particles' random streams are keyed by a plate's slot in this list, not by its place in the reading order, so
+// adding or moving a plate leaves every other plate's runs, and the counts printed on its card, as they were.
+// Append new plates; a plate missing from the list is keyed by a hash of its id
+const STREAM = ['survey', 'catchments', 'saddles', 'plateaus', 'ravines', 'cliffs', 'sharpflat', 'stability', 'eos', 'eoss', 'igr', 'temperature', 'anisotropic', 'heavytail', 'labelnoise', 'momentum', 'adam', 'wd', 'newton', 'sam', 'averaging', 'staircase', 'warmup', 'river', 'grokking', 'plasticity', 'connect', 'forks', 'symmetry', 'singular', 'common', 'rosenbrock', 'himmelblau', 'rastrigin', 'ackley', 'camel', 'sculpt', 'games', 'softmax', 'margin', 'displace', 'entropy', 'razor', 'safety', 'lora', 'merging', 'sinking', 'slices', 'pca', 'ddescent', 'mup'];
 // reading order: the plate blocks above are grouped by the code they share; the atlas is read in this order
 {
   const ORDER = ['survey', 'catchments', 'saddles', 'plateaus', 'ravines', 'cliffs', 'sharpflat', 'stability', 'eos', 'eoss', 'igr', 'temperature', 'anisotropic', 'heavytail', 'labelnoise', 'momentum', 'adam', 'wd', 'newton', 'sam', 'averaging', 'staircase', 'warmup', 'river', 'grokking', 'plasticity', 'connect', 'forks', 'symmetry', 'singular', 'common', 'rosenbrock', 'himmelblau', 'rastrigin', 'ackley', 'camel', 'sculpt', 'games', 'softmax', 'margin', 'displace', 'entropy', 'razor', 'safety', 'lora', 'merging', 'sinking', 'slices', 'pca', 'ddescent', 'mup'];
@@ -8586,7 +8570,7 @@ function sched(S, age) {
   return 1;
 }
 function stepAll() {
-  const lr = SIM.lr, sig = SIM.noise, beta = SIM.beta, b1 = 0.9, b2 = SIM.beta2, eps = 1e-8, rho = SIM.rho || 0.05, alpha = SIM.alpha || 0.1;
+  const lr = SIM.lr, sig = SIM.noise, beta = SIM.beta, b1 = 0.9, b2 = SIM.beta2, eps = 1e-8, rho = SIM.rho ?? 0.05, alpha = SIM.alpha ?? 0.1;
   const mx = 0.04 * MAPW, xa = X0 - mx, xb = X1 + mx, ya = Y0 - mx, yb = Y1 + mx;
   const seg2 = 0.003 * 0.003;
   const hook = PL.step || null;
@@ -10430,7 +10414,9 @@ function startWalkers() {
   SCAF.tree = null; SECT.a = SECT.b = SECT.res = null;
   const p = PL;
   resetWalkers(); clearInk(false);
-  const h = (F.seed ^ (p.index * 0x9e3779b1)) >>> 0;
+  let k = STREAM.indexOf(p.id);
+  if (k < 0) { k = 2166136261; for (const ch of p.id) k = Math.imul(k ^ ch.charCodeAt(0), 16777619) >>> 0; }
+  const h = (F.seed ^ (k * 0x9e3779b1)) >>> 0;
   NR = Frame.rng((h ^ 0x2c1b3c6d) >>> 0); RREL = Frame.rng((h ^ 0x297a2d39) >>> 0); RPLAN = Frame.rng((h ^ 0x6a09e667) >>> 0);
   RELEASES = []; RELEASES.more = null; nextRelease = 0; relCount = 0; ARCS.length = 0;
   if (p.setup) p.setup();

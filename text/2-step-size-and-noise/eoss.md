@@ -17,6 +17,9 @@ This tells us which curvature the step size caps when training uses minibatches.
 It is also one account of why smaller batches end in flatter regions.
 This plate builds a loss from twelve examples that curve in different directions.
 On it we can watch where gradient descent and SGD each stop sharpening.
+On this sheet, though, SGD stops sharpening before its batch sharpness reaches 2/η, at about 0.84 of it (see Limits).
+What the sheet does show is λ<sub>max</sub> settling below 2/η, by a gap that grows as the batch shrinks.
+Liao, Kolomvaki and Kyrillidis (2026) called this the stochastic sharpness gap.
 
 ## In practice
 
@@ -41,8 +44,8 @@ Below: each finished cohort’s settled λ<sub>max</sub> (filled) and batch shar
    Three examples per step make less noise across the valley, so SGD sharpens further before it stops.
 3. Set b = 12 → SGD becomes gradient descent, and both settle at 199.
    After steps 1 to 3, the lower panel shows λ<sub>max</sub> rising from about 0.78 of 2/η at b = 1 to 1 at b = 12.
-4. Set η = 0.02 and b = 1 → 2/η falls to 100, gradient descent settles at 100, and SGD’s λ<sub>max</sub> settles near 80.
-   The levels scale with 2/η: at both step sizes SGD stops at about 0.8 of the edge.
+4. Set η = 0.02 and b = 1 → 2/η falls to 100, gradient descent settles at 100, and SGD’s λ<sub>max</sub> settles near 75.
+   The levels scale roughly with 2/η: SGD stops at about 0.75 of the edge here, against 0.78 at η = 0.01.
 
 ## Background
 
@@ -104,7 +107,6 @@ That disagreement is gradient noise across the valley, the noise in the mechanis
 On this sheet it stops SGD before the batches’ own steps become unstable.
 So batch sharpness settles at about 0.84 of 2/η at b = 1, not at 2/η.
 For b ≥ 2 it sits a few percent below λ<sub>max</sub>.
-What the sheet does show is λ<sub>max</sub> settling below 2/η, by a gap that grows as the batch shrinks.
 
 Andreyev et al. (2026) extended the picture to [[heavy-ball momentum|hb]] with coefficient β.
 With small batches, batch sharpness settled near 2(1 − β)/η, below plain SGD’s edge.

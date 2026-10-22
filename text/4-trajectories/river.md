@@ -37,6 +37,8 @@ The dotted line marks the start of the decay, where warmup–stable–decay leav
    That is about five times as fast as the constant schedule.
    A uniform average of a steadily moving point trails halfway behind it.
    So the average x moves at half the speed of the iterate z, `γ/2 = 5η`.
+   Its interpolation lets it take a step γ = 10η without being thrown across the valley, and along the river it acts like momentum (see Method).
+   The four SGD schedules have no momentum, so this is not a like-for-like race.
 4. Set σ to 0 → the constant schedule and the batch ramp end together, lowest of the four SGD schedules.
    Without noise the bouncing dies out on its own.
    So a decay pays off only when noise holds particles up the walls.
@@ -75,7 +77,7 @@ Along the river the loss falls by 0.08 per unit of θ₁, to the minimum at a wa
 
 Twelve particles per schedule run 1,800 steps from the head at η = 0.0125, so ηλ = 1.75 across.
 With ηλ between 1 and 2, each step overshoots the floor, and the overshoot shrinks.
-The noise covariance is proportional to |H|, with H here the Hessian.
+The noise covariance has the shape of |H|, with H here the Hessian, and a fixed total variance 2σ².
 So the noise falls almost entirely across the river.
 
 Cosine and warmup–stable–decay end at 2% of η.
@@ -87,6 +89,7 @@ Schedule-free SGD steps `z ← z − γg̃(y)`, `x ← (1−c)x + cz`, `y = (1�
 Its averaging weight c is proportional to γ², which makes the average uniform after its 100-step warmup.
 With β = 0.9 and γ = 10η, (1−β)γ = η.
 So the z step moves y as far as an SGD step at η would.
+Across the valley that keeps it about as stable as SGD at η, but along the river its steps add up, much as a heavy ball’s do.
 
 Final L averages each schedule’s last 64 finishers.
 
@@ -104,7 +107,8 @@ In language-model pretraining, the loss curve under a schedule can be predicted 
 
 Bergsma et al. (2025) also found that decaying linearly all the way to zero beats the common cosine decay to 10% of the peak.
 
-Muon has no two-dimensional version, so this sheet cannot run it, but a matrix model of a river valley shows the same split.
+On two parameters Muon reduces to normalized or sign descent, so this sheet cannot show what is distinctive about it.
+A matrix model of a river valley does show the same split.
 Shen et al. (2026) found that Muon moves faster along the river early, but near the bottom it converges slowly or overshoots, because its orthogonalized steps discard the gradient's scale.
 They suggest finishing with a gradient-descent-like optimizer.
 
@@ -116,7 +120,7 @@ They suggest finishing with a gradient-descent-like optimizer.
   Introduces the warmup–stable–decay schedule.
 - Hägele, A., Bakouch, E., Kosson, A., Ben Allal, L., Von Werra, L. and Jaggi, M. (2024). Scaling laws and compute-optimal training beyond fixed training durations. NeurIPS.
   A constant rate with a short cooldown matches cosine.
-- Wen, K., Li, Z., Wang, J., Hall, D., Liang, P. and Ma, T. (2025). Understanding warmup-stable-decay learning rates: a river valley loss landscape view. ICLR.
+- Wen, K., Li, Z., Wang, J., Hall, D., Liang, P. and Ma, T. (2025). Understanding warmup-stable-decay learning rates: a river valley loss landscape perspective. ICLR.
   The river-valley explanation of warmup–stable–decay.
 - Schaipp, F., Hägele, A., Taylor, A., Şimşekli, U. and Bach, F. (2025). The surprising agreement between convex optimization theory and learning-rate scheduling for large model training. ICML.
   A convex-optimization bound predicts the benefit of the cooldown.

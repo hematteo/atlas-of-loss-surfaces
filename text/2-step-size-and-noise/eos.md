@@ -27,19 +27,19 @@ Oscillation at the edge is not, by itself, a reason to lower η, since the loss 
 
 ## Figure caption
 
-Above: curvature of the valley floor at the position of the latest cohort’s particles, for gradient descent (red) and Adam (orange), and along the central flow (dashed).
-Gradient descent levels off just above 2/η; Adam does not.
+Above: λ<sub>max</sub> of the Hessian at the latest cohort’s particles, for gradient descent (red) and Adam (orange), and along the central flow (dashed).
+Gradient descent levels off at 2/η; Adam does not.
 Below: Adam’s preconditioned sharpness η<sub>A</sub>·λ<sub>max</sub>(P⁻¹H), where η<sub>A</sub> = 0.15η is its step size, and the edge, 38 (dashed).
 
 ## Try
 
-1. Keep η = 0.01 → gradient descent reaches λ = 2/η = 200 after about 1,400 steps, then levels off.
-   ‘λ at particles’ settles near 215, and ‘λ at their time average’ near 213.
-   That floor is sharper than 2/η, but the particles oscillate on the softer walls, where the curvature is lower (see Method).
-2. Set η = 0.02 → the next cohort stops near λ = 105 after about 600 steps.
+1. Keep η = 0.01 → gradient descent reaches λ<sub>max</sub> = 2/η = 200 after about 1,400 steps, then levels off.
+   ‘λ_max at particles’ settles near 196, just below 2/η, and ‘λ_max at their time average’ near 202, just above it.
+   The particles bounce from wall to wall, and the walls curve a little less than the floor (see Method).
+2. Set η = 0.02 → the next cohort stops near λ<sub>max</sub> = 100 after about 600 steps.
    Doubling η roughly halves the λ at which it stops, as 2/η predicts.
-3. Read ‘λ at Adam particles’ → [[Adam|adam]] runs past the red line to the end of the valley, at λ ≈ 600.
-   Meanwhile its preconditioned sharpness hovers between 32 and 38.
+3. Read ‘λ_max at Adam particles’ → [[Adam|adam]] runs past the red line to the end of the valley, at λ<sub>max</sub> ≈ 600.
+   Meanwhile its preconditioned sharpness hovers between 31 and 38.
    Adam’s edge caps P⁻¹H rather than H, so λ<sub>max</sub> can keep rising as long as v̂ grows with it.
 4. Set β₂ to 0.999 → at step 300 the preconditioned sharpness is near 4, against 22 at β₂ = 0.95.
    Adam’s second-moment estimate v̂ averages over about `1/(1 − β₂)` steps, so it still carries the larger gradients of early training.
@@ -79,9 +79,10 @@ Andreyev and Beneventano (2024) found that it settles at 2/η, while λ<sub>max<
 
 ## Method
 
-Across the valley the loss is `H_c s/(1 + s) + 0.12v²`, where v is the distance from the floor.
+Across the valley the loss is `H_c s/√(1 + s²) + 0.12v²`, where v is the distance from the floor.
 Here `s = λ₀(θ₁)v²/(2H_c)`, with `λ₀(θ₁) = 4e^{1.85(θ₁ + 1.4)}` and H<sub>c</sub> = 2.6.
 The first term is a parabola of curvature λ₀ near the floor and levels off at H<sub>c</sub> away from it, so the walls soften.
+It departs from the parabola only at order v⁶, so the walls curve almost as steeply as the floor where the particles bounce.
 
 Along the valley the loss falls by 0.14 per unit, and the curvature across the floor rises.
 That curvature is `λ(θ₁) = λ₀(θ₁) + 0.24`, where the 0.24 comes from the `0.12v²` term, and it grows tenfold every 1.25 units.
@@ -90,8 +91,8 @@ It is ticked along the [[Valley of Rising Sharpness|@Valley of Rising Sharpness]
 Each cohort has 8 gradient-descent particles, released 0.12 off the floor with noise σ = 0.01 to seed the oscillation.
 It also has 5 full-batch Adam particles on the floor, with step `η_A = 0.15η`, β₁ = 0.9 and a trace of noise, σ = 10⁻⁴.
 
-The λ readouts, like the upper figure, give the floor’s curvature λ(θ₁) at each particle’s position.
-At the oscillating iterate the Hessian’s λ<sub>max</sub> averaged 174 at η = 0.01, 13% below 2/η.
+The λ readouts, like the upper figure, give λ<sub>max</sub> of the Hessian at each particle, as Cohen et al. measured it.
+A particle’s time average lies on the floor, where λ<sub>max</sub> is the floor’s curvature λ(θ₁).
 The black line is the central flow: gradient descent along the floor, stopped where λ = 2/η.
 The lower figure and the last readout compute Adam’s preconditioned sharpness from the Hessian and each Adam particle’s v̂.
 

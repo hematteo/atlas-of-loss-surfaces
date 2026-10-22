@@ -12,7 +12,7 @@ So every solution has twins elsewhere in weight space with the same predictions.
 
 Entezari et al. (2022) conjectured that SGD solutions have no [[barrier|barrier]] on the straight segment between them once this symmetry is accounted for.
 Accounting for it means reordering one network’s units to match the other’s.
-Ainsworth et al. (2023) found near-zero barriers after matching units in wide networks, but not in narrow ones or on ImageNet.
+Ainsworth et al. (2023) found near-zero barriers after matching units in MLPs and in widened ResNets, but not in ResNets of standard width or on ImageNet.
 
 Here a network with one unit has a single twin, given by a sign flip.
 So we can see the barrier and its removal exactly.
@@ -55,7 +55,7 @@ Entezari et al. proved a version of their conjecture for wide one-hidden-layer n
 Their [[simulated-annealing|anneal]] search for permutations lowered the barrier for small MLPs but not for VGG or ResNet.
 
 Ainsworth et al. matched units by their activations, by their weights, or by learning the permutation with a straight-through estimator.
-For widened ResNets on CIFAR-10, they reported the first zero-barrier connection between independently trained networks.
+For widened ResNets on CIFAR-10, they reported the first zero-barrier connection between independently trained ResNets.
 The barrier after matching fell as width grew and stayed large at standard width.
 ResNet-50 on ImageNet kept a barrier, though matching cut it by about two-thirds.
 
@@ -97,8 +97,9 @@ This cut the barrier by 90% for ResNet-18 on CIFAR-10 and by 74% for ResNet-50 o
 
 Verma and Elbayad (2024) carried matching over to transformers.
 Attention layers also have a continuous symmetry (Zhang et al. 2025).
-Attention sees the query and key weights of a head only through inner products, which lets the two be rotated together.
-So in large networks each minimum has whole continuous families of copies, on top of the n!·2<sup>n</sup> discrete ones.
+Attention sees the query and key weights of a head only through the product `W_Q W_Kᵀ`, so replacing them by `W_Q A` and `W_K A⁻ᵀ` leaves the network unchanged for any invertible A.
+Zhang et al. work with the rotations among these maps.
+So in large networks each minimum has whole continuous families of copies, on top of the discrete permutations of each layer’s units.
 
 ## References
 

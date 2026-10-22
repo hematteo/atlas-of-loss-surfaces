@@ -59,7 +59,7 @@ So real loss surfaces are studied in two indirect ways:
 Each feature also has its own literature:
 
 1. Minima differ in sharpness, which has been linked to generalization (Keskar et al. 2017; see <i>Sharp and flat minima</i>).
-2. Ill-conditioning limits the step size to `η < 2/λ_max`, so gradient descent moves slowly along directions of low curvature (LeCun et al. 1998).
+2. The largest curvature limits the step size to `η < 2/λ_max`, so where the loss is ill-conditioned, gradient descent moves slowly along directions of low curvature (LeCun et al. 1998).
 3. Dauphin et al. (2014) argued that in high dimensions, [[critical points|crit]] with high loss are mostly saddles, not local minima (see <i>Saddle points</i>).
 4. Plateaus appear when hidden units start nearly identical and training must break the symmetry between them (Saad and Solla 1995).
 
@@ -88,10 +88,7 @@ In an overparameterized network, which has more parameters than training example
 A slice through such a network also has an apparent sharpness that depends on the weights’ scale.
 So the sheet shows kinds of feature, not any one network.
 
-In millions of dimensions, the curvature along a random direction weights all the Hessian’s eigenvalues nearly equally.
-So it is roughly the average curvature, the Hessian’s trace divided by the dimension.
-A random slice through a saddle with only a few directions of negative curvature then usually looks like a bowl.
-Böttcher and Wheeler (2024) showed that slices along the top Hessian eigenvectors reveal what random ones hide.
+In millions of dimensions a random slice sees only the average curvature, so a saddle with a few directions of negative curvature usually looks like a bowl (see <i>What a slice hides</i>).
 
 The monotonic fall from initialization to solution is common but not universal.
 Lucas et al. (2021) found that it fails systematically when training carries the weights far from their initialization.
@@ -128,5 +125,3 @@ In full-batch training λ<sub>max</sub> climbs to the bound 2/η and stays there
   The relief-shading conventions used for every sheet.
 - Lucas, J., Bae, J., Zhang, M. R., Fort, S., Zemel, R. and Grosse, R. (2021). On monotonic linear interpolation of neural network parameters. ICML.
   The monotonic fall along the line from initialization is common but fails when the weights travel far.
-- Böttcher, L. and Wheeler, G. (2024). Visualizing high-dimensional loss landscapes with Hessian directions. Journal of Statistical Mechanics: Theory and Experiment 2024, 023401.
-  Random projections see the average curvature and misrepresent saddles; Hessian directions do not.

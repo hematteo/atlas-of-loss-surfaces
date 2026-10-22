@@ -37,7 +37,7 @@ Where a filled bar matches its outline, that ensemble is sampling the Boltzmann 
 3. Watch the cold ensemble → it keeps its starting shares.
    At T/4 even the lowest barrier, the one out of B, is about 10 times the temperature.
    [[Crossing it|kramers]] takes millions of steps.
-4. Raise σ to 14 → the cold ensemble empties B within about 100,000 steps.
+4. Raise σ to 14 → within about 100,000 steps the cold ensemble drains B down to its equilibrium share, about 7%.
    The barrier out of B is then only 4 times the temperature.
    The crossing time is exponential in that ratio, so a modest rise in σ shortens it a lot.
 

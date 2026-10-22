@@ -34,7 +34,7 @@ On a log scale a constant factor per step is a straight line.
 1. Watch the figure at the default η = 0.1 → the simultaneous curve climbs along the rising dashed line.
    Each step multiplies the distance by `√(1 + η²a²)`.
    The gradient field points at right angles to the line from the equilibrium, so every step lands further out.
-2. Watch the sheet → the simultaneous particles leave it after about 650 steps, while the alternating particles circle.
+2. Watch the sheet → the simultaneous particles leave it after about 700 steps, while the alternating particles circle.
    From a start at 0.35, their distance from the equilibrium stays between 0.33 and 0.37.
    An alternating step preserves area, since its determinant is 1, so it can spiral neither in nor out.
 3. Compare extragradient and optimistic → they fall together along the lower dashed line.

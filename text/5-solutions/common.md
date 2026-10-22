@@ -77,7 +77,7 @@ Nichol et al. (2018) made the same kind of expansion for Reptile, a meta-learnin
 
 Chen et al. trained models from 130M to 3B parameters.
 At 3B the pretraining loss differed from AdamW’s by 0.004, while the out-of-distribution loss fell by 0.012.
-Accuracy on reasoning tasks such as GSM8k rose by up to 15.0%.
+Accuracy on reasoning tasks such as GSM8k rose by up to 15.0 percentage points.
 
 ## Method
 

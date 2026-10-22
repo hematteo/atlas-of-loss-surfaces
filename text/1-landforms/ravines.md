@@ -13,7 +13,9 @@ Gradient descent is [[stable|stab]] only if `η < 2/λ_max`, so it moves slowly 
 
 The condition number κ is the ratio of the largest curvature to the smallest.
 On a quadratic with tuned hyperparameters, momentum cuts the number of steps from order κ to order √κ (Polyak 1964; see <i>Momentum</i>).
-This plate measures that gain on a curved ravine.
+Along this ravine’s floor, though, the curvature is close to zero and in places negative, so κ means little here.
+This plate measures a simpler gain.
+Where the floor’s slope is steady, momentum’s steps build up along it, while across the valley they largely cancel.
 
 ## In practice
 
@@ -84,10 +86,8 @@ The curvature across this ravine varies threefold along it, so no single η give
 The tuning behind the √κ result can then fit only one stretch of this ravine at a time.
 In a network the steep directions also change during training (see <i>The edge of stability</i>).
 
-In many networks the Hessian’s spectrum is a bulk near zero, some of it negative, plus a few large outliers (see <i>Survey of a loss surface</i>).
-Papyan (2020) tied the outliers to the classes.
-A ravine in such a network has a handful of steep walls and millions of nearly flat directions along its floor.
-There κ says little, because it divides by the smallest curvature, which is near zero or negative.
+In a network a ravine has a handful of steep walls, the large outliers of the Hessian’s [[spectrum|spectrum]], and millions of nearly flat directions along its floor (see <i>Survey of a loss surface</i>).
+As on this sheet, κ then says little.
 What matters is how many steep directions there are and how far their curvatures spread.
 
 Gradient noise changes the comparison too.
@@ -106,9 +106,5 @@ Their speedups appear only with large batches.
   Writes Nesterov’s method as momentum, shows it acts with momentum β(1 − ηλ) on a quadratic, and trains deep networks with it.
 - Goh, G. (2017). Why momentum really works. Distill.
   An interactive analysis of momentum on quadratics.
-- Ghorbani, B., Krishnan, S. and Xiao, Y. (2019). An investigation into neural net optimization via Hessian eigenvalue density. ICML.
-  Tracks the full Hessian spectrum in training: large isolated eigenvalues appear quickly without batch normalization and the gradient concentrates in them.
 - Zhang, G., Li, L., Nado, Z., Martens, J., Sachdeva, S., Dahl, G., Shallue, C. and Grosse, R. (2019). Which algorithmic choices matter at which batch sizes? Insights from a noisy quadratic model. NeurIPS.
   Momentum and preconditioning pay off only at large batch sizes, where they raise the critical batch size.
-- Papyan, V. (2020). Traces of class/cross-class structure pervade deep learning spectra. JMLR 21(252).
-  The Hessian’s outlier eigenvalues are organized by the classes, above a bulk near zero.

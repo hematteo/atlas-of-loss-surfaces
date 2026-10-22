@@ -12,9 +12,10 @@
 4. Trajectories
    How training moves over time, not only where it ends.
    Learning can arrive in stages, the first steps depend on the learning-rate schedule, and the long phase at a constant learning rate sets up the drop when it decays.
+   Generalization can arrive long after the training loss has fallen, and a network trained on one task after another can lose the ability to learn the next.
 5. Solutions
    Training rarely has a single answer.
-   These plates ask how the minima it finds relate to one another: joined by low-loss paths, split by early randomness, copies of one another under symmetry, or not isolated points at all.
+   These plates ask how the minima it finds relate to one another: joined by low-loss paths, split by early randomness, copies of one another under symmetry, not isolated points at all, or equally low but different in what they carry over to other tasks.
 6. Proving grounds
    The standard test functions of optimization, each built to defeat a particular kind of method.
    Particles race from shared starts so the optimizers can be compared directly, and the last plate is a blank sheet to sculpt.
@@ -22,8 +23,8 @@
    Problems in which gradient descent has no minimum to settle in.
    Two players pull one sheet in opposite directions, a softmax policy needs infinite logits to reach its best action, and a separable classifier's weights grow without bound.
 8. After pretraining
-   What happens to a pretrained model when it is fine-tuned on preferences or with reinforcement learning.
-   Probabilities can move the wrong way, entropy can collapse, the policy can drift from its base, and safety training can be undone.
+   What happens to a pretrained model when it is fine-tuned on preferences, with reinforcement learning or through a low-rank adapter, and when fine-tuned models are combined.
+   Probabilities can move the wrong way, entropy can collapse, the policy can drift from its base, safety training can be undone, an adapter starts beside a saddle, and task vectors add up only sometimes.
 9. Beyond two dimensions
    Every plate before this one has two parameters, and real networks have millions.
    These plates compute in many dimensions and use the map only for a slice or a projection.

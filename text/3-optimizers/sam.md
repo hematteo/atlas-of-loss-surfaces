@@ -32,9 +32,11 @@ SAM particles that stall beside a pit never come to rest and are not counted.
 2. Look just downhill of each pit → SAM particles stall there until they are retired.
    Their ascent step points up the slope, so on average it lands on the pit’s floor, where ∇L = 0.
    The gradient at the particle itself is not zero, so this is a hallucinated minimizer (see the Background).
-3. Read ‘never at rest, SGD · SAM’ → in the first 80 seconds 216 SAM particles stalled, against 67 at rest in the basin.
+3. Read ‘never at rest, SGD · SAM’ → in time, the SAM particles that stall outnumber those that come to rest.
+   Over the first 10,800 steps on this seed (four minutes at the default speed), 518 SAM particles stalled, against 295 at rest in the basin, and no SGD particle stalled.
+   A particle counts as stalled only after 2,475 steps without a ring, so in the first minute rests still lead.
 4. Lower ρ to 0.02, below the pits’ width → SAM rings land in the pits too.
-   After 80 seconds on this seed, 76 are in pits and 100 in the basin, against SGD’s 121 and 95.
+   Over the same 10,800 steps on this seed, 355 SAM rings are in pits and 365 in the basin, against SGD’s 578 and 337.
 
 ## Background
 
@@ -79,11 +81,11 @@ A two-parameter surface with one noise source also cannot show m-sharpness.
 
 Yet in networks, Andriushchenko and Flammarion found that much of SAM’s gain depends on it.
 Each SAM step costs a second gradient.
-Its clearest gains at scale are in two settings (Bahri, Mobahi and Tay 2022):
+Its clearest gains at scale are in two settings:
 
 1. Vision transformers and MLP-Mixers trained without large-scale pretraining.
    There, Chen, Hsieh and Gong (2022) found that SAM raised ViT-B/16’s ImageNet top-1 accuracy by 5.3 points.
-2. Fine-tuning language models.
+2. Fine-tuning language models (Bahri, Mobahi and Tay 2022).
 
 ## References
 

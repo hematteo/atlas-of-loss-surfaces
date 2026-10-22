@@ -13,6 +13,8 @@ Take a quadratic with condition number [[κ|cond]], the ratio of its largest to 
 With the [[learning rate|lr]] η and β tuned to those two curvatures, the heavy ball needs of order √κ steps.
 [[Gradient descent|gd]] needs of order κ (Polyak 1964).
 On this plate we can see how much of that speed-up depends on choosing β well.
+Polyak’s tuned η for this crater, about 0.07, lies above the slider’s range, so the Try steps hold η at 0.01 and vary β.
+At that η, part of the heavy ball’s gain is simply its longer effective step, η/(1 − β).
 
 ## In practice
 

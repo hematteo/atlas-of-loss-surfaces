@@ -39,8 +39,10 @@ Below: λ for each basin (outline) and the particles’ estimate ⟨L − L*⟩/
 2. Read ‘λ from volumes’ → 1.00, 0.75, 0.50 and 0.52.
    The ends of the level valley add volume that grows as `ε^¾`, which lifts its slope over this range of ε.
    Nearer the floor that extra volume matters less, so with smaller ε the slope would approach ½.
-3. Read ‘λ̂ from particles’ → at the default [[temperature|temp]] T each lies within 0.05 of λ.
+3. Read ‘λ̂ from particles’ after about a minute → at the default [[temperature|temp]] T each lies within 0.05 of λ.
    The particles’ mean excess loss is λT here (see the Method).
+   The particles start at the bottom and spread out slowly over the flat floor, so that basin’s λ̂ starts low: about 0.25 after 400 steps and 0.39 after 1,100.
+   It comes within 0.05 of ½ only after several thousand steps.
 4. Raise T to 0.02 → each λ̂ stays within 0.07 of λ, and the regular well reads about 1.05.
    Its curvature falls slightly further from the minimum, and the finite step adds bias.
 

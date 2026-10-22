@@ -33,14 +33,15 @@ Below: for each well, sharpest first and labelled by ηλ, SGD particles that se
 
 1. Watch the fans in the [[Central well|@Central well]] → particles with c &lt; 1 converge, and those with c &gt; 1 keep moving.
    ‘Largest c that settled’ reads 0.97.
-2. Read the upper figure → above c = 1 the particles bounce between two points instead of diverging.
+2. Read the upper figure → from c = 1 up to `√e ≈ 1.65` the particles bounce between two points instead of diverging.
    They stay bounded because the Gaussian walls soften.
    The bounce has half-width `s√(2 ln c)`, where s = 0.14 is the width of the well.
    That gives 0.03 at c = 1.03 and 0.10 at c = 1.3.
    At this distance the softer wall makes one step land exactly on the mirror point.
+   Above that the two-point bounce is itself unstable, and the particles no longer settle into it.
 3. Raise η until a ring well’s ηλ passes 2 → [[SGD|sgd]] stops settling there.
    Its particles stay in the well but bounce across it instead of settling.
-4. Raise η further → wells with ηλ above about 7 throw particles out (red bars).
+4. Raise η further → wells with ηλ above about 6 throw particles out (red bars).
    The thrown particles come [[to rest|rest]] only in wells with ηλ &lt; 2.
    This is the step size selecting flat minima.
 

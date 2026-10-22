@@ -11,11 +11,11 @@ During warmup the [[learning rate|lr]] η rises from near zero to its peak over 
 Why this helps has several competing explanations.
 
 One is curvature (Gilmer et al. 2022; Kalra and Barkeshli 2024).
-On this account, warmup lets the iterate reach flatter regions before η peaks.
-There the [[sharpness|sharpness]] is low enough that `λ_max < 2/η`.
+On this account the [[sharpness|sharpness]] falls during warmup, keeping pace with 2/η as η rises.
+In their experiments it often falls through [[catapults|catapult]]: each time ηλ<sub>max</sub> passes 2, the loss rises briefly and the sharpness drops (see <i>Stability and catapults</i>).
 
-This sheet builds that account into the landscape, as a gorge whose curvature λ falls downstream.
-So we can see whether a ramp keeps ηλ below 2 until the curvature has fallen.
+This sheet builds a simpler version into the landscape, as a gorge whose curvature λ falls downstream.
+So we can see whether a ramp keeps ηλ below 2 until the curvature has fallen, and what happens when it does not.
 
 ## In practice
 
@@ -38,8 +38,9 @@ Above the dashed line, ηλ > 2 and the step is unstable across the gorge, so th
    Particles bounce between the walls, and the bouncing carries them downstream faster than the slope alone would.
    Up on a wall the loss is lower where the gorge is wider, so the gradient there also points downstream.
 3. Watch the 700-step ramp → ηλ peaks near 1.6, below the [[stability threshold|stab]], and the loss falls monotonically.
-   Even so, the run without warmup reaches the shared minimum first.
-   Perhaps the ramp’s small early steps move slowly downstream, while thrown particles land further down (see Limits).
+   Even so, the run without warmup reaches the shared minimum first, at about step 190 against 545.
+   A particle sliding down the floor at the ramp’s η would arrive at the same step, so only the ramp’s small early steps hold it back.
+   Without warmup, the throw gains only about 20 steps over such sliding.
 4. Raise η to 0.04 → the 100-step ramp is thrown too, and the 700-step ramp’s ηλ briefly passes 2.
    Doubling the peak doubles η at every step of the ramp.
 
@@ -95,9 +96,8 @@ A network differs on both counts.
 There a large enough step can make the loss diverge, so the sheet shows the instability that warmup avoids but not its cost.
 The lead of the run without warmup in Try 3 may not carry over either.
 
-A network also need not travel to flatter regions.
-A step that is too large can instead set off a short loss spike, after which the sharpness itself drops.
-Lewkowycz et al. (2020) called this the [[catapult|catapult]] (see <i>Stability and catapults</i>).
+A network also need not travel to flatter regions, since in a catapult the sharpness itself drops (Lewkowycz et al. 2020).
+The bouncing of the 100-step ramp (Try 2) is the nearest thing to a catapult here.
 
 With Adam the threshold applies to the [[preconditioned sharpness|psharp]], the curvature after Adam’s per-coordinate rescaling.
 Full-batch Adam raises it to 38/η at β₁ = 0.9 and holds it there (see <i>The edge of stability</i>).

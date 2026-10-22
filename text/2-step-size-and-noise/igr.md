@@ -34,11 +34,11 @@ A perfect prediction lies on the diagonal.
 1. Keep η = 0.42 and compare the readouts after each release → gradient descent ends closer to the modified flow’s prediction than to gradient flow’s.
    Its final `w² − a²` goes past that prediction, toward balance.
    So L̃ captures most of the bias, but not all of it.
-2. Compare starting points → from some starts, gradient descent changes `w² − a²` 3.6 to 3.8 times as much as L̃ predicts.
+2. Compare starting points → from some starts, gradient descent changes `w² − a²` 3.4 to 3.7 times as much as L̃ predicts.
    These are the starts where `η′λ_max` stays above 1, so gradient descent overshoots the floor on every step.
-   From the other starts the factor is 1.4 to 2.2.
+   From the other starts the factor is 1.2 to 2.1.
    The expansion behind L̃ assumes small steps, and a step that overshoots every time is not small.
-3. Lower η to 0.2 → the three readouts draw together, and the factor falls to 1.2–1.8.
+3. Lower η to 0.2 → the three readouts draw together, and the factor falls to between 0.9 and 1.7.
    L̃ is only the first term of an expansion in η.
    The terms it leaves out shrink faster with η than the term it keeps.
 4. Raise η to 0.55 → the gap between the black and green rings widens.

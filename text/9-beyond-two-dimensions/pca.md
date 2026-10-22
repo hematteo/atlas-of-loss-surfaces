@@ -64,7 +64,7 @@ Between 40% and 90% of the variation lay in two components, which they took as e
 Antognini and Sohl-Dickstein (2018) worked out what a random walk gives.
 When the dimension d is much larger than the number of steps T, the walk’s T × T Gram matrix becomes nearly circulant as T grows.
 So its eigenvectors are Fourier modes, and for large T the k-th explains `6/(π²k²)` of the variance.
-The first two components explain about 80% of it, and the first twelve about 95%.
+The first two components explain about 76% of it, and the first twelve about 95%.
 Projected onto any two components, the path is a [[Lissajous curve|lissajous]].
 
 They also studied a random walk in a quadratic bowl, the Ornstein–Uhlenbeck process, which is SGD with constant noise on a quadratic loss.
@@ -72,8 +72,9 @@ When the curvatures spread over many scales, PCA is dominated by the directions 
 Those directions have not relaxed within the recording, so they still look like a random walk.
 
 They then compared real training.
-In the middle of training, a linear model on CIFAR-10 and ResNet-50 on ImageNet gave projected paths almost identical to a random walk’s.
-The first component held more of the variance, as in a walk with a steady drift.
+In the middle of training, a linear model on CIFAR-10 and ResNet-50 on ImageNet gave projected paths much like a random walk’s.
+The linear model’s variance spectrum matched an Ornstein–Uhlenbeck process.
+In ResNet-50 the first component held more of the variance, as in a walk with a steady drift.
 At the start of training, the linear model’s path was more directed than a walk.
 
 ## Method

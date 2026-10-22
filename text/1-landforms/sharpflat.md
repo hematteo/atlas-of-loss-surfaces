@@ -39,7 +39,8 @@ The width of each well at its dashed line is one way to read its flatness.
    The question "how sharp is this minimum?" has no answer until we say which measure, in which coordinates.
 3. Reset α to 1, then raise η to about 7.5 times the 2/λ at the [[Sharp minimum|@Sharp minimum]] → many particles are thrown into the [[Flat Basin|@Flat Basin]].
    That η is near the top of the slider.
-   Most of SGD’s particles, and about half of gradient descent’s, come [[to rest|rest]] there.
+   Most of SGD’s particles, and about a third of gradient descent’s, come [[to rest|rest]] there.
+   Without noise, many of the others come to rest near the pass between the two wells, where the readouts do not count them.
    Between 1.3 and about 6.5 times, they keep bouncing in and around the narrow well.
    So the large [[learning rate|lr]] has selected the flat minimum, without any reference to generalization.
 
@@ -49,7 +50,7 @@ Three measures of sharpness are in common use, and they do not always agree:
 
 1. [[λ<sub>max</sub>|sharpness]] is the largest eigenvalue of the Hessian: the curvature in the steepest direction.
 2. [[ε-sharpness|epssharp]] is the largest rise in loss within a small neighbourhood.
-   Keskar et al. used it, and sharpness-aware minimization (Foret et al. 2021) minimizes the worst loss within such a neighbourhood.
+   Keskar et al. used it, and sharpness-aware minimization (Foret et al. 2021; see <i>Sharpness-aware minimization</i>) minimizes the worst loss within such a neighbourhood.
 3. The [[sublevel set|sublevel]] `{θ : L(θ) < L* + δ}` contains all the weights whose loss is within δ of the minimum.
    Its volume is closest to Hochreiter and Schmidhuber’s definition.
 
@@ -144,5 +145,5 @@ Flat minima and good generalization often appear together, but the learning rate
   With the learning rate and other metaparameters retuned for each batch size, no consistent large-batch generalization penalty.
 - Wen, K., Li, Z. and Ma, T. (2023). Sharpness minimization algorithms do not only minimize sharpness to achieve better generalization. NeurIPS.
   Two-layer ReLU networks in which the flattest minima generalize poorly, yet sharpness minimization still helps.
-- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
+- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. NeurIPS.
   Flat minima of two-layer ReLU networks generalize at a rate that worsens exponentially with input dimension.

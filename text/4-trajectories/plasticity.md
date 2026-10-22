@@ -49,7 +49,7 @@ The last finished run is drawn faintly behind the current one.
    On the worst task it ends 50 to 75 times higher.
    Weight decay and shrink and perturb track the fresh networks, with a median ratio of about 1.
    With its gradient almost gone, SGD cannot get back to a new minimum in the 400 steps a task lasts (see <i>Plateaus</i>).
-   Weight decay pays most on the tasks out of reach, ending two to three times higher, because it holds θ in.
+   Weight decay pays most on the tasks out of reach, ending 1.6 to 3.3 times higher than the fresh networks, because it holds θ in.
 4. Set λ to 0 → the weight-decay particles follow SGD across the circle on task 5 and stay out.
    Over the last six tasks both average a final loss of about 0.2, against 0.03 for the fresh networks.
    Weight decay’s pull, λ‖θ‖, grows with distance where the loss’s pull fades, so it was what brought them back.
@@ -113,7 +113,8 @@ Here α = 0.5, and ε has standard deviation 0.02 per coordinate.
 
 Each run starts 14 particles of each optimizer from the same 14 points near the origin, with standard deviation 0.05; phones use 7.
 A task’s final loss is the task loss averaged over its last 40 steps and over the optimizer’s particles.
-The reference trains 16 networks from scratch on each task, off the map, with the same steps and noise.
+The reference trains 16 networks from scratch on each task, off the map, with the same steps and noise and without weight decay.
+So on the tasks out of reach, part of weight decay’s gap to the reference is the cost of the decay itself rather than lost plasticity.
 The readouts give the mean ‖θ‖, the mean gradient norm at the start of the task (after the shrink) and the last final losses.
 Changing a control restarts the run, and a click starts one from the clicked point.
 A steep wall just inside the edge keeps particles on the map.

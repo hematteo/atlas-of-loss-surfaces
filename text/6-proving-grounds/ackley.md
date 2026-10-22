@@ -23,7 +23,8 @@ This works because averaging over a ripple’s period cancels the ripple.
 
 ## Try
 
-1. Watch the five fixed races → [[gradient descent|gd]] and [[Adam|adam]] always stop in the dimple nearest their start.
+1. Watch the five fixed races → [[gradient descent|gd]] and [[Adam|adam]] stop in a dimple next to their start and never reach the funnel.
+   Starts that lie on a ripple’s crest, as in races two, three and five, can send them to a dimple other than the nearest one.
 2. Follow the [[heavy ball|hb]] in races two to four, which start 1.6 to 2.3 from the origin → most of its particles reach the funnel.
    Momentum averages recent gradients.
    The ripples’ pushes change sign from one ripple to the next and partly cancel, while the funnel’s pull adds up.
@@ -54,7 +55,7 @@ Momentum also averages, but over time rather than space, and on this sheet that 
 ## Method
 
 The window is a close-up of the centre, u ∈ [−3.2, 3.2], v ∈ [−2, 2], with A = 2.2, H = 10 and η = 0.012.
-The sheet has 23 minima, 58 saddles and 24 maxima.
+The sheet has 35 minima, 58 saddles and 24 maxima, and 12 of the minima lie on its top and bottom edges, where they are not marked.
 
 The funnel’s tip is a cone, which has no well-defined curvature at its point.
 Its slope does not shrink near the minimum, so gradient descent could never settle there.

@@ -34,8 +34,9 @@ The dashed line is ηc, the longest step clipped SGD can take.
    That is about a hundred times the gradient on the terrace.
 2. Read ‘clipped, longest’ → it equals ηc = 0.0048 exactly.
    No clipped step can exceed ηc, so clipped SGD descends the face in a few steps.
-3. Watch Adam → its longest step is about 3η, near its bound `η(1 − β₁)/√(1 − β₂)` ≈ 3.2η.
-   The bound holds because Adam divides by a running magnitude of the gradient.
+3. Watch Adam → its longest step is about 3η.
+   That is close to `η(1 − β₁)/√(1 − β₂)` ≈ 3.2η, the step Adam takes when one large gradient follows a calm stretch.
+   That step does not depend on the size of the gradient, because Adam divides by a running magnitude of it.
    After a calm stretch, a sudden gradient g enters Adam’s running averages as (1 − β₁)g and (1 − β₂)g².
    Dividing the first by the root of the second cancels the size of g.
 4. Raise η to 0.02 → SGD’s throws reach about 1.3, and some SGD particles leave the sheet.
@@ -55,7 +56,9 @@ They proved that clipped gradient descent can then converge arbitrarily faster t
 A fixed step must be small enough for the steepest point the run might reach.
 A clipped step shrinks only where the gradient is large.
 
-Unlike clipping, Adam adapts its step over many iterations rather than at once (Kingma and Ba 2015).
+Adam also limits the step at once, like clipping (Kingma and Ba 2015).
+But its limit is for a single spike, and a gradient that stays large for several steps can carry its step to about 6.6η.
+Adam also remembers a spike for about `1/(1 − β₂)` steps, so its steps stay short for a while afterwards.
 
 ## Method
 
@@ -107,7 +110,7 @@ Because Adam already bounds each coordinate’s step, global clipping matters mo
 - Zhang, J., He, T., Sra, S. and Jadbabaie, A. (2020). Why gradient clipping accelerates training: a theoretical justification for adaptivity. ICLR.
   Relaxed smoothness, observed in LSTM training, under which clipped gradient descent converges faster than any fixed step.
 - Kingma, D. P. and Ba, J. (2015). Adam: a method for stochastic optimization. ICLR.
-  Bounds Adam’s step by about η(1 − β₁)/√(1 − β₂) per coordinate.
+  Gives η(1 − β₁)/√(1 − β₂) as Adam’s step per coordinate when one large gradient follows a long run of small ones.
 - Chowdhery, A. et al. (2023). PaLM: scaling language modeling with pathways. JMLR 24(240).
   Loss spikes in the largest model despite gradient clipping, handled by restarting from an earlier checkpoint and skipping batches.
 - Molybog, I. et al. (2023). A theory on Adam instability in large-scale machine learning. arXiv:2304.09871.

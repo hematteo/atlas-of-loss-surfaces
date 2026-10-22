@@ -98,7 +98,7 @@ Zhao et al. (2025) found that Adam, Lion and signed momentum train language mode
 In their comparison, what matters most is adaptivity on the last layer and the normalization parameters.
 
 In large networks, Shampoo (Gupta, Koren and Singer 2018) and SOAP (Vyas et al. 2025) precondition each weight matrix from both sides.
-Muon replaces each matrix’s momentum by the nearest orthogonal matrix.
+Muon replaces each matrix’s momentum by the nearest orthogonal matrix (Jordan et al. 2024).
 This is a steepest-descent step in the spectral norm (Bernstein and Newhouse 2024).
 Liu et al. (2025) trained large language models with Muon on about half of AdamW’s compute.
 
@@ -132,6 +132,8 @@ At scale the axes may still matter, but with parameter blocks and matrices as th
   Convergence under ℓ∞ smoothness; after a random rotation of the loss, Adam can lose to rotation-invariant SGD variants.
 - Gupta, V., Koren, T. and Singer, Y. (2018). Shampoo: preconditioned stochastic tensor optimization. ICML.
   Preconditions each weight matrix with one matrix per side, instead of per coordinate.
+- Jordan, K., Jin, Y., Boza, V., You, J., Cesista, F., Newhouse, L. and Bernstein, J. (2024). Muon: an optimizer for hidden layers in neural networks. Blog post.
+  Introduces Muon, which orthogonalizes each weight matrix’s momentum with a Newton–Schulz iteration.
 - Bernstein, J. and Newhouse, L. (2024). Old optimizer, new norm: an anthology. arXiv:2409.20325.
   Adam, Shampoo and their relatives as steepest descent in different norms; orthogonalized updates as steepest descent in the spectral norm.
 - Kunstner, F., Milligan, A., Yadav, R., Schmidt, M. and Bietti, A. (2024). Heavy-tailed class imbalance and why Adam outperforms gradient descent on language models. NeurIPS.

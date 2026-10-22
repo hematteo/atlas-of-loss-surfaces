@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 345 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 346 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -26,7 +26,6 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Ghorbani, B., Krishnan, S. and Xiao, Y. (2019). An investigation into neural net optimization via Hessian eigenvalue density. ICML. *Large outlier eigenvalues, and their suppression by batch normalization.*
 - Imhof, E. (1965). Kartographische Geländedarstellung. De Gruyter. English edition: Cartographic Relief Presentation (1982). *The relief-shading conventions used for every sheet.*
 - Lucas, J., Bae, J., Zhang, M. R., Fort, S., Zemel, R. and Grosse, R. (2021). On monotonic linear interpolation of neural network parameters. ICML. *The monotonic fall along the line from initialization is common but fails when the weights travel far.*
-- Böttcher, L. and Wheeler, G. (2024). Visualizing high-dimensional loss landscapes with Hessian directions. Journal of Statistical Mechanics: Theory and Experiment 2024, 023401. *Random projections see the average curvature and misrepresent saddles; Hessian directions do not.*
 
 **2. [Basins of attraction](https://matteohe.com/atlas-of-loss-surfaces/?plate=catchments)**
 
@@ -65,9 +64,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Nesterov, Y. (1983). A method for solving the convex programming problem with convergence rate O(1/k²). Soviet Mathematics Doklady 27. *Introduces the accelerated gradient method.*
 - Sutskever, I., Martens, J., Dahl, G. and Hinton, G. (2013). On the importance of initialization and momentum in deep learning. ICML. *Writes Nesterov’s method as momentum, shows it acts with momentum β(1 − ηλ) on a quadratic, and trains deep networks with it.*
 - Goh, G. (2017). Why momentum really works. Distill. *An interactive analysis of momentum on quadratics.*
-- Ghorbani, B., Krishnan, S. and Xiao, Y. (2019). An investigation into neural net optimization via Hessian eigenvalue density. ICML. *Tracks the full Hessian spectrum in training: large isolated eigenvalues appear quickly without batch normalization and the gradient concentrates in them.*
 - Zhang, G., Li, L., Nado, Z., Martens, J., Sachdeva, S., Dahl, G., Shallue, C. and Grosse, R. (2019). Which algorithmic choices matter at which batch sizes? Insights from a noisy quadratic model. NeurIPS. *Momentum and preconditioning pay off only at large batch sizes, where they raise the critical batch size.*
-- Papyan, V. (2020). Traces of class/cross-class structure pervade deep learning spectra. JMLR 21(252). *The Hessian’s outlier eigenvalues are organized by the classes, above a bulk near zero.*
 
 **6. [Cliffs and exploding gradients](https://matteohe.com/atlas-of-loss-surfaces/?plate=cliffs)**
 
@@ -77,7 +74,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Pascanu, R., Mikolov, T. and Bengio, Y. (2013). On the difficulty of training recurrent neural networks. ICML. *Conditions for exploding and vanishing gradients, steep walls in the loss surface, and gradient-norm clipping.*
 - Goodfellow, I., Bengio, Y. and Courville, A. (2016). Deep Learning, sections 8.2.4 and 10.11.1. MIT Press. *Textbook treatment of cliffs, exploding gradients and clipping.*
 - Zhang, J., He, T., Sra, S. and Jadbabaie, A. (2020). Why gradient clipping accelerates training: a theoretical justification for adaptivity. ICLR. *Relaxed smoothness, observed in LSTM training, under which clipped gradient descent converges faster than any fixed step.*
-- Kingma, D. P. and Ba, J. (2015). Adam: a method for stochastic optimization. ICLR. *Bounds Adam’s step by about η(1 − β₁)/√(1 − β₂) per coordinate.*
+- Kingma, D. P. and Ba, J. (2015). Adam: a method for stochastic optimization. ICLR. *Gives η(1 − β₁)/√(1 − β₂) as Adam’s step per coordinate when one large gradient follows a long run of small ones.*
 - Chowdhery, A. et al. (2023). PaLM: scaling language modeling with pathways. JMLR 24(240). *Loss spikes in the largest model despite gradient clipping, handled by restarting from an earlier checkpoint and skipping batches.*
 - Molybog, I. et al. (2023). A theory on Adam instability in large-scale machine learning. arXiv:2304.09871. *Explains loss spikes in large language-model training by Adam updates that grow large and lose their correlation with the descent direction.*
 
@@ -94,7 +91,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Hoffer, E., Hubara, I. and Soudry, D. (2017). Train longer, generalize better: closing the generalization gap in large batch training of neural networks. NeurIPS. *The large-batch gap comes mainly from too few updates, and closes when training is lengthened and retuned.*
 - Shallue, C. J., Lee, J., Antognini, J., Sohl-Dickstein, J., Frostig, R. and Dahl, G. E. (2019). Measuring the effects of data parallelism on neural network training. Journal of Machine Learning Research 20(112). *With the learning rate and other metaparameters retuned for each batch size, no consistent large-batch generalization penalty.*
 - Wen, K., Li, Z. and Ma, T. (2023). Sharpness minimization algorithms do not only minimize sharpness to achieve better generalization. NeurIPS. *Two-layer ReLU networks in which the flattest minima generalize poorly, yet sharpness minimization still helps.*
-- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779. *Flat minima of two-layer ReLU networks generalize at a rate that worsens exponentially with input dimension.*
+- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. NeurIPS. *Flat minima of two-layer ReLU networks generalize at a rate that worsens exponentially with input dimension.*
 
 ### II · Step size and noise
 
@@ -217,6 +214,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Zhang, Y., Chen, C., Ding, T., Li, Z., Sun, R. and Luo, Z.-Q. (2024). Why transformers need Adam: a Hessian perspective. NeurIPS. *Relates the SGD–Adam gap to Hessian spectra that differ between parameter blocks.*
 - Xie, S., Mohamadi, M. A. and Li, Z. (2025). Adam exploits ℓ∞-geometry of loss landscape via coordinate-wise adaptivity. ICLR. *Convergence under ℓ∞ smoothness; after a random rotation of the loss, Adam can lose to rotation-invariant SGD variants.*
 - Gupta, V., Koren, T. and Singer, Y. (2018). Shampoo: preconditioned stochastic tensor optimization. ICML. *Preconditions each weight matrix with one matrix per side, instead of per coordinate.*
+- Jordan, K., Jin, Y., Boza, V., You, J., Cesista, F., Newhouse, L. and Bernstein, J. (2024). Muon: an optimizer for hidden layers in neural networks. Blog post. *Introduces Muon, which orthogonalizes each weight matrix’s momentum with a Newton–Schulz iteration.*
 - Bernstein, J. and Newhouse, L. (2024). Old optimizer, new norm: an anthology. arXiv:2409.20325. *Adam, Shampoo and their relatives as steepest descent in different norms; orthogonalized updates as steepest descent in the spectral norm.*
 - Kunstner, F., Milligan, A., Yadav, R., Schmidt, M. and Bietti, A. (2024). Heavy-tailed class imbalance and why Adam outperforms gradient descent on language models. NeurIPS. *Gradient descent is slow on rare classes, which dominate language data; Adam and sign descent are not.*
 - Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982. *Muon, with weight decay and per-matrix step scaling, trains large language models about twice as compute-efficiently as AdamW.*
@@ -306,7 +304,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Loshchilov, I. and Hutter, F. (2017). SGDR: stochastic gradient descent with warm restarts. ICLR. *The cosine schedule.*
 - Hu, S. et al. (2024). MiniCPM: unveiling the potential of small language models with scalable training strategies. arXiv:2404.06395. *Introduces the warmup–stable–decay schedule.*
 - Hägele, A., Bakouch, E., Kosson, A., Ben Allal, L., Von Werra, L. and Jaggi, M. (2024). Scaling laws and compute-optimal training beyond fixed training durations. NeurIPS. *A constant rate with a short cooldown matches cosine.*
-- Wen, K., Li, Z., Wang, J., Hall, D., Liang, P. and Ma, T. (2025). Understanding warmup-stable-decay learning rates: a river valley loss landscape view. ICLR. *The river-valley explanation of warmup–stable–decay.*
+- Wen, K., Li, Z., Wang, J., Hall, D., Liang, P. and Ma, T. (2025). Understanding warmup-stable-decay learning rates: a river valley loss landscape perspective. ICLR. *The river-valley explanation of warmup–stable–decay.*
 - Schaipp, F., Hägele, A., Taylor, A., Şimşekli, U. and Bach, F. (2025). The surprising agreement between convex optimization theory and learning-rate scheduling for large model training. ICML. *A convex-optimization bound predicts the benefit of the cooldown.*
 - Defazio, A., Yang, X., Mehta, H., Mishchenko, K., Khaled, A. and Cutkosky, A. (2024). The road less scheduled. NeurIPS. *Schedule-free SGD and AdamW.*
 - Song, M., Baek, B., Ahn, K. and Yun, C. (2025). Through the river: understanding the benefit of schedule-free methods for language model training. NeurIPS. *Schedule-free AdamW follows the river without decay or extra averaging.*
@@ -483,10 +481,10 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Rafailov, R., Sharma, A., Mitchell, E., Manning, C. D., Ermon, S. and Finn, C. (2023). Direct preference optimization: your language model is secretly a reward model. NeurIPS. *Introduces DPO.*
 - Azar, M. G., Guo, Z. D., Piot, B., Munos, R., Rowland, M., Valko, M. and Calandriello, D. (2024). A general theoretical paradigm to understand learning from human preferences. AISTATS. *Introduces IPO, a squared loss with a finite target margin.*
 - Pang, R. Y., Yuan, W., Cho, K., He, H., Sukhbaatar, S. and Weston, J. (2024). Iterative reasoning preference optimization. NeurIPS. *Adds the chosen answer’s negative log-likelihood to the DPO loss.*
+- Pal, A., Karkhanis, D., Dooley, S., Roberts, M., Naidu, S. and White, C. (2024). Smaug: fixing failure modes of preference optimisation with DPO-Positive. arXiv:2402.13228. *First showed that DPO can lower the likelihood of the preferred answers, and added a term that keeps it from falling.*
 - Razin, N., Malladi, S., Bhaskar, A., Chen, D., Arora, S. and Hanin, B. (2025). Unintentional unalignment: likelihood displacement in direct preference optimization. ICLR. *The No/Never/Yes example, the single-token theory and its extension to whole responses, and CHES-based filtering.*
 - Ren, Y. and Sutherland, D. J. (2025). Learning dynamics of LLM finetuning. ICLR. *The squeezing effect of negative gradients on unlikely responses.*
 - Luo, H., Deng, Z., Do, T.-T., Harandi, M., Phung, D. and Le, T. (2026). Sharpness-aware minimization in logit space efficiently enhances direct preference optimization. ICLR. *Relates squeezing to logit-space curvature and applies SAM to the output layer.*
-- Aghajanyan, A., Gupta, S. and Zettlemoyer, L. (2021). Intrinsic dimensionality explains the effectiveness of language model fine-tuning. ACL. *About 200 parameters, randomly projected into RoBERTa, reach 90% of full fine-tuning on MRPC.*
 
 **42. [Entropy collapse](https://matteohe.com/atlas-of-loss-surfaces/?plate=entropy)**
 
@@ -603,7 +601,6 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Ackley, D. H. (1987). A Connectionist Machine for Genetic Hillclimbing. Kluwer.
 - Advani, M. S., Saxe, A. M. and Sompolinsky, H. (2020). High-dimensional dynamics of generalization error in neural networks. Neural Networks 132.
 - Agarwal, A., Kakade, S. M., Lee, J. D. and Mahajan, G. (2021). On the theory of policy gradient methods: optimality, approximation, and distribution shift. JMLR 22.
-- Aghajanyan, A., Gupta, S. and Zettlemoyer, L. (2021). Intrinsic dimensionality explains the effectiveness of language model fine-tuning. ACL.
 - Ainsworth, S. K., Hayase, J. and Srinivasa, S. (2023). Git Re-Basin: merging models modulo permutation symmetries. ICLR.
 - Andreyev, A. and Beneventano, P. (2024). Edge of stochastic stability: revisiting the edge of stability for SGD. arXiv:2412.20553.
 - Andreyev, A., Ananthkumar, A., Walden, M., Poggio, T. and Beneventano, P. (2026). Momentum further constrains sharpness at the edge of stochastic stability. arXiv:2604.14108.
@@ -740,6 +737,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Ji, Z. and Telgarsky, M. (2020). Directional convergence and alignment in deep learning. NeurIPS.
 - Jiang, Y., Neyshabur, B., Mobahi, H., Krishnan, D. and Bengio, S. (2020). Fantastic generalization measures and where to find them. ICLR.
 - Jin, C., Ge, R., Netrapalli, P., Kakade, S. M. and Jordan, M. I. (2017). How to escape saddle points efficiently. ICML.
+- Jordan, K., Jin, Y., Boza, V., You, J., Cesista, F., Newhouse, L. and Bernstein, J. (2024). Muon: an optimizer for hidden layers in neural networks. Blog post.
 - Jordan, K., Sedghi, H., Saukh, O., Entezari, R. and Neyshabur, B. (2023). REPAIR: REnormalizing permuted activations for interpolation repair. ICLR.
 - Juneja, J., Bansal, R., Cho, K., Sedoc, J. and Saphra, N. (2023). Linear connectivity reveals generalization strategies. ICLR.
 - Kaddour, J. (2022). Stop wasting my time! Saving days of ImageNet and BERT training with latest weight averaging. NeurIPS Workshop: Has It Trained Yet? (HITY).
@@ -780,7 +778,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Li, Z., Lyu, K. and Arora, S. (2020). Reconciling modern deep learning with traditional optimization analyses: the intrinsic learning rate. NeurIPS.
 - Li, Z., Malladi, S. and Arora, S. (2021). On the validity of modeling SGD with stochastic differential equations (SDEs). NeurIPS.
 - Li, Z., Wang, T. and Arora, S. (2022). What happens after SGD reaches zero loss? A mathematical framework. ICLR.
-- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. arXiv:2506.20779.
+- Liang, T., Qiao, D., Wang, Y.-X. and Parhi, R. (2025). Stable minima of ReLU neural networks suffer from the curse of dimensionality: the neural shattering phenomenon. NeurIPS.
 - Liao, F., Kolomvaki, A. and Kyrillidis, A. (2026). SGD at the edge of stability: the stochastic sharpness gap. arXiv:2604.21016.
 - Lingle, L. (2024). An empirical study of μP learning rate transfer. arXiv:2404.05728.
 - Litman, E. (2026). The origin of edge of stability. arXiv:2604.20446.
@@ -839,6 +837,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Noci, L., Meterez, A., Hofmann, T. and Orvieto, A. (2024). Super consistency of neural network landscapes and learning rate transfer. NeurIPS.
 - Ortiz-Jimenez, G., Favero, A. and Frossard, P. (2023). Task arithmetic in the tangent space: improved editing of pre-trained models. NeurIPS.
 - Pagliardini, M., Ablin, P. and Grangier, D. (2025). The AdEMAMix optimizer: better, faster, older. ICLR.
+- Pal, A., Karkhanis, D., Dooley, S., Roberts, M., Naidu, S. and White, C. (2024). Smaug: fixing failure modes of preference optimisation with DPO-Positive. arXiv:2402.13228.
 - Pang, R. Y., Yuan, W., Cho, K., He, H., Sukhbaatar, S. and Weston, J. (2024). Iterative reasoning preference optimization. NeurIPS.
 - Panigrahi, A., Somani, R., Goyal, N. and Netrapalli, P. (2019). Non-Gaussianity of stochastic gradient noise. arXiv:1910.09626.
 - Papyan, V. (2020). Traces of class/cross-class structure pervade deep learning spectra. JMLR 21(252).
@@ -907,7 +906,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Wei, S., Murfet, D., Gong, M., Li, H., Gell-Redman, J. and Quella, T. (2023). Deep learning is singular, and that’s good. IEEE Transactions on Neural Networks and Learning Systems 34(12).
 - Welling, M. and Teh, Y. W. (2011). Bayesian learning via stochastic gradient Langevin dynamics. ICML.
 - Wen, K., Li, Z. and Ma, T. (2023). Sharpness minimization algorithms do not only minimize sharpness to achieve better generalization. NeurIPS.
-- Wen, K., Li, Z., Wang, J., Hall, D., Liang, P. and Ma, T. (2025). Understanding warmup-stable-decay learning rates: a river valley loss landscape view. ICLR.
+- Wen, K., Li, Z., Wang, J., Hall, D., Liang, P. and Ma, T. (2025). Understanding warmup-stable-decay learning rates: a river valley loss landscape perspective. ICLR.
 - Wen, K., Ma, T. and Li, Z. (2023). How does sharpness-aware minimization minimize sharpness? ICLR.
 - Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. Machine Learning 8.
 - Woodworth, B., Gunasekar, S., Lee, J. D., Moroshko, E., Savarese, P., Golan, I., Soudry, D. and Srebro, N. (2020). Kernel and rich regimes in overparametrized models. COLT.

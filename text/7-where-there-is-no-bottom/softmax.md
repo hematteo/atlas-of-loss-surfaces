@@ -32,7 +32,7 @@ The step axis is logarithmic, so equal rises are equal factors of time.
 
 ## Try
 
-1. Watch the figure → from depths 1 to 4 on the [[terrace of arm 2|@Terrace of arm 2 r = 0.8]], policy gradient escapes in about 40, 120, 530 and 1,400 steps.
+1. Watch the figure → from depths 1 to 4 on the [[terrace of arm 2|@Terrace of arm 2 r = 0.8]], policy gradient escapes in about 45, 125, 550 and 1,500 steps.
    Depth is the logit gap θ₂ − θ₁, so each unit of depth divides π₁/π₂ by e.
 2. Wait for depths 5 and 6 → policy gradient ends the race still trapped.
    Its push towards arm 1 is proportional to π₁.
@@ -54,7 +54,7 @@ Mei et al. (2020a) matched their O(1/t) rate for the suboptimality `J* − J` wi
 The probability that sets its constant can be exponentially small when the start favours another action.
 
 Write p<sub>min</sub> for the smallest π₁ on policy gradient’s path.
-On this sheet, for depths 2 to 4, its escape time is close to `5/(η p_min)`.
+On this sheet, for depths 2 to 4, its escape time is 10 to 20% above `5/(η p_min)`.
 
 Mei et al. (2020b) proved that this sensitivity to initialization holds for any expectation optimized through a softmax.
 In Markov decision processes, Li et al. (2021) constructed examples where softmax policy gradient needs exponentially many iterations in the number of states and the effective horizon.

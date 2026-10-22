@@ -42,7 +42,7 @@ Below: L<sub>A</sub> (red) and L<sub>B</sub> (blue) along `θ₀ + α(τ_A + τ_
 2. Set σ to 0 → both cohorts stop in narrow pockets part-way down, at a loss of 0.11, and the merge’s losses are 0.13.
    Plain gradient descent cannot leave a local minimum, so both task vectors fall short of their valleys.
    Most of the merge’s loss is the fine-tuned models’ own: merging adds only 0.02.
-3. Set σ to 2.5 → the fine-tuned models still reach their valleys, at about 0.02, but the merge’s losses rise to about 0.1.
+3. Set σ to 2.5 → the fine-tuned models still reach their valleys, at about 0.03, but the merge’s losses rise to about 0.1.
    The noise moves each model along its own valley, which costs its own task nothing.
    That is the direction in which the other task’s loss is steep, so the merge pays for it.
    In the upper figure, task arithmetic does best near σ = 0.8, at about 0.02, and reaches about 0.13 at both σ = 0 and σ = 3.
@@ -122,6 +122,7 @@ The noise is also isotropic here, while SGD’s noise concentrates in directions
 
 The pockets were placed by hand, to give gradient descent somewhere to stop.
 At low noise the merge does badly mainly because the fine-tuned models do.
+The cost of merging itself, the merge’s loss minus the fine-tuned models’, is about 0.02 at σ = 0, 0.005 at σ = 0.6, 0.03 at σ = 1 and 0.09 at σ = 3.
 So the plate reproduces the shape of Zhang et al.’s curve, not its cause.
 
 That cause is not settled, and Zhang et al. give no theory for it.

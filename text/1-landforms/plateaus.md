@@ -86,7 +86,7 @@ The time to leave then depends on how far the symmetry is broken, as on <i>Saddl
 Small initializations in deeper models give a sequence of plateaus, one at each saddle the run passes (see <i>Saddle to saddle</i>).
 
 In d dimensions a random initialization is nearly orthogonal to what must be learned.
-Its overlap with the target is of order `1/√d`, so in high dimensions training generally starts on a plateau.
+Its overlap with the target is of order `1/√d`, so in models whose loss depends on that overlap, training in high dimensions starts on a plateau.
 Ben Arous, Gheissari and Jagannath (2021) showed that in simple high-dimensional models, online SGD spends almost all of its samples in this initial search.
 The search grows longer as d grows.
 

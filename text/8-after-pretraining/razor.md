@@ -30,9 +30,10 @@ So the lower a curve, the less its optimizer has moved to reach a given error.
 
 1. Watch the first race until the error falls below 10% → [[natural policy gradient|npg]] and the oracle lie lowest, at a KL of about 0.75.
    The oracle is the curve labelled ‘SFT on π₀ given success’.
-2. Compare the others → plain policy gradient lies a little higher, at about 0.9, and SFT on the teacher far higher, at about 1.7.
-   Its teacher always gives the less likely right answer, so SFT must move far from the base model.
-3. Watch the readouts → by the end of the race, policy gradient’s A:B ratio has grown about ×240, while natural policy gradient’s stays at ×1.00.
+2. Compare the others → plain policy gradient lies just above them, at about 0.78, and SFT on the teacher far higher, at about 1.26.
+   Policy gradient’s gap widens as the error falls: at 1% error its KL is 2.21, against 2.09 for natural policy gradient.
+   SFT’s teacher always gives the less likely right answer, so SFT must move far from the base model.
+3. Watch the readouts → by the end of the race, policy gradient’s A:B ratio has grown about ×15, while natural policy gradient’s stays at ×1.00.
    A:B is the ratio between the two right answers.
    The [[policy gradient|pg]] of a right answer’s logit is proportional to its probability, so the likelier one gains faster.
    Natural policy gradient raises both logits equally.
@@ -70,7 +71,8 @@ Races cycle through four base models, starting with π₀ = (0.3, 0.1, 0.6).
 The dashed purple lines are `KL(π₀ ‖ π)`, the forgetting predictor.
 The [[π₀ given success|@π₀ given success]] mark is labelled with `KL(π ‖ π₀) = −log π₀(right)`.
 
-Updates use η = 0.05 and exact gradients, and all of them move θ₁ and θ₂ only.
+Updates use η = 0.05 and exact gradients.
+As in <i>The pull of softmax</i>, each gradient is taken in all three logits, which are then shifted so that θ₃ stays 0.
 Each optimizer has its own update:
 
 1. Policy gradient follows `∇J`.
@@ -96,7 +98,8 @@ They traced the difference to on-policy data, sampled from the model being train
 In their runs REINFORCE, which has no advantage estimate, forgot about as little as GRPO.
 SFT on data that the model regenerates at the start of each epoch forgot little or nothing.
 They attribute the effect to the mode-seeking behaviour that on-policy data gives RL.
-That behaviour is a tendency to concentrate on answers the model already favours.
+In their mixture model, RL minimizes a reverse KL, which can move one mode of the policy onto the new task and leave the old mode intact.
+SFT minimizes a forward KL, which covers the new task by pulling probability away from the old mode.
 
 ## References
 

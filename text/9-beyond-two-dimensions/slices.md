@@ -9,9 +9,10 @@ A saddle in 4,000 dimensions, cut by three planes, and particles that descend in
 Pictures of a network’s loss surface are [[slices|slice]]: the loss on a line or a plane through parameter space.
 A plane is spanned by two chosen directions, and the slice says nothing about the other directions.
 
-Along a random direction, the curvature is a weighted average of the [[Hessian|hessian]]’s eigenvalues, close to their mean `tr(H)/d` (Li et al. 2018).
+Along a random direction, the curvature is a weighted average of the [[Hessian|hessian]]’s eigenvalues (Li et al. 2018).
+In many dimensions the weights are nearly equal, so it is close to their mean `tr(H)/d`.
 When most eigenvalues are small and positive, that mean is positive.
-So a random slice through a [[saddle|saddle]] with a few directions of negative curvature looks like a bowl (Böttcher and Wheeler 2024).
+So a random slice through a [[saddle|saddle]] with a few directions of negative curvature looks like a bowl (Böttcher and Wheeler 2024; see also <i>Survey of a loss surface</i>).
 
 A slice is often the only picture we have of a loss surface, so this matters.
 Its lowest point can look like a minimum while the loss keeps falling along directions the plane leaves out.
@@ -58,7 +59,7 @@ The converse fails: a slice that curves up everywhere only says that the positiv
 For a random unit vector u, the curvature along u is `uᵀHu = Σᵢ λᵢuᵢ²`.
 Each weight `uᵢ²` is about 1/d, so the curvature is close to the mean eigenvalue, `tr(H)/d`.
 Its spread shrinks like 1/√d, so in millions of dimensions every random slice sees almost exactly the mean.
-Böttcher and Wheeler (2024) found that random projections rarely show saddles as saddles, and proposed slicing along the Hessian’s dominant eigenvectors instead.
+Böttcher and Wheeler (2024) found that random projections rarely show saddles as saddles, and proposed slicing along the Hessian’s dominant eigenvectors instead, those with the most positive and the most negative eigenvalues.
 
 The Hessians of trained networks have spectra like this plate’s.
 There is a bulk of eigenvalues near zero and a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019).
@@ -123,7 +124,6 @@ So a random slice can hide a saddle, but it does not follow that every bowl in a
 At scale the averaging only gets stronger.
 With d in the millions, every random slice of the same network sees nearly the same curvature, whatever its two directions.
 Filter normalization (Li et al. 2018) rescales the random directions filter by filter, but the slice still sees a weighted average of curvatures.
-In large language models, Chen et al. (2026) measured basins that are wide along random perturbations and sharp along worst-case directions.
 
 ## References
 

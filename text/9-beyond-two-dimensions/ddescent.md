@@ -75,15 +75,15 @@ At p = n the matrix X of training features is square, and its smallest singular 
 The solution divides the labels’ component along that direction by it, so label noise is amplified.
 Hastie et al. (2022) computed the risk exactly as p and n grow together.
 Below the threshold it is pure variance, which diverges as p/n → 1.
-They also showed that, with isotropic features, optimally tuned ridge regression is never worse than the minimum-norm fit.
+With isotropic features, Nakkiran et al. (2021) proved that optimally tuned ridge regression has no peak: its test risk falls monotonically as samples or features are added.
 Mei and Montanari (2022) derived exact curves for random features regression, whose lowest test error lies above the threshold.
 
 The second half of the plate is about [[implicit bias|implicit]].
-Every gradient `Xᵀ(Xθ − y)/n` lies in the row space of X, so gradient descent never changes the part of θ in the null space.
-Started from zero, it stays in the row space and converges to the exact fit of least norm (Zhang et al. 2017).
-Started from θ₀, it converges to the exact fit nearest θ₀.
+Every gradient `Xᵀ(Xθ − y)/n` lies in the row space of X, which is why the part of θ in the null space never changes (Try 4).
+Started from zero, gradient descent therefore converges to the exact fit of least norm (Zhang et al. 2017).
 Advani, Saxe and Sompolinsky (2020) call this part of the weights a frozen subspace, and found that low test error in high dimensions requires small initial weights.
-d’Ascoli et al. (2020) traced the peak to the variance due to label noise and to initialization, and found that ensembling independently initialized models suppresses both.
+d’Ascoli et al. (2020) traced the peak to the variance due to label noise and to the random draw of the features, which is the initialization in their model, and found that ensembling independently initialized models suppresses both.
+This plate keeps its features fixed, so its θ₀ is a different kind of initialization from theirs.
 
 Whether fitting noisy labels exactly is harmless depends on the features.
 Bartlett et al. (2020) showed that the minimum-norm fit is nearly optimal only when the features have far more than n directions that matter little for prediction.
@@ -109,7 +109,7 @@ A race ends once the slowest direction has shrunk by a factor e⁹, after at lea
 
 The random init is a fixed draw `θ₀ ~ N(0, s²I)`, with a little jitter for each particle.
 Weight decay starts from zero.
-Its λ is the one of 29 values from 10⁻⁷ to 10 that gives the lowest test error at the current p and σ.
+Its λ is the one of 29 values from 10⁻⁷ to 1 that gives the lowest test error at the current p and σ.
 This tuning uses the test error itself, as in Nakkiran et al. (2021).
 The curves are computed a few values of p per frame.
 The average over random inits adds `s² tr(PΣ)` to the minimum-norm test error, where P projects onto the null space and Σ is the features’ covariance.

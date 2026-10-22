@@ -7,7 +7,7 @@ One hidden state is trained on one prompt, so we can follow where the chosen ans
 ## Lead
 
 [[Direct preference optimization|dpo]] (DPO) raises a chosen answer’s log-probability relative to a rejected one, so we might expect the chosen answer to become more likely.
-Yet the chosen answer often loses probability, an effect called likelihood displacement.
+Yet the chosen answer often loses probability (Pal et al. 2024), an effect called likelihood displacement.
 
 Razin et al. (2025) showed that this probability can go to an answer of opposite meaning.
 Training a model to prefer <em>No</em> over <em>Never</em> can sharply raise <em>Yes</em>.
@@ -100,8 +100,6 @@ So many unembeddings point in similar directions.
 
 In a network the hidden state is computed from the prompt by weights that every prompt and token share.
 So fine-tuning changes h for every prompt at once.
-Aghajanyan, Gupta and Zettlemoyer (2021) found that the weight changes made by fine-tuning have low intrinsic dimension.
-That means they fit in a small random subspace.
 
 ## References
 
@@ -111,11 +109,11 @@ That means they fit in a small random subspace.
   Introduces IPO, a squared loss with a finite target margin.
 - Pang, R. Y., Yuan, W., Cho, K., He, H., Sukhbaatar, S. and Weston, J. (2024). Iterative reasoning preference optimization. NeurIPS.
   Adds the chosen answer’s negative log-likelihood to the DPO loss.
+- Pal, A., Karkhanis, D., Dooley, S., Roberts, M., Naidu, S. and White, C. (2024). Smaug: fixing failure modes of preference optimisation with DPO-Positive. arXiv:2402.13228.
+  First showed that DPO can lower the likelihood of the preferred answers, and added a term that keeps it from falling.
 - Razin, N., Malladi, S., Bhaskar, A., Chen, D., Arora, S. and Hanin, B. (2025). Unintentional unalignment: likelihood displacement in direct preference optimization. ICLR.
   The No/Never/Yes example, the single-token theory and its extension to whole responses, and CHES-based filtering.
 - Ren, Y. and Sutherland, D. J. (2025). Learning dynamics of LLM finetuning. ICLR.
   The squeezing effect of negative gradients on unlikely responses.
 - Luo, H., Deng, Z., Do, T.-T., Harandi, M., Phung, D. and Le, T. (2026). Sharpness-aware minimization in logit space efficiently enhances direct preference optimization. ICLR.
   Relates squeezing to logit-space curvature and applies SAM to the output layer.
-- Aghajanyan, A., Gupta, S. and Zettlemoyer, L. (2021). Intrinsic dimensionality explains the effectiveness of language model fine-tuning. ACL.
-  About 200 parameters, randomly projected into RoBERTa, reach 90% of full fine-tuning on MRPC.

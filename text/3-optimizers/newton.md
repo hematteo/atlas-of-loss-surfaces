@@ -30,18 +30,17 @@ Particles that never came to rest are not counted.
 
 ## Try
 
-1. Leave the step size α at 0.1 → almost all Newton rings are at saddles.
-   On this seed, 114 of 120 rings in the first minute are at saddles.
+1. Leave the step size α at 0.1 → Newton’s rings fall about evenly on minima, saddles and summits.
+   On this seed, over the first 10,800 steps (four minutes at the default speed), 82 are at minima, 87 at saddles and 78 at summits.
+   So two rings in three are at points that are not minima.
    This is the attraction described in the Lead.
 2. Compare saddle-free Newton and [[gradient descent|gd]] → all their particles come to rest at minima.
    Minima are the only points where these two methods can rest.
    Along negative curvature the Newton step moves toward the critical point, and |H| reverses that component.
-3. Watch Newton’s particles → on this seed about two in three never come to rest.
+3. Watch Newton’s particles → on this seed about seven in ten never come to rest.
    Some of them chatter near a curve where det H = 0 (see Limits).
-4. Raise α to 1 → saddles still take most of Newton’s rings.
-   The shares shift only a little toward minima and summits.
-   Over four minutes on this seed, about 27% are at minima, 60% at saddles and 13% at summits, against 20%, 70% and 10% at α = 0.1 over the same four minutes.
-   The saddles' share falls from the first minute's 95% as later rings arrive.
+4. Raise α to 1 → the saddles’ share falls by about a third, mostly in favour of minima.
+   Over the same 10,800 steps on this seed, 43% are at minima, 22% at saddles and 35% at summits, against 33%, 35% and 32% at α = 0.1.
    Steps are capped at 0.02, so the two step sizes differ only where the Newton step is shorter than 0.2.
    That happens close to a critical point, so α changes mostly the last stretch of each approach.
 
@@ -77,6 +76,8 @@ Saddle-free Newton floors each |λ<sub>i</sub>| at 0.5.
 Gradient descent uses η = 0.004.
 
 A Newton particle can come [[to rest|rest]] at any critical point.
+Gradient descent and saddle-free Newton are rung only at minima, since those are the only points where they can rest.
+So Try 2 really tests whether their particles come to rest at all, and on this seed every one of them does.
 The kind of point is read from the Hessian at the particle’s position averaged exponentially over about its last 60 steps.
 Particles that never come to rest are retired after 2475 steps without a ring.
 

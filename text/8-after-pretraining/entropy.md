@@ -16,7 +16,7 @@ The metric [[pass@k|passk]] is the chance that at least one of k samples is righ
 At large k it measures what a model can solve.
 Whether RL narrows what the base model can solve is disputed (Yue et al. 2025; Liu et al. 2025).
 
-Here we can watch the entropy fall and see what it costs.
+Here we can watch the entropy fall and see what it costs at pass@k.
 
 ## In practice
 
@@ -32,12 +32,12 @@ Where the two GRPO curves coincide, the first-order rule accounts for the whole 
 
 ## Try
 
-1. Watch the figure → [[GRPO|grpo]]’s entropy falls below 0.1 nats within about 700 steps.
+1. Watch the figure → [[GRPO|grpo]]’s entropy falls below 0.1 nats within about 900 steps.
    The dashed first-order prediction lies on top of it.
 2. Wait for the race to end → GRPO sits on the <em>Shortcut</em>, which has the highest pass@1, 0.54.
-   GRPO’s pass@16 has fallen to 0.60 from 0.92 or more.
+   GRPO’s pass@16 has fallen to 0.61 from 0.92 or more.
    The Shortcut never solves a tricky problem, so its pass@16 cannot exceed the 60% of problems that are routine.
-3. Compare the other two optimizers → the pass@16 objective reaches a pass@16 of 0.999.
+3. Compare the other two optimizers → the pass@16 objective reaches a pass@16 of 0.9995.
    The entropy bonus holds a mixture that lies between it and GRPO.
    <em>Derivation</em> solves tricky problems that the Shortcut never does, which pays when there are many tries.
 4. Wait for a race from the [[base model|@Base model]] that favours <em>Guess</em> (0.65) → GRPO’s entropy rises before it collapses.
@@ -55,7 +55,7 @@ Setting H to 0 gives −a + b, so the law also predicts a ceiling on accuracy on
 
 They also derived how one step changes the entropy of a softmax policy.
 The change is approximately `−Cov_π(log π(a), Δz(a))`, where Δz is the change in the logits.
-Under exact policy gradient `Δz(a)` is proportional to π(a) times the advantage of a.
+Under exact policy gradient `Δz(a)` is proportional to π(a) times the advantage of a, up to a shift shared by every logit, which leaves the covariance unchanged.
 So raising actions that are both likely and successful lowers the entropy.
 
 Hao et al. (2026) showed that the token-level change also depends on clipping and on each token’s probability and entropy.
@@ -87,12 +87,16 @@ A group that all passed or all failed contributes nothing, since every reward in
 
 The entropy bonus adds `τ∇H` with τ = 0.2.
 The pass@16 objective follows the exact gradient of pass@16.
-All updates move θ₁ and θ₂ only.
+As in <i>The pull of softmax</i>, each gradient is taken in all three logits, which are then shifted so that θ₃ stays 0.
 
 The figure averages entropy over each optimizer’s particles.
 The dashed curve starts from GRPO’s initial entropy.
 
 ## Limits
+
+GRPO collapses here onto the Shortcut, which already has the highest pass@1.
+So on this sheet the collapse costs nothing at pass@1, and the ceiling of Cui et al.’s law does not show.
+What shows is the cost at large k that Yue et al. measured.
 
 Here the verifier’s pass rates are fixed, and a strategy that solves both kinds of problem is always available.
 So optimizing pass@16 finds it.

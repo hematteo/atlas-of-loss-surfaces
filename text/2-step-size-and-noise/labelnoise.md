@@ -35,11 +35,12 @@ A curve falling toward it belongs to particles moving toward the flattest minimi
    The label-noise particles head toward the balanced points w = a = ±1, the minimizers with the smallest tr H.
 2. Watch ‘w² + a², label noise’ → it falls from 3.67 to about 2.1 by step 2,000 and to 2.0 by step 4,000.
    The drift slows near the balanced points, where the gradient of tr H along the floor goes to zero.
-3. Set ε to 0.6 → the drift runs about four times faster.
+3. Set ε to 0.6 → the drift runs about four times faster, and the mean ends a little below 2.
    The strength of the implicit regularizer grows as ε².
+   The particles head for a stationary point of `L + λR` (see the Background), which lies just off the floor, at `wa < 1`.
+   Since w² + a² is at least 2wa, only off the floor can it fall below 2.
 4. Set ε to 1.2 → a third to a half of the label-noise particles leave the sheet.
-   The noise holds the rest off the floor at `wa < 1`, which brings the mean below 2.
-   This is possible because w² + a² is at least 2wa, so it can fall below 2 only where wa &lt; 1.
+   The few that remain are thrown across the floor, and their mean w² + a² swings between about 1.8 and 2.3 (see Limits).
 
 ## Background
 

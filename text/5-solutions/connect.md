@@ -68,6 +68,8 @@ Two Gaussian wells on a gentle bowl hold [[Minimum A|@Minimum A]] and [[Minimum 
 A hill lies between them on the straight segment.
 A trench, labelled the low road, follows a circular arc that passes through both minima and around the far side of the hill.
 Inside the wells the trench is faded out, so it joins them without dipping below them.
+The sheet’s faint texture is only damped inside the trench, so its floor rolls between about 0.12 and 0.13 and holds a few shallow dips.
+Now and then a particle comes to rest in one of them and is counted among the solutions.
 
 The green curve is `φ(t) = (1−t)²A + 2t(1−t)C + t²B`.
 It runs from A at t = 0 to B at t = 1 and bends towards the control point C.
@@ -76,6 +78,7 @@ C then takes gradient steps of size 0.02 on `E_t L(φ(t))`, with t uniform on [0
 Each gradient is estimated from 12 stratified samples of t and clipped to norm 3.
 
 Each barrier readout is the largest loss on 101 points of the path minus the larger of L(A) and L(B).
+<i>Forks in the road</i> and <i>Twins and re-basin</i> subtract the mean of the two end losses instead, as Frankle et al. and Ainsworth et al. do.
 Particles run [[SGD|sgd]] with η = 0.004 and σ = 0.3, and every third [[cohort|cohort]] starts in the trench.
 For each distinct run, the loss on its start-to-rest line is checked at 61 points.
 The line counts as monotone if that loss never rises more than 0.002 above its lowest earlier value.
@@ -83,8 +86,9 @@ The line counts as monotone if that loss never rises more than 0.002 above its l
 ## Limits
 
 The low road was built into this sheet, so the plate shows what such a curve looks like, not why one exists.
-In two dimensions, two minima are usually separated by a ridge that every path between them must cross.
-In networks, by contrast, low-loss curves are found by training in millions of dimensions.
+Between two isolated minima every path must cross a barrier, in any number of dimensions (the mountain-pass theorem).
+So here the low road lowers the barrier but cannot remove it.
+In networks the minima are not isolated but lie on connected sets, and low-loss curves are found by training in millions of dimensions.
 Their existence has been attributed to overparameterization (Freeman and Bruna 2017; Draxler et al. 2018).
 
 In large networks the low-loss set is more than a curve.

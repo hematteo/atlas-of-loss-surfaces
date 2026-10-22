@@ -21,7 +21,7 @@ We can watch the best learning rate follow λ<sub>max</sub> down under SP and st
 ## In practice
 
 Under μP, a learning rate tuned on a narrow model can be reused on a wide one, which is called [[μTransfer|transfer]].
-Yang et al. (2021) tuned a 40-million-parameter model this way and beat the published results of the 6.7-billion-parameter GPT-3.
+Yang et al. (2021) tuned hyperparameters on a 40-million-parameter proxy and transferred them to a 6.7-billion-parameter GPT-3, which then beat the published model of that size.
 Under SP, a learning rate tuned at one width can diverge at a larger one unless it is shrunk.
 Transfer can fail with some common architecture choices (Lingle 2024), so a short sweep at a second width is a cheap check.
 
@@ -119,7 +119,7 @@ Kosson et al. (2026) argued that later in training, weight decay rather than μP
 
 The sharpness account itself is debated.
 Noci et al. (2024) presented consistent sharpness as the reason for transfer, and noted that other factors may also set the best learning rate.
-Ghosh, Wu and Bietti (2026) found the link between such spectral measures and the best learning rate unclear.
+Ghosh, Wu and Bietti (2026) noted that the link between such spectral measures and the best learning rate remains unclear.
 They attribute transfer instead to a part of the trajectory that does not change with width.
 Hayou (2026) proved transfer under μP for deep linear networks without appealing to sharpness.
 
