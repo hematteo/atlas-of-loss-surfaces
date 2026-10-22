@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 282 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 291 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -310,9 +310,22 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Bergsma, S., Dey, N., Gosal, G., Gray, G., Soboleva, D. and Hestness, J. (2025). Straight to zero: why linearly decaying the learning rate to zero works best for LLMs. ICLR. *With a tuned peak, linear decay to zero beats cosine decay to 10% of the peak.*
 - Shen, T., Yang, J., Shi, R., Ma, J., Teng, J. and Ma, Z. (2026). Towards understanding the power and limits of the Muon optimizer: a river-valley perspective. arXiv:2606.21514. *In a river-valley model, Muon is fast along the river early and slow or oscillating near the bottom.*
 
+**24. [Grokking](https://matteohe.com/atlas-of-loss-surfaces/?plate=grokking)**
+
+- Power, A., Burda, Y., Edwards, H., Babuschkin, I. and Misra, V. (2022). Grokking: generalization beyond overfitting on small algorithmic datasets. arXiv:2201.02177. *Names grokking; smaller datasets need more optimization to generalize, and weight decay helps data efficiency most.*
+- Liu, Z., Michaud, E. J. and Tegmark, M. (2023). Omnigrok: grokking beyond algorithmic data. ICLR. *The LU mechanism and the Goldilocks zone; the delay is about ln(w₀/wc)/γ; large initialization induces grokking beyond algorithmic data.*
+- Nanda, N., Chan, L., Lieberum, T., Smith, J. and Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. ICLR. *Reverse-engineers modular addition; memorization, circuit formation and cleanup, with weight decay driving the cleanup.*
+- Varma, V., Shah, R., Kenton, Z., Kramár, J. and Kumar, R. (2023). Explaining grokking through circuit efficiency. arXiv:2309.02390. *Generalizing circuits are more efficient; a critical dataset size; ungrokking and semi-grokking. Preprint.*
+- Kumar, T., Bordelon, B., Gershman, S. J. and Pehlevan, C. (2024). Grokking as the transition from lazy to rich training dynamics. ICLR. *Grokking without regularization, as the move from kernel fitting to feature learning; the output scale sets the delay.*
+- Lyu, K., Jin, J., Li, Z., Du, S. S., Lee, J. D. and Hu, W. (2024). Dichotomy of early and late phase implicit biases can provably induce grokking. ICLR. *With large initialization and small weight decay, a kernel predictor early and a min-norm or max-margin solution after about (1/λ) log α.*
+- Xu, Y. (2026a). Low-dimensional and transversely curved optimization dynamics in grokking. arXiv:2602.16746. *Grokking trajectories are nearly one-dimensional, and curvature across them grows before generalization. Preprint.*
+- Xu, Y. (2026b). The geometry of multi-task grokking: transverse instability, superposition, and weight decay phase structure. arXiv:2602.18523. *In multi-task modular arithmetic, grokking time falls as a power of λ, with no generalization at λ = 0. Preprint.*
+- Cullen, B., Estan-Ruiz, S., Danait, R. and Li, J. (2026). A basin-selection perspective on grokking via singular learning theory. arXiv:2603.01192. *Grokking as a move from a memorizing basin to a generalizing one with a smaller learning coefficient. Preprint.*
+- Muckatira, S., Shivagunde, N., Deshpande, V. and Rumshisky, A. (2026). A pre-training analogue of grokking in language models: tracing delayed grammatical generalization. AACL-IJCNLP. *Delayed generalization of grammar in language-model pretraining, from phrases seen in training to unseen ones.*
+
 ### V · Solutions
 
-**24. [Mode connectivity](https://matteohe.com/atlas-of-loss-surfaces/?plate=connect)**
+**25. [Mode connectivity](https://matteohe.com/atlas-of-loss-surfaces/?plate=connect)**
 
 - Goodfellow, I. J., Vinyals, O. and Saxe, A. M. (2015). Qualitatively characterizing neural network optimization problems. ICLR. *The loss usually falls monotonically on the straight line from initialization to solution.*
 - Freeman, C. D. and Bruna, J. (2017). Topology and geometry of half-rectified network optimization. ICLR. *Sublevel sets of one-hidden-layer ReLU networks become connected as width grows; low-loss paths measured with a string method.*
@@ -325,7 +338,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Wortsman, M., Ilharco, G., Gadre, S. Y., Roelofs, R., Gontijo-Lopes, R., Morcos, A. S., Namkoong, H., Farhadi, A., Carmon, Y., Kornblith, S. and Schmidt, L. (2022). Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time. ICML. *Averaging the weights of fine-tunes of one pretrained model works because they share a basin.*
 - Juneja, J., Bansal, R., Cho, K., Sedoc, J. and Saphra, N. (2023). Linear connectivity reveals generalization strategies. ICLR. *Fine-tuned text classifiers form linearly connected clusters with large barriers between them, matching different generalization strategies.*
 
-**25. [Forks in the road](https://matteohe.com/atlas-of-loss-surfaces/?plate=forks)**
+**26. [Forks in the road](https://matteohe.com/atlas-of-loss-surfaces/?plate=forks)**
 
 - Frankle, J., Dziugaite, G. K., Roy, D. M. and Carbin, M. (2020). Linear mode connectivity and the lottery ticket hypothesis. ICML. *Instability analysis: networks become stable to SGD noise early in training; pruned subnetworks reach full accuracy only when stable.*
 - Fort, S., Dziugaite, G. K., Paul, M., Kharaghani, S., Roy, D. M. and Ganguli, S. (2020). Deep learning versus kernel learning: an empirical study of loss landscape geometry and the time evolution of the neural tangent kernel. NeurIPS. *A chaotic phase in the first few epochs decides the final linearly connected basin.*
@@ -333,7 +346,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Li, M., Gururangan, S., Dettmers, T., Lewis, M., Althoff, T., Smith, N. A. and Zettlemoyer, L. (2022). Branch-Train-Merge: embarrassingly parallel training of expert language models. NeurIPS Workshop on Interpolation Regularizers and Beyond (INTERPOLATE). *Expert language models branched from one seed model, trained apart, then ensembled or averaged.*
 - Douillard, A., Feng, Q., Rusu, A. A., Chhaparia, R., Donchev, Y., Kuncoro, A., Ranzato, M., Szlam, A. and Shen, J. (2023). DiLoCo: distributed low-communication training of language models. arXiv:2311.08105. *Workers train copies for hundreds of steps between averaging, matching synchronous training with 500 times less communication.*
 
-**26. [Twins and re-basin](https://matteohe.com/atlas-of-loss-surfaces/?plate=symmetry)**
+**27. [Twins and re-basin](https://matteohe.com/atlas-of-loss-surfaces/?plate=symmetry)**
 
 - Hecht-Nielsen, R. (1990). On the algebraic structure of feedforward network weight spaces. In Eckmiller, R. (ed.), Advanced Neural Computers. Elsevier. *The weight-space symmetries of feedforward networks: permutations of hidden units and sign flips.*
 - Chen, A. M., Lu, H. and Hecht-Nielsen, R. (1993). On the geometry of feedforward neural network error surfaces. Neural Computation 5(6). *A tanh layer of n units has n!·2n equivalent weight settings.*
@@ -343,7 +356,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Verma, N. and Elbayad, M. (2024). Merging text transformer models from different initializations. TMLR. *Permutation matching for transformers lowers the barrier between independently trained masked language models.*
 - Zhang, B., Zheng, Z., Chen, Z. and Li, J. (2025). Beyond the permutation symmetry of transformers: the role of rotation for model fusion. ICML. *Self-attention has a continuous rotation symmetry that generalizes permutations, and matching it improves model fusion.*
 
-**27. [Singular minima and the learning coefficient](https://matteohe.com/atlas-of-loss-surfaces/?plate=singular)**
+**28. [Singular minima and the learning coefficient](https://matteohe.com/atlas-of-loss-surfaces/?plate=singular)**
 
 - Watanabe, S. (2009). Algebraic Geometry and Statistical Learning Theory. Cambridge University Press. *Proves the asymptotics of the free energy and the generalization error of singular models in terms of λ.*
 - Watanabe, S. (2013). A widely applicable Bayesian information criterion. JMLR 14. *WBIC: the free energy from posterior samples at inverse temperature 1/log n.*
@@ -355,7 +368,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 
 ### VI · Proving grounds
 
-**28. [Rosenbrock’s valley](https://matteohe.com/atlas-of-loss-surfaces/?plate=rosenbrock)**
+**29. [Rosenbrock’s valley](https://matteohe.com/atlas-of-loss-surfaces/?plate=rosenbrock)**
 
 - Rosenbrock, H. H. (1960). An automatic method for finding the greatest or least value of a function. The Computer Journal 3(3). *Introduces the function, as a test for a search that rotates its directions to follow a valley.*
 - Polyak, B. T. (1964). Some methods of speeding up the convergence of iteration methods. USSR Computational Mathematics and Mathematical Physics 4(5). *Introduces the heavy ball and proves its rate (√κ − 1)/(√κ + 1) near a minimum.*
@@ -363,13 +376,13 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Surjanovic, S. and Bingham, D. (2013). Virtual library of simulation experiments: test functions and datasets. Simon Fraser University. *Definitions, usual domains and minima of the standard test functions.*
 - Kok, S. and Sandrock, C. (2009). Locating and characterizing the stationary points of the extended Rosenbrock function. Evolutionary Computation 17(3). *In up to 100 dimensions, two local minimizers and many saddle points.*
 
-**29. [Himmelblau’s four minima](https://matteohe.com/atlas-of-loss-surfaces/?plate=himmelblau)**
+**30. [Himmelblau’s four minima](https://matteohe.com/atlas-of-loss-surfaces/?plate=himmelblau)**
 
 - Himmelblau, D. M. (1972). Applied Nonlinear Programming. McGraw-Hill. *Introduces the function as a test problem with four minima.*
 - Wu, L., Ma, C. and E, W. (2018). How SGD selects the global minima in over-parameterized learning: a dynamical stability perspective. NeurIPS. *Among minima of equal loss, gradient descent can converge only to those with λmax < 2/η.*
 - Surjanovic, S. and Bingham, D. (2013). Virtual library of simulation experiments: test functions and datasets. Simon Fraser University. *Definitions, usual domains and minima of the standard test functions.*
 
-**30. [Rastrigin’s egg crate](https://matteohe.com/atlas-of-loss-surfaces/?plate=rastrigin)**
+**31. [Rastrigin’s egg crate](https://matteohe.com/atlas-of-loss-surfaces/?plate=rastrigin)**
 
 - Rastrigin, L. A. (1974). Systems of Extremal Control. Nauka, Moscow. *Proposes the function in two dimensions.*
 - Mühlenbein, H., Schomisch, M. and Born, J. (1991). The parallel genetic algorithm as function optimizer. Parallel Computing 17(6–7). *Uses the n-dimensional form as a benchmark for a parallel genetic algorithm.*
@@ -378,25 +391,25 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Surjanovic, S. and Bingham, D. (2013). Virtual library of simulation experiments: test functions and datasets. Simon Fraser University. *Definitions, usual domains and minima of the standard test functions.*
 - Choromanska, A., Henaff, M., Mathieu, M., Ben Arous, G. and LeCun, Y. (2015). The loss surfaces of multilayer networks. AISTATS. *In a spin-glass model of a network, the lowest critical values form a band just above the global minimum.*
 
-**31. [Ackley’s well](https://matteohe.com/atlas-of-loss-surfaces/?plate=ackley)**
+**32. [Ackley’s well](https://matteohe.com/atlas-of-loss-surfaces/?plate=ackley)**
 
 - Ackley, D. H. (1987). A Connectionist Machine for Genetic Hillclimbing. Kluwer. *Defines the function in two dimensions, as a test for a genetic hill-climbing algorithm.*
 - Bäck, T. and Schwefel, H.-P. (1993). An overview of evolutionary algorithms for parameter optimization. Evolutionary Computation 1(1). *Generalizes the function to n dimensions.*
 - Surjanovic, S. and Bingham, D. (2013). Virtual library of simulation experiments: test functions and datasets. Simon Fraser University. *Definitions, usual domains and minima of the standard test functions.*
 
-**32. [The six-hump camel](https://matteohe.com/atlas-of-loss-surfaces/?plate=camel)**
+**33. [The six-hump camel](https://matteohe.com/atlas-of-loss-surfaces/?plate=camel)**
 
 - Dixon, L. C. W. and Szegő, G. P. (1978). The global optimization problem: an introduction. In Towards Global Optimisation 2, 1–15. North-Holland. *A standard collection of global-optimization test problems, the source usually cited for this function.*
 - Surjanovic, S. and Bingham, D. (2013). Virtual library of simulation experiments: test functions and datasets. Simon Fraser University. *Gives the usual window [−3, 3] × [−2, 2] and the six minima, two of them global.*
 
-**33. [A sheet of your own](https://matteohe.com/atlas-of-loss-surfaces/?plate=sculpt)**
+**34. [A sheet of your own](https://matteohe.com/atlas-of-loss-surfaces/?plate=sculpt)**
 
 - Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS. *Two-dimensional slices of real loss surfaces, which sheets like this one imitate.*
 - Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754. *After a short time the gradient lies in the span of the top Hessian eigenvectors, about one per class.*
 
 ### VII · Where there is no bottom
 
-**34. [Two players on one sheet](https://matteohe.com/atlas-of-loss-surfaces/?plate=games)**
+**35. [Two players on one sheet](https://matteohe.com/atlas-of-loss-surfaces/?plate=games)**
 
 - Korpelevich, G. M. (1976). The extragradient method for finding saddle points and other problems. Ekonomika i Matematicheskie Metody 12(4). *Introduces extragradient and proves its convergence for monotone saddle-point problems.*
 - Popov, L. D. (1980). A modification of the Arrow–Hurwicz method for search of saddle points. Mathematical Notes of the Academy of Sciences of the USSR 28(5). *The method that reuses the previous gradient as the trial step, now called optimistic gradient descent–ascent.*
@@ -411,7 +424,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Balduzzi, D., Racanière, S., Martens, J., Foerster, J., Tuyls, K. and Graepel, T. (2018). The mechanics of n-player differentiable games. ICML. *Splits a game’s dynamics into a potential part and a rotational (Hamiltonian) part, and adjusts the update to tame the rotation.*
 - Huang, Y., Gokaslan, A., Kuleshov, V. and Tompkin, J. (2024). The GAN is dead; long live the GAN! A modern GAN baseline. NeurIPS. *A relativistic GAN loss with R1 and R2 gradient penalties that has local convergence guarantees.*
 
-**35. [The pull of softmax](https://matteohe.com/atlas-of-loss-surfaces/?plate=softmax)**
+**36. [The pull of softmax](https://matteohe.com/atlas-of-loss-surfaces/?plate=softmax)**
 
 - Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. Machine Learning 8. *The likelihood-ratio policy gradient (REINFORCE).*
 - Kakade, S. M. (2001). A natural policy gradient. NeurIPS. *Preconditions the policy gradient by the inverse Fisher information.*
@@ -423,7 +436,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Mei, J., Dai, B., Agarwal, A., Vaswani, S., Raj, A., Szepesvári, C. and Schuurmans, D. (2024). Small steps no more: global convergence of stochastic gradient bandits for arbitrary learning rates. NeurIPS. *The stochastic gradient bandit converges to the optimal policy almost surely for any constant learning rate.*
 - Wortsman, M. et al. (2024). Small-scale proxies for large-scale Transformer training instabilities. ICLR. *Attention-logit growth and output-logit divergence, and their fixes, qk-layernorm and z-loss, reproduced in small models.*
 
-**36. [The road to infinity](https://matteohe.com/atlas-of-loss-surfaces/?plate=margin)**
+**37. [The road to infinity](https://matteohe.com/atlas-of-loss-surfaces/?plate=margin)**
 
 - Soudry, D., Hoffer, E., Nacson, M. S., Gunasekar, S. and Srebro, N. (2018). The implicit bias of gradient descent on separable data. JMLR 19. *Gradient descent on separable data converges in direction to the ℓ₂ max-margin separator, at rate 1/log t.*
 - Gunasekar, S., Lee, J., Soudry, D. and Srebro, N. (2018). Characterizing implicit bias in terms of optimization geometry. ICML. *Steepest descent with respect to a norm maximizes the margin in that norm.*
@@ -438,7 +451,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 
 ### VIII · After pretraining
 
-**37. [Likelihood displacement](https://matteohe.com/atlas-of-loss-surfaces/?plate=displace)**
+**38. [Likelihood displacement](https://matteohe.com/atlas-of-loss-surfaces/?plate=displace)**
 
 - Rafailov, R., Sharma, A., Mitchell, E., Manning, C. D., Ermon, S. and Finn, C. (2023). Direct preference optimization: your language model is secretly a reward model. NeurIPS. *Introduces DPO.*
 - Azar, M. G., Guo, Z. D., Piot, B., Munos, R., Rowland, M., Valko, M. and Calandriello, D. (2024). A general theoretical paradigm to understand learning from human preferences. AISTATS. *Introduces IPO, a squared loss with a finite target margin.*
@@ -448,7 +461,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Luo, H., Deng, Z., Do, T.-T., Harandi, M., Phung, D. and Le, T. (2026). Sharpness-aware minimization in logit space efficiently enhances direct preference optimization. ICLR. *Relates squeezing to logit-space curvature and applies SAM to the output layer.*
 - Aghajanyan, A., Gupta, S. and Zettlemoyer, L. (2021). Intrinsic dimensionality explains the effectiveness of language model fine-tuning. ACL. *About 200 parameters, randomly projected into RoBERTa, reach 90% of full fine-tuning on MRPC.*
 
-**38. [Entropy collapse](https://matteohe.com/atlas-of-loss-surfaces/?plate=entropy)**
+**39. [Entropy collapse](https://matteohe.com/atlas-of-loss-surfaces/?plate=entropy)**
 
 - Shao, Z., Wang, P., Zhu, Q., Xu, R., Song, J., Bi, X., Zhang, H., Zhang, M., Li, Y. K., Wu, Y. and Guo, D. (2024). DeepSeekMath: pushing the limits of mathematical reasoning in open language models. arXiv:2402.03300. *Introduces GRPO.*
 - Cui, G., Zhang, Y., Chen, J., Yuan, L., Wang, Z., Zuo, Y., Li, H., Fan, Y., Chen, H., Chen, W., Liu, Z., Peng, H., Bai, L., Ouyang, W., Cheng, Y., Zhou, B. and Ding, N. (2025). The entropy mechanism of reinforcement learning for reasoning language models. arXiv:2505.22617. *Entropy collapse, R = −a eH + b, and the covariance form of the entropy change.*
@@ -459,14 +472,14 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Yu, Q. et al. (2025). DAPO: an open-source LLM reinforcement learning system at scale. NeurIPS. *Clip-Higher: a separate, larger upper clipping bound, against entropy collapse.*
 - Wang, S. et al. (2025). Beyond the 80/20 rule: high-entropy minority tokens drive effective reinforcement learning for LLM reasoning. NeurIPS. *Updates on the highest-entropy 20% of tokens match or beat updates on all of them.*
 
-**39. [RL’s razor](https://matteohe.com/atlas-of-loss-surfaces/?plate=razor)**
+**40. [RL’s razor](https://matteohe.com/atlas-of-loss-surfaces/?plate=razor)**
 
 - Kakade, S. M. (2001). A natural policy gradient. NeurIPS. *Natural policy gradient, which for softmax policies is the multiplicative-weights update.*
 - Shenfeld, I., Pari, J. and Agrawal, P. (2026). RL’s razor: why online reinforcement learning forgets less. ICLR. *Forgetting tracks forward KL on the new task; policy gradient converges to the I-projection in an idealized setting.*
 - Zhu, H., Zhang, Z., Huang, H., Su, D., Liu, Z., Zhao, J., Fedorov, I., Pirsiavash, H., Sha, Z., Lee, J., Pan, D. Z., Wang, Z., Tian, Y. and Tai, K. S. (2025). The path not taken: RLVR provably learns off the principals. arXiv:2511.08567. *RLVR updates avoid the principal directions of pretrained weights; SFT does not.*
 - Chen, H., Razin, N., Narasimhan, K. and Chen, D. (2026). Retaining by doing: the role of on-policy data in mitigating forgetting. ICML. *RL forgets less than SFT because its data are on-policy; iterative SFT on self-generated data forgets little too.*
 
-**40. [The safety basin](https://matteohe.com/atlas-of-loss-surfaces/?plate=safety)**
+**41. [The safety basin](https://matteohe.com/atlas-of-loss-surfaces/?plate=safety)**
 
 - Qi, X., Zeng, Y., Xie, T., Chen, P.-Y., Jia, R., Mittal, P. and Henderson, P. (2024). Fine-tuning aligned language models compromises safety, even when users do not intend to! ICLR. *A few harmful examples remove safety alignment; benign fine-tuning also degrades it.*
 - Peng, S., Chen, P.-Y., Hull, M. and Chau, D. H. (2024). Navigating the safety landscape: measuring risks in finetuning large language models. NeurIPS. *The safety basin along random directions, and the VISAGE metric.*
@@ -609,6 +622,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Kosson, A., Messmer, B. and Jaggi, M. (2024). Analyzing & reducing the need for learning rate warmup in GPT training. NeurIPS.
 - Kosson, A., Messmer, B. and Jaggi, M. (2024). Rotational equilibrium: how weight decay balances learning across neural networks. ICML.
 - Kramers, H. A. (1940). Brownian motion in a field of force and the diffusion model of chemical reactions. Physica 7(4).
+- Kumar, T., Bordelon, B., Gershman, S. J. and Pehlevan, C. (2024). Grokking as the transition from lazy to rich training dynamics. ICLR.
 - Kunin, D., Raventós, A., Dominé, C., Chen, F., Klindt, D., Saxe, A. and Ganguli, S. (2024). Get rich quick: exact solutions reveal how unbalanced initializations promote rapid feature learning. NeurIPS.
 - Kunstner, F., Balles, L. and Hennig, P. (2019). Limitations of the empirical Fisher approximation for natural gradient descent. NeurIPS.
 - Kunstner, F., Chen, J., Lavington, J. W. and Schmidt, M. (2023). Noise is not the main factor behind the gap between SGD and Adam on transformers, but sign descent might be. ICLR.
@@ -634,12 +648,14 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982.
 - Liu, L., Jiang, H., He, P., Chen, W., Liu, X., Gao, J. and Han, J. (2020). On the variance of the adaptive learning rate and beyond. ICLR.
 - Liu, M., Diao, S., Lu, X., Hu, J., Dong, X., Choi, Y., Kautz, J. and Dong, Y. (2025). ProRL: prolonged reinforcement learning expands reasoning boundaries in large language models. NeurIPS.
+- Liu, Z., Michaud, E. J. and Tegmark, M. (2023). Omnigrok: grokking beyond algorithmic data. ICLR.
 - Loshchilov, I. and Hutter, F. (2017). SGDR: stochastic gradient descent with warm restarts. ICLR.
 - Loshchilov, I. and Hutter, F. (2019). Decoupled weight decay regularization. ICLR.
 - Lucas, J., Bae, J., Zhang, M. R., Fort, S., Zemel, R. and Grosse, R. (2021). On monotonic linear interpolation of neural network parameters. ICML.
 - Luo, H., Deng, Z., Do, T.-T., Harandi, M., Phung, D. and Le, T. (2026). Sharpness-aware minimization in logit space efficiently enhances direct preference optimization. ICLR.
 - Luo, K., Wen, H., Hu, S., Sun, Z., Sun, M., Liu, Z., Lyu, K. and Chen, W. (2025). A multi-power law for loss curve prediction across learning rate schedules. ICLR.
 - Lyu, K. and Li, J. (2020). Gradient descent maximizes the margin of homogeneous neural networks. ICLR.
+- Lyu, K., Jin, J., Li, Z., Du, S. S., Lee, J. D. and Hu, W. (2024). Dichotomy of early and late phase implicit biases can provably induce grokking. ICLR.
 - Lyu, K., Li, Z. and Arora, S. (2022). Understanding the generalization benefit of normalization layers: sharpness reduction. NeurIPS.
 - Malladi, S., Lyu, K., Panigrahi, A. and Arora, S. (2022). On the SDEs and scaling rules for adaptive gradient algorithms. NeurIPS.
 - Mandt, S., Hoffman, M. D. and Blei, D. M. (2017). Stochastic gradient descent as approximate Bayesian inference. JMLR 18(134).
@@ -660,8 +676,10 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Molybog, I. et al. (2023). A theory on Adam instability in large-scale machine learning. arXiv:2304.09871.
 - Moré, J. J., Garbow, B. S. and Hillstrom, K. E. (1981). Testing unconstrained optimization software. ACM Transactions on Mathematical Software 7(1).
 - Mori, T., Ziyin, L., Liu, K. and Ueda, M. (2022). Power-law escape rate of SGD. ICML.
+- Muckatira, S., Shivagunde, N., Deshpande, V. and Rumshisky, A. (2026). A pre-training analogue of grokking in language models: tracing delayed grammatical generalization. AACL-IJCNLP.
 - Mühlenbein, H., Schomisch, M. and Born, J. (1991). The parallel genetic algorithm as function optimizer. Parallel Computing 17(6–7).
 - Nacson, M. S., Lee, J., Gunasekar, S., Savarese, P., Srebro, N. and Soudry, D. (2019). Convergence of gradient descent on separable data. AISTATS.
+- Nanda, N., Chan, L., Lieberum, T., Smith, J. and Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. ICLR.
 - Nesterov, Y. (1983). A method for solving the convex programming problem with convergence rate O(1/k²). Soviet Mathematics Doklady 27.
 - Nesterov, Y. (2004). Introductory lectures on convex optimization: a basic course. Kluwer.
 - Neyshabur, B., Sedghi, H. and Zhang, C. (2020). What is being transferred in transfer learning? NeurIPS.
@@ -679,6 +697,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Polyak, B. T. (1964). Some methods of speeding up the convergence of iteration methods. USSR Computational Mathematics and Mathematical Physics 4(5).
 - Polyak, B. T. and Juditsky, A. B. (1992). Acceleration of stochastic approximation by averaging. SIAM Journal on Control and Optimization 30(4).
 - Popov, L. D. (1980). A modification of the Arrow–Hurwicz method for search of saddle points. Mathematical Notes of the Academy of Sciences of the USSR 28(5).
+- Power, A., Burda, Y., Edwards, H., Babuschkin, I. and Misra, V. (2022). Grokking: generalization beyond overfitting on small algorithmic datasets. arXiv:2201.02177.
 - Qi, X., Panda, A., Lyu, K., Ma, X., Roy, S., Beirami, A., Mittal, P. and Henderson, P. (2025). Safety alignment should be made more than just a few tokens deep. ICLR.
 - Qi, X., Zeng, Y., Xie, T., Chen, P.-Y., Jia, R., Mittal, P. and Henderson, P. (2024). Fine-tuning aligned language models compromises safety, even when users do not intend to! ICLR.
 - Qian, N. (1999). On the momentum term in gradient descent learning algorithms. Neural Networks 12(1).
@@ -714,6 +733,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Tsilivis, N., Vardi, G. and Kempe, J. (2025). Flavors of margin: implicit bias of steepest descent in homogeneous neural networks. ICLR.
 - van Laarhoven, T. (2017). L2 regularization versus batch and weight normalization. arXiv:1706.05350.
 - Vardi, G., Shamir, O. and Srebro, N. (2022). On margin maximization in linear and ReLU networks. NeurIPS.
+- Varma, V., Shah, R., Kenton, Z., Kramár, J. and Kumar, R. (2023). Explaining grokking through circuit efficiency. arXiv:2309.02390.
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł. and Polosukhin, I. (2017). Attention is all you need. NeurIPS.
 - Verma, N. and Elbayad, M. (2024). Merging text transformer models from different initializations. TMLR.
 - Vlaar, T. J. and Frankle, J. (2022). What can linear interpolation of neural network loss landscapes tell us? ICML.
@@ -743,6 +763,8 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Xie, S. and Li, Z. (2024). Implicit bias of AdamW: ℓ∞-norm constrained optimization. ICML.
 - Xie, S., Mohamadi, M. A. and Li, Z. (2025). Adam exploits ℓ∞-geometry of loss landscape via coordinate-wise adaptivity. ICLR.
 - Xie, Z., Sato, I. and Sugiyama, M. (2021). A diffusion theory for deep learning dynamics: stochastic gradient descent exponentially favors flat minima. ICLR.
+- Xu, Y. (2026a). Low-dimensional and transversely curved optimization dynamics in grokking. arXiv:2602.16746.
+- Xu, Y. (2026b). The geometry of multi-task grokking: transverse instability, superposition, and weight decay phase structure. arXiv:2602.18523.
 - Yang, S., Zhang, Q., Liu, Y., Huang, Y., Jia, X., Ning, K., Yao, J., Wang, J., Dai, H., Song, Y. and Yuan, L. (2026). AsFT: anchoring safety during LLM fine-tuning within narrow safety basin. AAAI.
 - Yu, Q. et al. (2025). DAPO: an open-source LLM reinforcement learning system at scale. NeurIPS.
 - Yue, Y., Chen, Z., Lu, R., Zhao, A., Wang, Z., Yue, Y., Song, S. and Huang, G. (2025). Does reinforcement learning really incentivize reasoning capacity in LLMs beyond the base model? NeurIPS.

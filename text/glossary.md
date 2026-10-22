@@ -550,6 +550,18 @@ Fine-tuning by maximizing the log-likelihood of given target outputs y, `θ ← 
 
 The fraction of harmful requests in a benchmark that a model complies with instead of refusing.
 
+## grok: Grokking
+
+Generalization that arrives long after the training data have been fitted: the test loss stays high for many steps after the training loss has reached its floor, then falls (Power et al. 2022).
+
+## wdecay: Weight decay
+
+Shrinking the parameters toward zero at every step, `θ ← θ − ηλθ` on top of the optimizer’s own step. For plain gradient descent this is the same as adding `½λ‖θ‖²` to the loss; for adaptive optimizers the decoupled form, as in AdamW, differs from that penalty.
+
+## goldilocks: Goldilocks zone
+
+In the account of grokking by Liu, Michaud and Tegmark (2023), the range of weight norms where the test loss is lowest. Larger norms still fit the training data but generalize worse, and smaller ones cannot fit it.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.
