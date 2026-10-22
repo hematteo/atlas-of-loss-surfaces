@@ -688,6 +688,31 @@ Yu et al. (2020) identified such conflicts between tasks as a cause of slow mult
 How near the trained weights lie to the minimizer of each data source’s or task’s own loss.
 Chen et al. (2026) measure it as the mean squared distance to those minimizers, and link a smaller one to lower downstream loss at the same pretraining loss.
 
+## ddescent: Double descent
+
+Test error that falls, rises to a peak where the model can just fit its training set exactly, and falls again as the number of parameters keeps growing.
+The second fall extends the classical U-shaped curve of the bias–variance trade-off.
+
+## interp: Interpolation threshold
+
+The model size at which training first fits every training example exactly, reaching zero training loss.
+For least squares on p features and n examples it is p = n.
+
+## minnorm: Minimum-norm solution
+
+Among all parameters that fit the training data exactly, the one with the smallest ℓ₂ norm ‖θ‖.
+For least squares it is `θ = X⁺y`, and gradient descent started from zero converges to it.
+
+## nullspace: Null space
+
+The directions v in parameter space with `Xv = 0`, along which the predictions on the training set, and so the training loss, do not change.
+With more parameters than examples it has dimension at least p − n, and gradient descent never moves θ along it.
+
+## earlystop: Early stopping
+
+Ending training before the training loss reaches its minimum, at the point where held-out error is lowest.
+For gradient descent on least squares it leaves the flattest directions, which are learned last, mostly unfitted.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.

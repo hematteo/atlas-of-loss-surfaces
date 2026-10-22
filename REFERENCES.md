@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 330 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 341 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -560,7 +560,21 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754. *The gradient soon lies mostly in the span of the Hessian’s top eigenvectors, about one per class.*
 - Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR. *Updates projected onto that subspace barely lower the loss; removing them trains about as well.*
 
-**49. [Learning rates across widths](https://matteohe.com/atlas-of-loss-surfaces/?plate=mup)**
+**49. [Double descent](https://matteohe.com/atlas-of-loss-surfaces/?plate=ddescent)**
+
+- Belkin, M., Hsu, D., Ma, S. and Mandal, S. (2019). Reconciling modern machine-learning practice and the classical bias–variance trade-off. PNAS 116(32). *Names double descent and shows it for random features and other models; the norm of the fit peaks at the interpolation threshold.*
+- Nakkiran, P., Kaplun, G., Bansal, Y., Yang, T., Barak, B. and Sutskever, I. (2020). Deep double descent: where bigger models and more data hurt. ICLR. *Model-wise and epoch-wise double descent in CNNs, ResNets and transformers, strongest with label noise; more data can hurt.*
+- Hastie, T., Montanari, A., Rosset, S. and Tibshirani, R. J. (2022). Surprises in high-dimensional ridgeless least squares interpolation. Annals of Statistics 50(2). *Exact risk of minimum-norm least squares as p and n grow together; tuned ridge dominates it, and cross-validation can tune it.*
+- Mei, S. and Montanari, A. (2022). The generalization error of random features regression: precise asymptotics and the double descent curve. Communications on Pure and Applied Mathematics 75(4). *Exact double-descent curves for random features regression, with the lowest test error above the interpolation threshold.*
+- Advani, M. S., Saxe, A. M. and Sompolinsky, H. (2020). High-dimensional dynamics of generalization error in neural networks. Neural Networks 132. *Overtraining is worst when the parameters match the examples; gradient descent leaves a frozen subspace, so small initial weights matter.*
+- Bartlett, P. L., Long, P. M., Lugosi, G. and Tsigler, A. (2020). Benign overfitting in linear regression. PNAS 117(48). *When the minimum-norm interpolant of noisy labels is nearly optimal: many directions unimportant for prediction must absorb the noise.*
+- Nakkiran, P., Venkat, P., Kakade, S. and Ma, T. (2021). Optimal regularization can mitigate double descent. ICLR. *Optimally tuned ℓ₂ regularization makes the test error monotone in model size for isotropic linear regression, and mitigates the peak in networks.*
+- Zhang, C., Bengio, S., Hardt, M., Recht, B. and Vinyals, O. (2017). Understanding deep learning requires rethinking generalization. ICLR. *Gradient descent from zero on least squares stays in the span of the data and converges to the minimum-norm exact fit.*
+- d’Ascoli, S., Refinetti, M., Biroli, G. and Krzakala, F. (2020). Double trouble in double descent: bias and variance(s) in the lazy regime. ICML. *The peak comes from the variance due to label noise and to initialization; ensembling over initializations suppresses both.*
+- Loog, M., Viering, T., Mey, A., Krijthe, J. H. and Tax, D. M. J. (2020). A brief prehistory of double descent. PNAS 117(20). *The peak was observed for minimum-norm linear classifiers from 1989 onwards.*
+- Curth, A., Jeffares, A. and van der Schaar, M. (2023). A U-turn on double descent: rethinking parameter counting in statistical learning. NeurIPS. *In classical methods the second descent marks a change in how parameters are added; in effective parameters the curves are U-shaped.*
+
+**50. [Learning rates across widths](https://matteohe.com/atlas-of-loss-surfaces/?plate=mup)**
 
 - Yang, G. and Hu, E. J. (2021). Tensor Programs IV: Feature learning in infinite-width neural networks. ICML. *In SP, training stays stable at large width only with a learning rate of order 1/width, and the limit then learns no features; μP learns features.*
 - Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W. and Gao, J. (2021). Tensor Programs V: Tuning large neural networks via zero-shot hyperparameter transfer. NeurIPS. *μTransfer: under μP the best hyperparameters stay put as width grows; the per-layer rules, defined relative to a base width where μP equals SP.*
@@ -578,6 +592,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 
 - Abbe, E., Boix-Adserà, E. and Misiakiewicz, T. (2023). SGD learning on neural networks: leap complexity and saddle-to-saddle dynamics. COLT, PMLR 195.
 - Ackley, D. H. (1987). A Connectionist Machine for Genetic Hillclimbing. Kluwer.
+- Advani, M. S., Saxe, A. M. and Sompolinsky, H. (2020). High-dimensional dynamics of generalization error in neural networks. Neural Networks 132.
 - Agarwal, A., Kakade, S. M., Lee, J. D. and Mahajan, G. (2021). On the theory of policy gradient methods: optimality, approximation, and distribution shift. JMLR 22.
 - Aghajanyan, A., Gupta, S. and Zettlemoyer, L. (2021). Intrinsic dimensionality explains the effectiveness of language model fine-tuning. ACL.
 - Ainsworth, S. K., Hayase, J. and Srinivasa, S. (2023). Git Re-Basin: merging models modulo permutation symmetries. ICLR.
@@ -602,7 +617,9 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Balles, L., Pedregosa, F. and Le Roux, N. (2020). The geometry of sign gradient descent. arXiv:2002.08056.
 - Bantzis, I., Simon, J. B. and Jacot, A. (2026). Saddle-to-saddle dynamics in deep ReLU networks: low-rank bias in the first saddle escape. ICLR.
 - Barrett, D. G. T. and Dherin, B. (2021). Implicit gradient regularization. ICLR.
+- Bartlett, P. L., Long, P. M., Lugosi, G. and Tsigler, A. (2020). Benign overfitting in linear regression. PNAS 117(48).
 - Battash, B., Wolf, L. and Lindenbaum, O. (2024). Revisiting the noise model of stochastic gradient descent. AISTATS.
+- Belkin, M., Hsu, D., Ma, S. and Mandal, S. (2019). Reconciling modern machine-learning practice and the classical bias–variance trade-off. PNAS 116(32).
 - Ben Arous, G., Gheissari, R. and Jagannath, A. (2021). Online stochastic gradient descent on non-convex losses from high-dimensional inference. Journal of Machine Learning Research 22.
 - Bengio, Y., Simard, P. and Frasconi, P. (1994). Learning long-term dependencies with gradient descent is difficult. IEEE Transactions on Neural Networks 5(2).
 - Benton, G. W., Maddox, W. J., Lotfi, S. and Wilson, A. G. (2021). Loss surface simplexes for mode connecting volumes and fast ensembling. ICML.
@@ -635,7 +652,9 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Covic, N., Lipshitz, B., Padula, A. and Visnjic, S. (2026). Muon operates beyond the edge of stability. arXiv:2610.24305.
 - Cui, G., Zhang, Y., Chen, J., Yuan, L., Wang, Z., Zuo, Y., Li, H., Fan, Y., Chen, H., Chen, W., Liu, Z., Peng, H., Bai, L., Ouyang, W., Cheng, Y., Zhou, B. and Ding, N. (2025). The entropy mechanism of reinforcement learning for reasoning language models. arXiv:2505.22617.
 - Cullen, B., Estan-Ruiz, S., Danait, R. and Li, J. (2026). A basin-selection perspective on grokking via singular learning theory. arXiv:2603.01192.
+- Curth, A., Jeffares, A. and van der Schaar, M. (2023). A U-turn on double descent: rethinking parameter counting in statistical learning. NeurIPS.
 - D’Angelo, F., Andriushchenko, M., Varre, A. and Flammarion, N. (2024). Why do we need weight decay in modern deep learning? NeurIPS.
+- d’Ascoli, S., Refinetti, M., Biroli, G. and Krzakala, F. (2020). Double trouble in double descent: bias and variance(s) in the lazy regime. ICML.
 - Damian, A., Ma, T. and Lee, J. D. (2021). Label noise SGD provably prefers flat global minimizers. NeurIPS.
 - Damian, A., Nichani, E. and Lee, J. D. (2023). Self-stabilization: the implicit bias of gradient descent at the edge of stability. ICLR.
 - Daskalakis, C., Ilyas, A., Syrgkanis, V. and Zeng, H. (2018). Training GANs with optimism. ICLR.
@@ -685,6 +704,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Hajek, B. (1988). Cooling schedules for optimal annealing. Mathematics of Operations Research 13(2).
 - Hao, Z., Wang, H., Liu, H., Luo, J., Yu, J., Dong, H., Lin, Q., Wang, C. and Chen, J. (2026). Rethinking entropy interventions in RLVR: an entropy change perspective. ACL.
 - HaoChen, J. Z., Wei, C., Lee, J. D. and Ma, T. (2021). Shape matters: understanding the implicit bias of the noise covariance. COLT.
+- Hastie, T., Montanari, A., Rosset, S. and Tibshirani, R. J. (2022). Surprises in high-dimensional ridgeless least squares interpolation. Annals of Statistics 50(2).
 - Hayou, S. (2026). A proof of learning rate transfer under μP. AISTATS.
 - Hayou, S., Ghosh, N. and Yu, B. (2024a). LoRA+: efficient low rank adaptation of large models. ICML.
 - Hayou, S., Ghosh, N. and Yu, B. (2024b). The impact of initialization on LoRA finetuning dynamics. NeurIPS.
@@ -760,6 +780,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Liu, L., Jiang, H., He, P., Chen, W., Liu, X., Gao, J. and Han, J. (2020). On the variance of the adaptive learning rate and beyond. ICLR.
 - Liu, M., Diao, S., Lu, X., Hu, J., Dong, X., Choi, Y., Kautz, J. and Dong, Y. (2025). ProRL: prolonged reinforcement learning expands reasoning boundaries in large language models. NeurIPS.
 - Liu, Z., Michaud, E. J. and Tegmark, M. (2023). Omnigrok: grokking beyond algorithmic data. ICLR.
+- Loog, M., Viering, T., Mey, A., Krijthe, J. H. and Tax, D. M. J. (2020). A brief prehistory of double descent. PNAS 117(20).
 - Lorch, E. (2016). Visualizing deep network training trajectories with PCA. ICML Workshop on Visualization for Deep Learning.
 - Loshchilov, I. and Hutter, F. (2017). SGDR: stochastic gradient descent with warm restarts. ICLR.
 - Loshchilov, I. and Hutter, F. (2019). Decoupled weight decay regularization. ICLR.
@@ -781,6 +802,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Mei, J., Xiao, C., Dai, B., Li, L., Szepesvári, C. and Schuurmans, D. (2020b). Escaping the gravitational pull of softmax. NeurIPS.
 - Mei, J., Xiao, C., Szepesvári, C. and Schuurmans, D. (2020a). On the global convergence rates of softmax policy gradient methods. ICML.
 - Mei, J., Zhong, Z., Dai, B., Agarwal, A., Szepesvári, C. and Schuurmans, D. (2023). Stochastic gradient succeeds for bandits. ICML.
+- Mei, S. and Montanari, A. (2022). The generalization error of random features regression: precise asymptotics and the double descent curve. Communications on Pure and Applied Mathematics 75(4).
 - Merrill, W., Arora, S., Groeneveld, D. and Hajishirzi, H. (2025). Critical batch size revisited: a simple empirical approach to large-batch language model training. NeurIPS.
 - Mescheder, L., Geiger, A. and Nowozin, S. (2018). Which training methods for GANs do actually converge? ICML.
 - Mescheder, L., Nowozin, S. and Geiger, A. (2017). The numerics of GANs. NeurIPS.
@@ -794,6 +816,8 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Muckatira, S., Shivagunde, N., Deshpande, V. and Rumshisky, A. (2026). A pre-training analogue of grokking in language models: tracing delayed grammatical generalization. AACL-IJCNLP.
 - Mühlenbein, H., Schomisch, M. and Born, J. (1991). The parallel genetic algorithm as function optimizer. Parallel Computing 17(6–7).
 - Nacson, M. S., Lee, J., Gunasekar, S., Savarese, P., Srebro, N. and Soudry, D. (2019). Convergence of gradient descent on separable data. AISTATS.
+- Nakkiran, P., Kaplun, G., Bansal, Y., Yang, T., Barak, B. and Sutskever, I. (2020). Deep double descent: where bigger models and more data hurt. ICLR.
+- Nakkiran, P., Venkat, P., Kakade, S. and Ma, T. (2021). Optimal regularization can mitigate double descent. ICLR.
 - Nanda, N., Chan, L., Lieberum, T., Smith, J. and Steinhardt, J. (2023). Progress measures for grokking via mechanistic interpretability. ICLR.
 - Nesterov, Y. (1983). A method for solving the convex programming problem with convergence rate O(1/k²). Soviet Mathematics Doklady 27.
 - Nesterov, Y. (2004). Introductory lectures on convex optimization: a basic course. Kluwer.
@@ -893,6 +917,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Yu, T., Kumar, S., Gupta, A., Levine, S., Hausman, K. and Finn, C. (2020). Gradient surgery for multi-task learning. NeurIPS.
 - Yue, Y., Chen, Z., Lu, R., Zhao, A., Wang, Z., Yue, Y., Song, S. and Huang, G. (2025). Does reinforcement learning really incentivize reasoning capacity in LLMs beyond the base model? NeurIPS.
 - Zhang, B., Zheng, Z., Chen, Z. and Li, J. (2025). Beyond the permutation symmetry of transformers: the role of rotation for model fusion. ICML.
+- Zhang, C., Bengio, S., Hardt, M., Recht, B. and Vinyals, O. (2017). Understanding deep learning requires rethinking generalization. ICLR.
 - Zhang, C., Zou, D. and Cao, Y. (2024). The implicit bias of Adam on separable data. NeurIPS.
 - Zhang, F. and Pilanci, M. (2024). Riemannian preconditioned LoRA for fine-tuning foundation models. ICML.
 - Zhang, G., Li, L., Nado, Z., Martens, J., Sachdeva, S., Dahl, G., Shallue, C. and Grosse, R. (2019). Which algorithmic choices matter at which batch sizes? Insights from a noisy quadratic model. NeurIPS.
