@@ -1,6 +1,6 @@
 # References
 
-Every plate cites the papers it draws on: 277 works in all. They are listed here by plate, each with a note on what it
+Every plate cites the papers it draws on: 279 works in all. They are listed here by plate, each with a note on what it
 contributed, and then alphabetically. Each plate title links to that plate in the atlas. The about panel (press I in the
 atlas) cites a few more, on what a two-parameter map cannot show; they are listed in the panel.
 
@@ -470,6 +470,16 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Wei, B., Huang, K., Huang, Y., Xie, T., Qi, X., Xia, M., Mittal, P., Wang, M. and Henderson, P. (2024). Assessing the brittleness of safety alignment via pruning and low-rank modifications. ICML. *Safety-critical regions are about 3% of parameters and 2.5% of ranks; removing them breaks safety, not utility.*
 - Qi, X., Panda, A., Lyu, K., Ma, X., Roy, S., Beirami, A., Mittal, P. and Henderson, P. (2025). Safety alignment should be made more than just a few tokens deep. ICLR. *Alignment mainly changes the distribution of the first few output tokens.*
 
+### IX · Beyond two dimensions
+
+**41. [Trajectories in PCA](https://matteohe.com/atlas-of-loss-surfaces/?plate=pca)**
+
+- Lorch, E. (2016). Visualizing deep network training trajectories with PCA. ICML Workshop on Visualization for Deep Learning. *Introduces PCA plots of training trajectories; PC1 changes monotonically and PC2 rises and falls once.*
+- Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS. *Draws optimizer paths on PCA directions over loss contours; two components hold 40% to 90% of the variation.*
+- Antognini, J. M. and Sohl-Dickstein, J. (2018). PCA of high dimensional random walks with comparison to neural network training. NeurIPS. *A random walk’s components are cosines explaining `6/(π²k²)`; in a quadratic, PCA is dominated by the flattest directions.*
+- Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754. *The gradient soon lies mostly in the span of the Hessian’s top eigenvectors, about one per class.*
+- Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR. *Updates projected onto that subspace barely lower the loss; removing them trains about as well.*
+
 ## All works, alphabetically
 
 - Abbe, E., Boix-Adserà, E. and Misiakiewicz, T. (2023). SGD learning on neural networks: leap complexity and saddle-to-saddle dynamics. COLT, PMLR 195.
@@ -481,6 +491,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Andriushchenko, M. and Flammarion, N. (2022). Towards understanding sharpness-aware minimization. ICML.
 - Andriushchenko, M., Croce, F., Müller, M., Hein, M. and Flammarion, N. (2023). A modern look at the relationship between sharpness and generalization. ICML.
 - Andriushchenko, M., Varre, A. V., Pillaud-Vivien, L. and Flammarion, N. (2023). SGD with large step sizes learns sparse features. ICML.
+- Antognini, J. M. and Sohl-Dickstein, J. (2018). PCA of high dimensional random walks with comparison to neural network training. NeurIPS.
 - Arora, S., Li, Z. and Lyu, K. (2019). Theoretical analysis of auto rate-tuning by batch normalization. ICLR.
 - Azar, M. G., Guo, Z. D., Piot, B., Munos, R., Rowland, M., Valko, M. and Calandriello, D. (2024). A general theoretical paradigm to understand learning from human preferences. AISTATS.
 - Bach, F. and Moulines, E. (2013). Non-strongly-convex smooth stochastic approximation with convergence rate O(1/n). NeurIPS.
@@ -625,6 +636,7 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Liu, J. et al. (2025). Muon is scalable for LLM training. arXiv:2502.16982.
 - Liu, L., Jiang, H., He, P., Chen, W., Liu, X., Gao, J. and Han, J. (2020). On the variance of the adaptive learning rate and beyond. ICLR.
 - Liu, M., Diao, S., Lu, X., Hu, J., Dong, X., Choi, Y., Kautz, J. and Dong, Y. (2025). ProRL: prolonged reinforcement learning expands reasoning boundaries in large language models. NeurIPS.
+- Lorch, E. (2016). Visualizing deep network training trajectories with PCA. ICML Workshop on Visualization for Deep Learning.
 - Loshchilov, I. and Hutter, F. (2017). SGDR: stochastic gradient descent with warm restarts. ICLR.
 - Loshchilov, I. and Hutter, F. (2019). Decoupled weight decay regularization. ICLR.
 - Lucas, J., Bae, J., Zhang, M. R., Fort, S., Zemel, R. and Grosse, R. (2021). On monotonic linear interpolation of neural network parameters. ICML.

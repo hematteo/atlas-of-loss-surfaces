@@ -4397,6 +4397,218 @@ function symEig(A, n) {
 // plate: slices (what a slice hides)
 //
 // plate: pca (trajectories in PCA)
+// A d-dimensional process is recorded for T steps; PCA of the recording draws it on the map. The work is spread over
+// frames: recording (each iterate adds a row to the T×T Gram matrix of the iterates), subspace iteration on the centred
+// Gram matrix for the top components, then the plane's loss and a rebuild of the sheet. The walk and both SGD runs draw
+// the same noise ξ, so only the process differs.
+const PCA_D = 2000, PCA_T = 300, PCA_K = 10, PCA_P = 20, PCA_FAR = 3, PCA_MS = 2;
+const PCA_CACHE = new Map();      // finished recordings by seed, process and spectrum, so the rebuild that brings in the plane finds them
+const PCA = { key: '', res: null, job: null, seed: 1, X: null };
+const pcaKey = () => `${F.seed}|${SIM.proc}|${SIM.proc === 'walk' ? 0 : Math.round(SIM.tau)}`;
+function pcaSync() { const k = pcaKey(); if (k !== PCA.key) { PCA.key = k; PCA.res = PCA_CACHE.get(k) || null; PCA.job = null; } }
+// SGD's curvatures, as ηλ_i: a power law 1/i from 1 down to 1/d, with the slowest relaxation time 1/ηλ capped at τ steps
+function pcaLam(tau) { const h = new Float64Array(PCA_D); for (let i = 0; i < PCA_D; i++) h[i] = Math.max(1 / (i + 1), 1 / tau); return h; }
+const pcaCos = (k, t) => Math.cos(Math.PI * k * (t + 0.5) / PCA_T);      // the random walk's k-th component over steps t = 0 … T−1
+function pcaStart() {
+  const proc = SIM.proc, h = proc === 'walk' ? null : pcaLam(SIM.tau), s = 1 / Math.sqrt(PCA_D);     // noise s per coordinate: a step of length ≈ 1
+  const Rn = Frame.rng(PCA.seed), Ri = Frame.rng((PCA.seed ^ 0x5bd1e995) >>> 0), th = new Float64Array(PCA_D);
+  if (proc === 'stat') for (let i = 0; i < PCA_D; i++) th[i] = s * Math.sqrt(1 / (h[i] * (2 - h[i]))) * Ri.normal();      // SGD's exact stationary law
+  else if (proc === 'descent') {
+    let rc2 = 0; for (let i = 0; i < PCA_D; i++) rc2 += s * s / (h[i] * (2 - h[i]));      // rc: the stationary distance from the minimum
+    const u = unitN(Ri, PCA_D), r = PCA_FAR * Math.sqrt(rc2); for (let i = 0; i < PCA_D; i++) th[i] = r * u[i];
+  }
+  if (!PCA.X) PCA.X = new Float64Array(PCA_T * PCA_D);        // (T, d) iterates, reused by every recording
+  let Lst = 0; if (h) for (let i = 0; i < PCA_D; i++) Lst += s * s / (2 * (2 - h[i]));
+  return { key: PCA.key, proc, stage: 0, t: 0, it: 0, col: 0, h, s, Rn, Ri, th, Lst, loss: new Float64Array(PCA_T), G: new Float64Array(PCA_T * PCA_T) };
+}
+// one recorded step, θ ← θ − η∇L + ησξ (the walk leaves out the gradient), then its row of the Gram matrix  (T, T)
+function pcaRecord(J) {
+  const d = PCA_D, T = PCA_T, X = PCA.X, th = J.th, h = J.h, s = J.s, R = J.Rn, t = J.t, o = t * d;
+  let Lt = 0;
+  if (h) for (let i = 0; i < d; i++) { th[i] -= h[i] * th[i] - s * R.normal(); Lt += 0.5 * h[i] * th[i] * th[i]; }
+  else for (let i = 0; i < d; i++) th[i] += s * R.normal();
+  X.set(th, o); J.loss[t] = Lt;
+  for (let j = 0; j <= t; j++) {
+    const q = j * d; let a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+    for (let k = 0; k < d; k += 4) { a0 += X[o + k] * X[q + k]; a1 += X[o + k + 1] * X[q + k + 1]; a2 += X[o + k + 2] * X[q + k + 2]; a3 += X[o + k + 3] * X[q + k + 3]; }
+    J.G[t * T + j] = J.G[j * T + t] = a0 + a1 + a2 + a3;
+  }
+  J.t++;
+}
+// centre the Gram matrix (Gc = CGC, C = I − 11ᵀ/T) and seed the subspace with random orthonormal columns
+function pcaCentre(J) {
+  const T = PCA_T, G = J.G, r = new Float64Array(T); let m = 0;
+  for (let i = 0; i < T; i++) { let a = 0; for (let j = 0; j < T; j++) a += G[i * T + j]; r[i] = a / T; m += a / (T * T); }
+  for (let i = 0; i < T; i++) for (let j = 0; j < T; j++) G[i * T + j] += m - r[i] - r[j];
+  J.tr = 0; for (let i = 0; i < T; i++) J.tr += G[i * T + i];
+  J.Q = []; for (let c = 0; c < PCA_P; c++) J.Q.push(gaussN(J.Ri, T));
+  pcaOrtho(J.Q);
+  J.Z = J.Q.map(() => new Float64Array(T));
+}
+function pcaOrtho(Q) { for (let pass = 0; pass < 2; pass++) for (let c = 0; c < Q.length; c++) { for (let b = 0; b < c; b++) { const a = dotN(Q[b], Q[c]); for (let t = 0; t < PCA_T; t++) Q[c][t] -= a * Q[b][t]; } const l = normN(Q[c]) || 1; for (let t = 0; t < PCA_T; t++) Q[c][t] /= l; } }
+// Rayleigh–Ritz on span(Q) once Z = Gc·Q is in: Ritz pairs by symEig, residuals, and the next orthonormal Q
+function pcaRitz(J) {
+  const p = PCA_P, T = PCA_T, Q = J.Q, Z = J.Z, B = new Float64Array(p * p);
+  for (let a = 0; a < p; a++) for (let b = a; b < p; b++) B[a * p + b] = B[b * p + a] = 0.5 * (dotN(Q[a], Z[b]) + dotN(Q[b], Z[a]));
+  const { vals, vecs } = symEig(B, p), Y = [], ZW = [];
+  let res = 0;
+  for (let c = 0; c < p; c++) {
+    const e = p - 1 - c, y = new Float64Array(T), z = new Float64Array(T);      // descending order
+    for (let b = 0; b < p; b++) { const w = vecs[b * p + e]; if (!w) continue; for (let t = 0; t < T; t++) { y[t] += w * Q[b][t]; z[t] += w * Z[b][t]; } }
+    if (c < PCA_K) { let r2 = 0; for (let t = 0; t < T; t++) { const q = z[t] - vals[e] * y[t]; r2 += q * q; } res = Math.max(res, Math.sqrt(r2) / Math.max(1e-300, vals[p - 1])); }
+    Y.push(y); ZW.push(z);
+  }
+  J.lam = Array.from({ length: PCA_K }, (_, c) => vals[p - 1 - c]); J.U = Y.slice(0, PCA_K); J.res = res; J.it++;
+  pcaOrtho(ZW); J.Q = ZW;
+}
+// the result: explained-variance fractions, the components over time, the path on the map, and the plane's loss
+function pcaFinish(J) {
+  const T = PCA_T, d = PCA_D, X = PCA.X, frac = J.lam.map((l) => l / J.tr), U = J.U.map((u) => Float64Array.from(u)), ov = [];
+  U.forEach((u, k) => {
+    let m = 0; for (let t = 0; t < T; t++) m += u[t] / T; for (let t = 0; t < T; t++) u[t] -= m;
+    let a = 0; for (let t = 0; t < T; t++) a += u[t] * pcaCos(k + 1, t);
+    if (a < 0) for (let t = 0; t < T; t++) u[t] = -u[t];          // PCA's signs are arbitrary: each component is turned to match its cosine
+    ov.push(Math.abs(a) / (normN(u) * Math.sqrt(T / 2)));       // overlap |u·c|/(‖u‖‖c‖), with ‖c‖² = T/2
+  });
+  const a1 = U[0].map((v) => v * Math.sqrt(J.lam[0])), a2 = U[1].map((v) => v * Math.sqrt(J.lam[1]));      // the path's coordinates on PC1 and PC2
+  let m1 = 1e-12, m2 = 1e-12; for (let t = 0; t < T; t++) { m1 = Math.max(m1, Math.abs(a1[t])); m2 = Math.max(m2, Math.abs(a2[t])); }
+  const sc = Math.min(1.42 / m1, 0.84 / m2), px = a1.map((v) => v * sc), py = a2.map((v) => v * sc);      // one scale on both axes keeps the path's shape
+  const res = { key: J.key, proc: J.proc, frac, lam: J.lam, tr: J.tr, U, ov, sc, px, py, it: J.it, resid: J.res, plane: null };
+  if (J.h) {
+    const h = J.h, mu = new Float64Array(d), v1 = new Float64Array(d), v2 = new Float64Array(d);
+    for (let t = 0; t < T; t++) { const o = t * d, w1 = U[0][t], w2 = U[1][t]; for (let i = 0; i < d; i++) { const x = X[o + i]; mu[i] += x / T; v1[i] += w1 * x; v2[i] += w2 * x; } }
+    const n1 = normN(v1), n2 = normN(v2); for (let i = 0; i < d; i++) { v1[i] /= n1; v2[i] /= n2; }      // ‖Xᵀu‖ = √λ: the unit PC directions in d dimensions
+    const P = { c0: 0, g1: 0, g2: 0, h11: 0, h12: 0, h22: 0 };
+    for (let i = 0; i < d; i++) { const hm = h[i] * mu[i]; P.c0 += 0.5 * hm * mu[i]; P.g1 += hm * v1[i]; P.g2 += hm * v2[i]; P.h11 += h[i] * v1[i] * v1[i]; P.h12 += h[i] * v1[i] * v2[i]; P.h22 += h[i] * v2[i] * v2[i]; }
+    const det = P.h11 * P.h22 - P.h12 * P.h12;      // the plane's lowest loss, c0 − ½gᵀH⁻¹g (H is positive definite)
+    res.plane = P; res.L0 = J.loss[0]; res.L1 = J.loss[T - 1]; res.Lst = J.Lst; res.Lmin = Math.min(...J.loss); res.hMean = h.reduce((a, b) => a + b, 0) / d;
+    res.Lplane = P.c0 - 0.5 * (P.h22 * P.g1 * P.g1 - 2 * P.h12 * P.g1 * P.g2 + P.h11 * P.g2 * P.g2) / det;
+  }
+  return res;
+}
+// spread the work over frames: about PCA_MS of it per frame, whole steps and whole matrix columns at a time
+function pcaWork(budget = PCA_MS) {
+  pcaSync();      // an instrument just moved: start on the new recording while the sheet waits for its rebuild
+  if (PCA.res) return;
+  if (!PCA.job) { PCA.job = pcaStart(); return; }      // allocation and the start state: a frame of their own
+  const J = PCA.job, t0 = performance.now();
+  let first = true, u0 = t0;
+  do {
+    if (!first && (J.stage === 3 || (J.stage === 2 && J.col >= PCA_P))) return;      // the Ritz step and the last unit (1–2 ms) each open a frame
+    first = false; u0 = performance.now();
+    if (J.stage === 0) { pcaRecord(J); if (J.t >= PCA_T) J.stage = 1; }
+    else if (J.stage === 1) { pcaCentre(J); J.stage = 2; }
+    else if (J.stage === 2) {
+      if (J.col < PCA_P) {      // one column of Z = Gc·Q  (T,)
+        const T = PCA_T, G = J.G, q = J.Q[J.col], z = J.Z[J.col];
+        for (let i = 0; i < T; i++) { let a = 0; const o = i * T; for (let j = 0; j < T; j++) a += G[o + j] * q[j]; z[i] = a; }
+        J.col++;
+      } else { J.col = 0; pcaRitz(J); if (J.res < 1e-10 || J.it >= 400) J.stage = 3; }
+    } else {
+      const r = pcaFinish(J);
+      PCA_CACHE.set(r.key, r); if (PCA_CACHE.size > 24) PCA_CACHE.delete(PCA_CACHE.keys().next().value);
+      PCA.res = r; PCA.job = null;
+      if (PL.id === 'pca') reshape(0);      // the sheet, the path and its labels come in with the result
+      return;
+    }
+  } while (2 * performance.now() - t0 - u0 < budget);      // stop when another unit as long as the last would overrun
+}
+function sheetPCA(R) {
+  pcaSync();
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  const r = PCA.res;
+  if (!r || !r.plane) { sheetEnd(R, true); return; }      // flat: the walk has no loss, and SGD's plane is not known until PCA is done
+  const P = r.plane, k = 1 / r.sc;      // map units → distance along PC1 and PC2 from the recording's mean
+  EXTRA = (x, y) => { const a = x * k, b = y * k; return P.c0 + P.g1 * a + P.g2 * b + 0.5 * (P.h11 * a * a + 2 * P.h12 * a * b + P.h22 * b * b); };
+  sheetEnd(R);
+}
+function pcaReplay() {
+  const r = PCA.res; if (!r) return;
+  stamp(r.px[0], r.py[0], 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  if (spawn(r.px[0], r.py[0], 0) >= 0) STAT.released++;
+}
+const pcaPct = (v, dp = 0) => `${(100 * v).toFixed(dp)}%`;
+plate({
+  id: 'pca', ch: 8, seed: 4507,
+  run: [
+    (T) => { T.set('tau', 2000); T.set('proc', 'walk'); T.clear(); if (reshapeWait) reshapeWait.push(pcaReplay); else pcaReplay(); },
+    null,
+    (T) => { T.set('tau', 2000); T.set('proc', 'descent'); },
+    (T) => { T.set('tau', 2000); T.set('proc', 'stat'); },
+    null,
+    (T) => { T.set('proc', 'stat'); T.set('tau', 20); },
+    (T) => { T.set('tau', 20); T.set('proc', 'descent'); },
+  ],
+  status: 'established',
+  tribes: [{ k: 'sgd', name: 'The recording, on PC1 and PC2', kind: K_FN, sigMul: 0, rest: 'never', maxAge: PCA_T - 1, inkA: 0.5, rule: 'replays the projected iterates (PC1, PC2) step by step',
+    fn: (i, x, y) => { const r = PCA.res, t = Age[i] + 1; if (!r || t >= PCA_T) return [0, 0]; return [r.px[t] - x, r.py[t] - y]; } }],
+  sim: { proc: 'walk', tau: 2000 },
+  ctl: [{ type: 'select', key: 'proc', label: 'Process', options: { walk: 'Random walk', descent: 'SGD, starting far from the minimum', stat: 'SGD at stationarity' } },
+    { key: 'tau', label: 'SGD’s slowest relaxation', min: 10, max: 2000, scale: 'log', f: (v) => `${Math.round(v)} steps` }],
+  view: { yaw: -4, pitch: 58 },
+  figH: 280,
+  sheet: sheetPCA,
+  features: () => { pcaSync(); PL.st = {}; },
+  setup: () => { PCA.seed = (F.seed ^ 0x2545f491) >>> 0; },      // from the seed alone, not NR: NR also hangs on the plate's place in the atlas
+  names: (S) => {
+    const r = PCA.res; if (!r) return;
+    S.marks.push({ p: { x: r.px[0], y: r.py[0] }, name: 'Start', sub: 't = 1', sym: 'none', pri: 9 });
+    S.marks.push({ p: { x: r.px[PCA_T - 1], y: r.py[PCA_T - 1] }, name: 'End', sub: `t = ${PCA_T}`, sym: 'none', pri: 8 });
+    S.paths.push({ text: 'PC1', pts: [X1 - 0.62, 0, X1 - 0.08, 0], size: 10.5, offset: 0.04 });
+    S.paths.push({ text: 'PC2', pts: [0, Y0 + 0.08, 0, Y0 + 0.5], size: 10.5, offset: 0.04 });
+  },
+  lines: () => {
+    const r = PCA.res; if (!r) return;
+    line(drape([X0 + 0.06, 0, X1 - 0.06, 0], 0.02), INK, 0.7, 0.02, true, 0.45);
+    line(drape([0, Y0 + 0.06, 0, Y1 - 0.06], 0.02), INK, 0.7, 0.02, true, 0.45);
+    const xy = []; for (let t = 0; t < PCA_T; t++) xy.push(r.px[t], r.py[t]);
+    line(drape(xy, 0.01), '#c22a40', 1, 0, true, 0.5);
+  },
+  frame: () => pcaWork(),
+  onSim: (k) => { if (k === 'proc' || k === 'tau') reshape(); },
+  release: () => {
+    if (!PCA.res || !F.params.auto) { nextRelease = STAT.steps + 30; return; }
+    if (STAT.alive === 0) pcaReplay();
+    nextRelease = STAT.steps + PCA_T + 90;
+  },
+  click: () => pcaReplay(),
+  debug: () => { const r = PCA.res, J = PCA.job; return r ? { frac: r.frac.slice(0, 4).map((v) => +v.toFixed(4)), ov: r.ov.slice(0, 4).map((v) => +v.toFixed(4)), it: r.it, resid: r.resid } : J ? { stage: J.stage, t: J.t, it: J.it } : null; },
+  readouts: () => {
+    const r = PCA.res, J = PCA.job;
+    if (!r) return [['recording', J ? (J.stage === 0 ? `step ${J.t} of ${PCA_T}` : `PCA, iteration ${J.it}`) : '…']];
+    const out = [['recorded', `${PCA_D.toLocaleString('en')} dimensions × ${PCA_T} steps`],
+      ['PC1 · PC2 explain (walk: 61% · 15%)', `${pcaPct(r.frac[0], 1)} · ${pcaPct(r.frac[1], 1)}`],
+      ['PC1 · PC2 overlap with cos(kπt/T)', `${r.ov[0].toFixed(3)} · ${r.ov[1].toFixed(3)}`]];
+    if (r.plane) out.push(['ηλ along PC1 · PC2 (mean over all directions)', `${r.plane.h11.toFixed(4)} · ${r.plane.h22.toFixed(4)} (${r.hMean.toFixed(4)})`], ['loss at t = 1 → 300 (stationary)', `${r.L0.toFixed(2)} → ${r.L1.toFixed(2)} (${r.Lst.toFixed(2)})`], ['lowest loss on the plane (minimum 0)', r.Lplane.toFixed(2)]);
+    return out;
+  },
+  fig: (c, w, h) => {
+    const r = PCA.res, J = PCA.job, x0 = 36, x1 = w - 8, hh = (h - 12) * 0.5;
+    let y0 = 8, y1 = hh - 22;
+    FIG.axes(c, x0, y0, x1, y1, 'component k', 'explained variance');
+    const tk = (k) => x0 + 10 + (x1 - x0 - 20) * (k - 1) / (PCA_K - 1), tv = (v) => y1 - (y1 - y0) * (Math.log10(clamp(v, 1e-4, 1)) + 4) / 4;
+    c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.6)'; c.lineWidth = 1; c.beginPath();
+    for (let k = 1; k <= PCA_K; k++) { const X = tk(k), Y = tv(6 / (Math.PI * Math.PI * k * k)); if (k === 1) c.moveTo(X, Y); else c.lineTo(X, Y); }
+    c.stroke(); c.setLineDash([]);
+    FIG.note(c, tk(1) + 2, tv(0.0003), 'dashed: a random walk, 6/π²k²');
+    for (const v of [0.001, 0.01, 0.1, 1]) FIG.tick(c, x0 - 3, tv(v), v >= 0.01 ? pcaPct(v) : '0.1%', 'right', 'middle');
+    for (const k of [1, 2, 5, 10]) FIG.tick(c, tk(k), y1 + 3, String(k));
+    const col = TRIBES[0].color;
+    if (r) { c.fillStyle = col; for (let k = 1; k <= PCA_K; k++) { c.beginPath(); c.arc(tk(k), tv(r.frac[k - 1]), 2.6, 0, TAU); c.fill(); } }
+    y0 = hh + 20; y1 = h - 26;
+    FIG.axes(c, x0, y0, x1, y1, 'step t', 'PC1 and PC2 over time; dashed: cos(kπt/T)');
+    const xs = Array.from({ length: PCA_T }, (_, t) => t + 1);
+    const cosS = (k) => ({ ys: xs.map((_, t) => pcaCos(k, t)), xs, color: 'rgba(36,38,43,0.55)', w: 1, dash: [3, 2] });
+    const ser = [cosS(1), cosS(2)];
+    let lo = -1.15, hi = 1.15;
+    if (r) for (const [k, cl] of [[0, col], [1, '#4b3fa0']]) { const ys = Array.from(r.U[k], (v) => v * Math.sqrt(PCA_T / 2)); for (const v of ys) { lo = Math.min(lo, v); hi = Math.max(hi, v); } ser.push({ ys, xs, color: cl, w: 1.4 }); }
+    const s = figSeries(c, x0, y0, x1, y1, ser, { xmax: PCA_T, ymin: lo, ymax: hi });
+    for (const v of [-1, 0, 1]) FIG.tick(c, x0 - 3, s.ty(v), String(v), 'right', 'middle');
+    for (const t of [1, 150, 300]) FIG.tick(c, x0 + (x1 - x0) * t / PCA_T, y1 + 3, String(t));
+    if (r) { FIG.note(c, x0 + (x1 - x0) * 0.25, s.ty(r.U[0][74] * Math.sqrt(PCA_T / 2)) - 10, 'PC1', col, 'center'); FIG.note(c, x0 + (x1 - x0) * 0.5, s.ty(r.U[1][PCA_T >> 1] * Math.sqrt(PCA_T / 2)) - 9, 'PC2', '#4b3fa0', 'center'); }
+    else FIG.note(c, (x0 + x1) / 2, (y0 + y1) / 2, J ? (J.stage === 0 ? `recording step ${J.t} of ${PCA_T}` : `PCA, iteration ${J.it}`) : 'recording…', 'rgba(36,38,43,0.6)', 'center');
+  },
+});
 //
 // ch9>>
 // reading order: the plate blocks above are grouped by the code they share; the atlas is read in this order
