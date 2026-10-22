@@ -4568,6 +4568,202 @@ function symEig(A, n) {
 // plate: sinking (minima in many dimensions)
 //
 // plate: slices (what a slice hides)
+// A loss in d dimensions, written in the eigenbasis of its Hessian at the origin: L(θ) = L₀ + Σᵢ [½λᵢθᵢ² + (κ/4)θᵢ⁴],
+// with L₀ chosen so that the global minimum is 0. On a plane θ = a·u + b·v it is a quartic in (a, b) with eight
+// coefficients, so a slice is cheap. The map draws (θ₁, θ₂) = (a/s₁, b/s₂), each axis stretched so that the loss along
+// it rises by SLC.H at map distance 1.6. One optimizer steps in all d dimensions and is drawn at its projection; the
+// other steps on the plane only, from the same projected start.
+const SLC = { d: 4000, kap: 0.25, H: 1.2, eps: 0.01, T: 1800, X: [], G: [0, 0] };
+const SLC_NAMES = { random: 'two random directions', top: 'top two eigenvectors', neg: 'top and most negative eigenvectors' };
+function slcP(a, b) {
+  const c = SLC, a2 = a * a, b2 = b * b;
+  return 0.5 * (c.A * a2 + 2 * c.B * a * b + c.C * b2) + 0.25 * c.kap * (c.q40 * a2 * a2 + 4 * c.q31 * a2 * a * b + 6 * c.q22 * a2 * b2 + 4 * c.q13 * a * b2 * b + c.q04 * b2 * b2);
+}
+function slcGrad(a, b) {      // (uᵀ∇L, vᵀ∇L) at θ = a·u + b·v
+  const c = SLC, a2 = a * a, b2 = b * b;
+  c.G[0] = c.A * a + c.B * b + c.kap * (c.q40 * a2 * a + 3 * c.q31 * a2 * b + 3 * c.q22 * a * b2 + c.q13 * b2 * b);
+  c.G[1] = c.B * a + c.C * b + c.kap * (c.q31 * a2 * a + 3 * c.q22 * a2 * b + 3 * c.q13 * a * b2 + c.q04 * b2 * b);
+  return c.G;
+}
+function slcLoss(X) { const c = SLC, lam = c.lam, k4 = c.kap / 4; let l = c.L0; for (let k = 0; k < c.d; k++) { const q = X[k], q2 = q * q; l += 0.5 * lam[k] * q2 + k4 * q2 * q2; } return l; }
+function sheetSlices(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  const c = SLC, d = c.d, lam = c.lam = new Float64Array(d);
+  // the spectrum: ten outliers up to λ_max, a few negative eigenvalues down to λ_min, and a bulk piled up near zero
+  const nOut = 10, nNeg = R.int(12, 18), lmax = R.range(12, 16), lmin = -R.range(0.45, 0.6);
+  let k = 0;
+  for (let j = 0; j < nOut; j++) lam[k++] = j === 0 ? lmax : Math.exp(R.range(Math.log(1.5), Math.log(0.8 * lmax)));
+  for (let j = 0; j < nNeg; j++) lam[k++] = j === 0 ? lmin : lmin * Math.pow(R.range(0.04, 0.96), 1.5);
+  for (; k < d; k++) lam[k] = Math.min(1.2, -0.12 * Math.log(1 - R()));
+  let tr = 0, s2 = 0, L0 = 0, iMax = 0, iMin = 0, i2 = -1;
+  for (let i = 0; i < d; i++) { tr += lam[i]; s2 += lam[i] * lam[i]; if (lam[i] < 0) L0 += lam[i] * lam[i] / (4 * c.kap); if (lam[i] > lam[iMax]) iMax = i; if (lam[i] < lam[iMin]) iMin = i; }
+  for (let i = 0; i < d; i++) if (i !== iMax && (i2 < 0 || lam[i] > lam[i2])) i2 = i;
+  Object.assign(c, { nNeg, lmax, lmin, L0, trd: tr / d, sd: Math.sqrt(2 * (s2 / d - (tr / d) ** 2) / (d + 2)) });   // sd: spread of uᵀHu over random unit u
+  const ru = unitN(R, d), rv = orthoN(ru, unitN(R, d)), e = (i) => { const v = new Float64Array(d); v[i] = 1; return v; };
+  [c.u, c.v] = SIM.slice === 'top' ? [e(iMax), e(i2)] : SIM.slice === 'neg' ? [e(iMin), e(iMax)] : [ru, rv];
+  const u = c.u, v = c.v;
+  let A = 0, B = 0, C = 0, q40 = 0, q31 = 0, q22 = 0, q13 = 0, q04 = 0;
+  for (let i = 0; i < d; i++) {
+    const x = u[i], y = v[i], x2 = x * x, y2 = y * y;
+    A += lam[i] * x2; B += lam[i] * x * y; C += lam[i] * y2; q40 += x2 * x2; q31 += x2 * x * y; q22 += x2 * y2; q13 += x * y2 * y; q04 += y2 * y2;
+  }
+  Object.assign(c, { A, B, C, q40, q31, q22, q13, q04 });
+  // the stretch of each axis: ½ct² + (κ/4)qt⁴ = H at t = 1.6s
+  const scale = (cc, q) => Math.sqrt((-cc + Math.sqrt(cc * cc + 4 * c.kap * q * c.H)) / (c.kap * q)) / 1.6;
+  c.s1 = scale(A, q40); c.s2 = scale(C, q04);
+  EXTRA = (x, y) => c.L0 + slcP(c.s1 * x, c.s2 * y);
+}
+function slcFeatures() {
+  const c = SLC, st = PL.st = { C: curveInit(2, c.T), cid: 1, cur: [null, null], start: null };
+  let kb = 0; for (let k = 1; k < HG.length; k++) if (HG[k] < HG[kb]) kb = k;
+  const m = critAt(X0 + (kb % GW) * GDX, Y0 + ((kb / GW) | 0) * GDY) || { x: 0, y: 0, L: L(0, 0), l1: 0, l2: 0, type: 'min' };
+  st.min = m;
+  st.wells = Math.hypot(m.x, m.y) > 0.05 ? [m, { x: -m.x, y: -m.y, L: L(-m.x, -m.y) }] : null;
+  // the spectrum as a histogram on a signed log axis
+  const f = slcF, lo = f(c.lmin) - 0.15, hi = f(c.lmax) + 0.15, nb = 64, bins = new Float64Array(nb);
+  for (let i = 0; i < c.d; i++) bins[clamp(Math.floor((f(c.lam[i]) - lo) / (hi - lo) * nb), 0, nb - 1)]++;
+  st.hist = { lo, hi, bins };
+}
+const slcF = (l) => Math.sign(l) * Math.log10(1 + Math.abs(l) / 0.05);
+const slcStep = (i, x, y, eta) => {      // gradient descent in all d dimensions; returns the move of its projection
+  const c = SLC, X = c.X[i], lam = c.lam, u = c.u, v = c.v, kap = c.kap, k4 = kap / 4;
+  if (!X) { Wl[i] = L(x, y); return [0, 0]; }
+  let l = c.L0, a = 0, b = 0;
+  for (let k = 0; k < c.d; k++) {
+    const q = X[k], q2 = q * q, lq = lam[k] * q, n = q - eta * (lq + kap * q2 * q);
+    l += 0.5 * lq * q + k4 * q2 * q2; X[k] = n; a += u[k] * n; b += v[k] * n;
+  }
+  Wl[i] = l;
+  return [a / c.s1 - x, b / c.s2 - y];
+};
+const slcPlane = (i, x, y, eta) => {     // gradient descent on the plane: (a, b) ← (a, b) − η(uᵀ∇L, vᵀ∇L)
+  const c = SLC, a = c.s1 * x, b = c.s2 * y, g = slcGrad(a, b);
+  Wl[i] = c.L0 + slcP(a, b);
+  return [-eta * g[0] / c.s1, -eta * g[1] / c.s2];
+};
+const SLC_TRIBES = [
+  { k: 'sgd', name: 'Descent in all d dimensions', color: '#c22a40', kind: K_FN, sigMul: 0, rest: 'never', maxAge: SLC.T, rule: 'θ ← θ − η∇L(θ),  θ ∈ ℝ⁴⁰⁰⁰,  η = 0.05', fn: slcStep },
+  { k: 'sgd', name: 'Descent on the slice', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'min', maxAge: SLC.T, rule: '(a, b) ← (a, b) − η(uᵀ∇L, vᵀ∇L),  θ = au + bv', fn: slcPlane },
+];
+function slcRace(p) {
+  const c = SLC, st = PL.st, d = c.d, n = PHONE ? 4 : 8, tmp = c.tmp || (c.tmp = new Float64Array(d));
+  curveReset(st.C); st.cid = st.C.cid; st.cur = [null, null];
+  stamp(p[0], p[1], 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  const a0 = c.s1 * p[0], b0 = c.s2 * p[1];
+  let L1 = 0, m = 0;
+  for (let q = 0; q < n; q++) {
+    for (let k = 0; k < d; k++) tmp[k] = a0 * c.u[k] + b0 * c.v[k] + c.eps * RREL.normal();     // a point on the plane, nudged off it in every direction
+    const x = dotN(tmp, c.u, d) / c.s1, y = dotN(tmp, c.v, d) / c.s2;
+    const i = spawn(x, y, 0, { tag: st.cid });
+    if (i >= 0) { const X = c.X[i] || (c.X[i] = new Float64Array(d)); X.set(tmp); Wl[i] = slcLoss(X); L1 += Wl[i]; m++; }
+    const j = spawn(x, y, 1, { tag: st.cid });
+    if (j >= 0) Wl[j] = c.L0 + slcP(c.s1 * x, c.s2 * y);
+  }
+  st.start = m ? L1 / m : null;
+  STAT.released++;
+  nextRelease = STAT.steps + c.T + 100;
+}
+plate({
+  id: 'slices', ch: 8, seed: 4901,
+  run: [
+    (T) => { T.set('slice', 'random'); T.clear(); T.release(0.9, 0.45); },
+    null,
+    null,
+    (T) => { T.set('slice', 'top'); T.clear(); T.release(0.9, 0.45); },
+    (T) => { T.set('slice', 'neg'); T.clear(); T.release(0, 0.6); },
+  ],
+  status: 'established',
+  tribes: SLC_TRIBES,
+  sim: { lr: 0.05, noise: 0, slice: 'random' },
+  ctl: [{ type: 'select', key: 'slice', label: 'Slice through the origin, along', options: SLC_NAMES }],
+  view: { yaw: -10, pitch: 48 }, speed: 2, figH: 300,
+  sheet: sheetSlices,
+  features: slcFeatures,
+  onSim: (k) => { if (k === 'slice') reshape(); },
+  names: (S) => {
+    const c = SLC, st = PL.st, sl = SIM.slice;
+    if (st.wells) {
+      S.marks.push({ p: { x: 0, y: 0 }, name: 'Saddle', sub: `L ${c.L0.toFixed(3)} · λ ${fmt(c.A, 2)} and ${c.C.toFixed(1)}`, sym: 'pass', pri: 8 });
+      st.wells.forEach((w, k) => S.marks.push({ p: w, name: k ? '' : 'Well', sub: k ? `L ${w.L.toFixed(3)}` : `L ${w.L.toFixed(3)} · lowest point of the slice`, sym: 'min', pri: 9 - k, pin: k ? false : undefined }));
+    } else {
+      S.areas.push({ x: 0, y: -0.55, lines: [sl === 'top' ? 'Bowl of the Outliers' : 'Bowl of Averages'], size: 15, ls: 3 });
+      S.marks.push({ p: st.min, name: 'Hidden Saddle', sub: `L ${st.min.L.toFixed(3)} · lowest point of the slice`, sym: 'min', pri: 9 });
+    }
+    const ax = { random: ['random direction u', 'random direction v'], top: ['top eigenvector', 'second eigenvector'], neg: ['most negative eigenvector', 'top eigenvector'] }[sl];
+    S.paths.push({ text: `θ₁ along the ${ax[0]}`, pts: [-1.2, -0.9, 1.2, -0.9], size: 11, offset: 0 });
+    S.paths.push({ text: `θ₂ along the ${ax[1]}`, pts: [-1.5, -0.75, -1.5, 0.75], size: 11, offset: 0 });
+  },
+  print: () => {
+    const c = sc; c.save(); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.lineWidth = 0.8; c.setLineDash([2, 3]);
+    c.beginPath(); c.moveTo(ox(X0), oy(0)); c.lineTo(ox(X1), oy(0)); c.moveTo(ox(0), oy(Y0)); c.lineTo(ox(0), oy(Y1)); c.stroke(); c.restore();
+  },
+  release: () => {
+    if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
+    const a = RPLAN.range(0, TAU), r = RPLAN.range(0.6, 0.85);
+    slcRace([1.3 * r * Math.cos(a), 0.8 * r * Math.sin(a)]);
+  },
+  click: (x, y) => slcRace([x, y]),
+  frame: ch8Wait,
+  step: (i) => {
+    const st = PL.st; if (Tag[i] !== st.cid) return;
+    curveAdd(st.C, Tr[i], Age[i], Wl[i]);
+    st.cur[Tr[i]] = Wl[i];
+  },
+  overlay: (oc) => {        // the loss of a d-dimensional particle, printed where its projection stands on the slice
+    const st = PL.st; let k = -1;
+    for (let i = 0; i < hiW; i++) if (Alive[i] && Tr[i] === 0 && Tag[i] === st.cid) { k = i; break; }
+    if (k < 0) return;
+    const x = Wx[k], y = Wy[k];
+    project(VP, 0, 0, hgrid(0, 0) * ZS, P0); const ox0 = P0[0], oy0 = P0[1];       // keep clear of the label at the origin
+    project(VP, x, y, hgrid(x, y) * ZS + 0.02, P0); if (P0[2] <= 0) return;
+    const t1 = `its loss ${Wl[k].toFixed(3)}`, t2 = `the slice here ${L(x, y).toFixed(3)}`, right = P0[0] >= ox0, up = P0[1] < oy0;
+    const tx = P0[0] + (right ? 12 : -12), ty = up ? P0[1] - 38 : P0[1] + 6;
+    oc.font = `italic 400 ${PHONE ? 11 : 12}px ${SERIF}`; oc.textAlign = right ? 'left' : 'right'; oc.textBaseline = 'top'; oc.lineJoin = 'round';
+    oc.strokeStyle = 'rgba(236,238,232,0.9)'; oc.lineWidth = 3;
+    oc.strokeText(t1, tx, ty); oc.fillStyle = '#a3203a'; oc.fillText(t1, tx, ty);
+    oc.strokeText(t2, tx, ty + 15); oc.fillStyle = INK; oc.fillText(t2, tx, ty + 15);
+  },
+  readouts: () => {
+    const c = SLC, st = PL.st, p3 = (v) => (v < 0 ? '−' : '') + Math.abs(v).toPrecision(3), f3 = (v) => (v == null ? '…' : v.toFixed(3));
+    return [['slice along', SLC_NAMES[SIM.slice]], ['one map unit along θ₁ · θ₂', `${p3(c.s1)} · ${p3(c.s2)}`], ['curvature along θ₁ · θ₂', `${p3(c.A)} · ${p3(c.C)}`], ['tr(H)/d', `${c.trd.toFixed(3)} ± ${c.sd.toFixed(3)} (d = ${c.d})`],
+      ['largest · most negative λ', `${c.lmax.toFixed(1)} · ${fmt(c.lmin, 2)}`], ['negative eigenvalues', `${c.nNeg} of ${c.d}`], ['lowest point of the slice', `L ${st.min.L.toFixed(3)}`],
+      ['L in d dimensions · on the slice', `${f3(st.cur[0])} · ${f3(st.cur[1])}`]];
+  },
+  debug: () => {
+    const c = SLC, st = PL.st, f = (v) => (v == null ? null : +v.toFixed(4));
+    return { slice: SIM.slice, A: f(c.A), B: f(c.B), C: f(c.C), trd: f(c.trd), sd: f(c.sd), lmax: f(c.lmax), lmin: f(c.lmin), nNeg: c.nNeg, L0: f(c.L0), s: [f(c.s1), f(c.s2)],
+      min: [f(st.min.x), f(st.min.y), f(st.min.L)], start: f(st.start), cur: st.cur.map(f), H: [f(HMIN), f(HMAX)] };
+  },
+  fig: (c, w, h) => {
+    const s = SLC, st = PL.st, x0 = 30, x1 = w - 8, hh = (h - 12) * 0.42;
+    // the spectrum, counts on a log scale, with the curvature each axis of the slice sees
+    let y0 = 10, y1 = hh - 24;
+    FIG.axes(c, x0, y0, x1, y1, 'λ, signed log scale', 'log₁₀ count of eigenvalues');
+    const H = st.hist, tx = (l) => x0 + (x1 - x0) * (slcF(l) - H.lo) / (H.hi - H.lo), nb = H.bins.length, bw = (x1 - x0) / nb, ymx = Math.log10(1 + Math.max(...H.bins));
+    c.fillStyle = 'rgba(36,38,43,0.5)';
+    for (let b = 0; b < nb; b++) if (H.bins[b]) { const v = Math.log10(1 + H.bins[b]), hb = Math.max(1.5, (y1 - y0) * v / ymx); c.fillRect(x0 + b * bw + 0.3, y1 - hb, bw - 0.6, hb); }
+    for (const l of [-0.5, 0, 0.1, 1, 10]) FIG.tick(c, tx(l), y1 + 4, String(l));
+    const vline = (l, col, w, dash) => { c.setLineDash(dash); c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(tx(l), y0); c.lineTo(tx(l), y1); c.stroke(); c.setLineDash([]); };
+    vline(s.A, '#4b3fa0', 1.6, []); vline(s.C, '#cf6d0c', 1.6, [4, 2]); vline(s.trd, INK, 1, [1.5, 2]);
+    // the key, under the axis: what each line is
+    let lx = x0; const ly = y1 + 20;
+    for (const [txt, col, dash] of [['θ₁', '#4b3fa0', []], ['θ₂', '#cf6d0c', [4, 2]], ['tr(H)/d', INK, [1.5, 2]]]) {
+      c.setLineDash(dash); c.strokeStyle = col; c.lineWidth = col === INK ? 1 : 1.6; c.beginPath(); c.moveTo(lx, ly); c.lineTo(lx + 12, ly); c.stroke(); c.setLineDash([]);
+      FIG.note(c, lx + 15, ly, txt, col); c.font = `italic 400 11px ${SERIF}`; lx += 15 + c.measureText(txt).width + 12;
+    }
+    // the loss of each cohort against step, and the lowest point of the slice
+    y0 = hh + 18; y1 = h - 28;
+    FIG.axes(c, x0, y0, x1, y1, 'steps', 'L');
+    const top = Math.max(0.5, (st.start || s.L0) * 1.08), xm = 1200;
+    const ser = TRIBES.map((T, t) => { const m = curveMean(st.C, t); let last = NaN; const n = st.C.cnt[0]; for (let k = 0; k < m.length; k++) { if (Number.isFinite(m[k])) last = m[k]; else if (n[k] > 0) m[k] = last; } return { ys: m.slice(0, xm), color: T.color, w: 1.5 }; });
+    const r = figSeries(c, x0, y0, x1, y1, ser, { xmax: xm, ymin: 0, ymax: top });
+    const ym = r.ty(st.min.L);
+    c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.65)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x0, ym); c.lineTo(x1, ym); c.stroke(); c.setLineDash([]);
+    FIG.note(c, x1 - 2, ym - 8, `lowest point of the slice, L ${st.min.L.toFixed(3)}`, 'rgba(36,38,43,0.75)', 'right');
+    for (const v of [0, 1, 2, 3]) if (v <= top) FIG.tick(c, x0 - 3, r.ty(v), String(v), 'right', 'middle');
+    for (const k of [0, 600, 1200]) FIG.tick(c, r.tx(k), y1 + 4, String(k));
+  },
+});
 //
 // plate: pca (trajectories in PCA)
 //

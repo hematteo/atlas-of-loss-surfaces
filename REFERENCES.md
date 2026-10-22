@@ -488,6 +488,19 @@ If a claim on a plate looks wrong, please [open an issue](https://github.com/hem
 - Wei, B., Huang, K., Huang, Y., Xie, T., Qi, X., Xia, M., Mittal, P., Wang, M. and Henderson, P. (2024). Assessing the brittleness of safety alignment via pruning and low-rank modifications. ICML. *Safety-critical regions are about 3% of parameters and 2.5% of ranks; removing them breaks safety, not utility.*
 - Qi, X., Panda, A., Lyu, K., Ma, X., Roy, S., Beirami, A., Mittal, P. and Henderson, P. (2025). Safety alignment should be made more than just a few tokens deep. ICLR. *Alignment mainly changes the distribution of the first few output tokens.*
 
+### IX · Beyond two dimensions
+
+**41. [What a slice hides](https://matteohe.com/atlas-of-loss-surfaces/?plate=slices)**
+
+- Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS. *Random two-dimensional slices; their curvatures are weighted averages of the Hessian’s eigenvalues, so a convex-looking slice need not be convex.*
+- Goodfellow, I. J., Vinyals, O. and Saxe, A. M. (2015). Qualitatively characterizing neural network optimization problems. ICLR. *The loss along the straight line from initialization to solution usually falls monotonically.*
+- Lucas, J., Bae, J., Zhang, M. R., Fort, S., Zemel, R. and Grosse, R. (2021). On monotonic linear interpolation of neural network parameters. ICML. *The monotonic fall along the line from initialization is common but fails when the weights travel far.*
+- Sagun, L., Evci, U., Güney, V. U., Dauphin, Y. and Bottou, L. (2018). Empirical analysis of the Hessian of over-parametrized neural networks. ICLR Workshop Track. *The Hessian spectrum after training: a bulk near zero and a few outliers.*
+- Ghorbani, B., Krishnan, S. and Xiao, Y. (2019). An investigation into neural net optimization via Hessian eigenvalue density. ICML. *Tracks the whole spectrum through training: large negative eigenvalues vanish early, but some negative density remains at the end on ImageNet.*
+- Papyan, V. (2020). Traces of class/cross-class structure pervade deep learning spectra. JMLR 21(252). *The Hessian’s outlier eigenvalues are organized by the classes, above a bulk near zero.*
+- Böttcher, L. and Wheeler, G. (2024). Visualizing high-dimensional loss landscapes with Hessian directions. Journal of Statistical Mechanics: Theory and Experiment 2024, 023401. *Random projections see the normalized trace of the Hessian and rarely show saddles as saddles; Hessian directions do.*
+- Chen, H., Wei, Z., Huang, Y., Zhang, Y., Dong, Y. and Zhu, J. (2026). Unveiling the basin-like loss landscape in large language models. ICLR. *Language models sit in basins that are broad along random perturbations and sharp along worst-case directions.*
+
 ## All works, alphabetically
 
 - Abbe, E., Boix-Adserà, E. and Misiakiewicz, T. (2023). SGD learning on neural networks: leap complexity and saddle-to-saddle dynamics. COLT, PMLR 195.
