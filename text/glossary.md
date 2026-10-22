@@ -574,6 +574,34 @@ The set of eigenvalues of the Hessian, the curvatures along its eigenvectors.
 In trained networks it has a bulk of eigenvalues near zero and a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019).
 The number of negative eigenvalues at a critical point is its index.
 
+## pca: Principal component analysis (PCA)
+
+The directions along which a set of points varies most, in order: the eigenvectors of their covariance matrix, ranked by eigenvalue.
+For a recorded training run the points are the parameter vectors at successive steps, and a component’s eigenvalue is the variance of the run along it.
+With fewer recorded steps T than parameters, the components come more cheaply from the T × T Gram matrix of the centred iterates.
+
+## randwalk: Random walk
+
+A process whose every step is independent noise: `θₜ = θₜ₋₁ + ξₜ`, with `ξₜ` of mean zero.
+Its distance from the start grows as the square root of the number of steps.
+SGD with the gradient left out is a random walk.
+
+## explvar: Explained variance
+
+The share of the total variance that lies along one principal component: its eigenvalue over the sum of all the eigenvalues.
+For a random walk in many dimensions, the k-th component explains `6/(π²k²)`, about 61% for the first (Antognini and Sohl-Dickstein 2018).
+
+## lissajous: Lissajous curve
+
+The curve traced by two oscillations of different frequencies plotted against each other, such as `(cos(at), cos(bt))`.
+Projected onto its first two principal components, a random walk traces `(cos(πt/T), cos(2πt/T))` up to scale, an arch shaped like a parabola.
+
+## relax: Relaxation time
+
+The number of steps over which a direction forgets an offset.
+For gradient descent on a quadratic with curvature λ, an offset shrinks by the factor `1 − ηλ` per step, so it relaxes in about `1/(ηλ)` steps.
+Over a recording shorter than that, the noise along the direction accumulates like a random walk.
+
 ## st-established: Established
 
 Replicated widely, and proved where the card says so.

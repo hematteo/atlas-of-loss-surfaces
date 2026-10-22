@@ -64,6 +64,7 @@ const TEXT = {
     "entropy": 7,
     "razor": 7,
     "safety": 7,
+    "pca": 8,
     "slices": 8
   },
   "plates": {
@@ -1957,6 +1958,39 @@ const TEXT = {
         ]
       ]
     },
+    "pca": {
+      "title": "Trajectories in PCA",
+      "deck": "A random walk and two runs of SGD in 2,000 dimensions, each recorded for 300 steps and drawn on its first two principal components.",
+      "lead": "<p>A training run moves through millions of dimensions, so it is often drawn by [[principal component analysis|pca]] of the recorded parameters (Lorch 2016). PCA finds the directions in which the recorded iterates vary most, and the plot shows the path along the first two. Such plots usually look smooth and orderly, with much of the variation in the first two components (Lorch 2016; Li et al. 2018).</p><p>Antognini and Sohl-Dickstein (2018) showed that a pure [[random walk|randwalk]] in many dimensions gives the same picture. Its k-th component follows <code>cos(kπt/T)</code> over the T recorded steps. The first component alone explains <code>6/π² ≈ 61%</code> of the variance. So a smooth arch on the first two components is not, by itself, evidence of structure in the loss.</p><p>This plate records three processes in 2,000 dimensions and runs PCA on each. We can then see which parts of the picture noise alone produces, and where SGD on a quadratic loss departs from it.</p>",
+      "take": "<p>Before reading a PCA plot of training, compare its [[explained variance|explvar]] with the random walk’s <code>6/(π²k²)</code>, and its components with cosines. On this plate the shapes barely tell descent from noise. The explained variance separates them better.</p>",
+      "cap": "Top: the share of the variance explained by each of the first ten components (dots), against the random walk’s <code>6/(π²k²)</code> (dashed), on a log scale. Bottom: PC1 and PC2 over the 300 steps, scaled so that a pure cosine has amplitude 1, against <code>cos(πt/T)</code> and <code>cos(2πt/T)</code> (dashed).",
+      "try": "<ol><li>Wait a moment while the random walk is recorded → the path is a smooth arch, and PC1 and PC2 explain about 60% and 16%. The prediction <code>6/(π²k²)</code> gives 60.8% and 15.2%. A walk varies mostly slowly, and in 2,000 dimensions each slow mode has a direction of its own, so PCA returns the modes in order.</li><li>Read the figure → the ten dots sit on the dashed line, and PC1 and PC2 overlap their cosines at 1.000 and 0.998. Every step of the walk is independent noise. The arch, the cosines and the fast fall of the explained variance all come from summing that noise.</li><li>Choose SGD starting far from the minimum → the arch turns lopsided, and PC1 explains about 77%, against the walk’s 61%. PC1 and PC2 still overlap their cosines at about 0.98 and 0.94. The loss falls from about 6.6 to 1.16, still far above its stationary 0.25, so the descent adds a drift that lasts the whole recording.</li><li>Choose SGD at stationarity → PC1 explains about 56%, and both overlaps are above 0.99, as for the walk. Here 1,700 of the 2,000 directions take longer than 300 steps to [[relax|relax]], so within the recording they drift like a random walk. They hold most of the variance: ηλ along PC1 is about 0.0015, below the mean of 0.0041.</li><li>Look at the bowl under that path → its lowest point lies inside the arch, but the plane’s lowest loss is about 0.20. The quadratic’s minimum has loss 0, and the iterates stay near 0.25. PCA fits the plane to the iterates, and nothing makes it pass through the minimum.</li><li>Drag SGD’s slowest relaxation down to 20 steps → PC1 falls to about 14% and PC2 to 12%, and the arch breaks up into a ragged loop. Every direction now relaxes many times within the recording, so the iterates sample SGD’s [[stationary distribution|stationary]]. Their variance then spreads more evenly over many components.</li><li>With the relaxation at 20 steps, choose SGD starting far from the minimum → the path runs straight from Start, then tangles, and PC1 explains about 25%. The loss reaches its stationary level in about 45 steps, so descent and diffusion come one after the other. PC1 now follows the run, not a cosine: its overlap drops to about 0.6.</li></ol>",
+      "bg": "<p>Lorch (2016) introduced PCA plots of training for small networks on CIFAR-10 and MNIST. In every run that trained well, PC1 changed monotonically. PC2 rose and then fell, usually turning near the halfway point. Li et al. (2018) drew optimizer paths on PCA directions over the contours of the loss. Between 40% and 90% of the variation lay in two components, which they took as evidence that the paths are low-dimensional.</p><p>Antognini and Sohl-Dickstein (2018) worked out what a random walk gives. When the dimension d is much larger than the number of steps T, the walk’s T × T Gram matrix becomes nearly circulant as T grows. So its eigenvectors are Fourier modes, and for large T the k-th explains <code>6/(π²k²)</code> of the variance. The first two components explain about 80% of it, and the first twelve about 95%. Projected onto any two components, the path is a [[Lissajous curve|lissajous]].</p><p>They also studied a random walk in a quadratic bowl, the Ornstein–Uhlenbeck process, which is SGD with constant noise on a quadratic loss. When the curvatures spread over many scales, PCA is dominated by the directions of lowest curvature. Those directions have not relaxed within the recording, so they still look like a random walk.</p><p>They then compared real training. In the middle of training, a linear model on CIFAR-10 and ResNet-50 on ImageNet gave projected paths almost identical to a random walk’s. The first component held more of the variance, as in a walk with a steady drift. At the start of training, the linear model’s path was more directed than a walk.</p>",
+      "method": "<p>The plate records one of three processes in <code>d = 2,000</code> dimensions for <code>T = 300</code> steps, <code>θ₁ … θ₃₀₀</code>:</p><ol><li>A random walk from the origin, <code>θ ← θ − ησξ</code> with <code>ξ ~ N(0, I)</code>: SGD with the gradient left out.</li><li>[[SGD|sgd]] on the quadratic <code>L(θ) = ½ Σ λᵢθᵢ²</code>, stepping <code>θ ← θ − η(∇L + σξ)</code>. It starts three times as far from the minimum as the distance at which its noise holds it at stationarity.</li><li>The same SGD started from a draw of its exact stationary distribution, with variance <code>ησ²/(λᵢ(2 − ηλᵢ))</code> in direction i.</li></ol><p>The curvatures follow a power law, <code>ηλᵢ = 1/i</code> from 1 down to 1/2,000. The instrument puts a floor of <code>1/τ</code> under them, so the slowest direction relaxes in τ steps. The noise term <code>ησξ</code> has length about 1, and all three processes draw the same <code>ξ</code>, so only the process differs.</p><p>PCA works on the 300 × 300 Gram matrix of the iterates, built as they arrive and then centred. Subspace iteration on 20 vectors, with a Rayleigh–Ritz step each time, finds its top ten eigenpairs to a residual below 10⁻¹⁰. The explained variance of component k is its eigenvalue over the trace. The overlap is <code>|u·c|/(‖u‖‖c‖)</code> between the component’s time course u and <code>c = cos(kπ(t − ½)/T)</code>. The work is spread over about 60 frames, at about 2 ms each.</p><p>The map draws the path at <code>(√λ₁u₁(t), √λ₂u₂(t))</code>, with one scale on both axes so it keeps its shape. Each component’s sign is chosen to match its cosine. A stick man replays the projected path, one recorded step per step.</p><p>For SGD the sheet is the loss on the plane through the recording’s mean, spanned by PC1 and PC2. Its heights are shifted and rescaled to the atlas’s usual range, and the readouts give the loss itself. The walk has no loss, so its sheet is flat.</p>",
+      "limits": "<p>This sheet’s SGD runs on a quadratic, with isotropic noise and a constant learning rate. In a network the curvature changes along the path, and the noise is larger along the sharp directions (see <i>The shape of the noise</i>). The recording is also short and narrow: 300 steps in 2,000 dimensions. The <code>6/(π²k²)</code> law needs d much larger than T, which a real network meets easily.</p><p>PCA ranks directions by how far the iterates move along them, and that need not be where the gradient points. On this plate, with the full spectrum, ηλ along PC1 and PC2 stays below 0.01, over a hundred times below the largest. In networks, Gur-Ari, Roberts and Dyer (2018) found that the gradient soon lies mostly in the span of the Hessian’s top eigenvectors. Song, Ahn and Yun (2025) then found that the part of the update in that subspace barely lowers the loss. The loss falls through the remaining directions.</p>",
+      "refs": [
+        [
+          "Lorch, E. (2016). Visualizing deep network training trajectories with PCA. ICML Workshop on Visualization for Deep Learning.",
+          "Introduces PCA plots of training trajectories; PC1 changes monotonically and PC2 rises and falls once."
+        ],
+        [
+          "Li, H., Xu, Z., Taylor, G., Studer, C. and Goldstein, T. (2018). Visualizing the loss landscape of neural nets. NeurIPS.",
+          "Draws optimizer paths on PCA directions over loss contours; two components hold 40% to 90% of the variation."
+        ],
+        [
+          "Antognini, J. M. and Sohl-Dickstein, J. (2018). PCA of high dimensional random walks with comparison to neural network training. NeurIPS.",
+          "A random walk’s components are cosines explaining <code>6/(π²k²)</code>; in a quadratic, PCA is dominated by the flattest directions."
+        ],
+        [
+          "Gur-Ari, G., Roberts, D. A. and Dyer, E. (2018). Gradient descent happens in a tiny subspace. arXiv:1812.04754.",
+          "The gradient soon lies mostly in the span of the Hessian’s top eigenvectors, about one per class."
+        ],
+        [
+          "Song, M., Ahn, K. and Yun, C. (2025). Does SGD really happen in tiny subspaces? ICLR.",
+          "Updates projected onto that subspace barely lower the loss; removing them trains about as well."
+        ]
+      ]
+    },
     "slices": {
       "title": "What a slice hides",
       "deck": "A saddle in 4,000 dimensions, cut by three planes, and particles that descend in all 4,000 dimensions.",
@@ -2407,6 +2441,26 @@ const TEXT = {
     "spectrum": [
       "Hessian spectrum",
       "The set of eigenvalues of the Hessian, the curvatures along its eigenvectors. In trained networks it has a bulk of eigenvalues near zero and a few large outliers (Sagun et al. 2018; Ghorbani, Krishnan and Xiao 2019). The number of negative eigenvalues at a critical point is its index."
+    ],
+    "pca": [
+      "Principal component analysis (PCA)",
+      "The directions along which a set of points varies most, in order: the eigenvectors of their covariance matrix, ranked by eigenvalue. For a recorded training run the points are the parameter vectors at successive steps, and a component’s eigenvalue is the variance of the run along it. With fewer recorded steps T than parameters, the components come more cheaply from the T × T Gram matrix of the centred iterates."
+    ],
+    "randwalk": [
+      "Random walk",
+      "A process whose every step is independent noise: <code>θₜ = θₜ₋₁ + ξₜ</code>, with <code>ξₜ</code> of mean zero. Its distance from the start grows as the square root of the number of steps. SGD with the gradient left out is a random walk."
+    ],
+    "explvar": [
+      "Explained variance",
+      "The share of the total variance that lies along one principal component: its eigenvalue over the sum of all the eigenvalues. For a random walk in many dimensions, the k-th component explains <code>6/(π²k²)</code>, about 61% for the first (Antognini and Sohl-Dickstein 2018)."
+    ],
+    "lissajous": [
+      "Lissajous curve",
+      "The curve traced by two oscillations of different frequencies plotted against each other, such as <code>(cos(at), cos(bt))</code>. Projected onto its first two principal components, a random walk traces <code>(cos(πt/T), cos(2πt/T))</code> up to scale, an arch shaped like a parabola."
+    ],
+    "relax": [
+      "Relaxation time",
+      "The number of steps over which a direction forgets an offset. For gradient descent on a quadratic with curvature λ, an offset shrinks by the factor <code>1 − ηλ</code> per step, so it relaxes in about <code>1/(ηλ)</code> steps. Over a recording shorter than that, the noise along the direction accumulates like a random walk."
     ],
     "st-established": [
       "Established",
