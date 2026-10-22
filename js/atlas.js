@@ -4401,6 +4401,366 @@ function symEig(A, n) {
 // plate: ddescent (double descent)
 //
 // plate: mup (learning rates across widths)
+// --- a two-layer tanh network f(x) = β Σⱼ vⱼ tanh(α(wⱼ₀x + wⱼ₁)) fits 24 points of a sine on [−1, 1] by full-batch
+// gradient descent with one learning rate η on all its 3n raw parameters (w, v), at widths n = 16 … 1024. Standard
+// parametrization (SP): α = β = 1, wⱼ ~ N(0, 1/2), vⱼ ~ N(0, 1/n). μP with base width 16: α = √r and β = 1/√r with
+// r = n/16, and wⱼ ~ N(0, 1/(2r)), which is SP at n = 16 and otherwise Yang et al.'s per-layer learning rates and
+// readout initialization written as multipliers. The card's figure sweeps η at every width, a little each frame; the
+// map is the plane through the initialization at the current width spanned by the top Hessian eigenvector (θ₁) and
+// the readout part of the gradient (θ₂), with each particle drawn at its projection
+const MUP = { m: 24, n0: 16, W: [16, 32, 64, 128, 256, 512, 1024], T: 100, K: 22, LZ: 20, s: 0.5, y0: -0.6, Z: 0.5, cap: 1e6, KX: 129, xa: -1.7, xb: 1.7, fan: [0.5, 1, 2],
+  DX: null, DY: null, base: -1, C: null, plane: null };
+const mupEta = (k) => Math.pow(10, -3 + k / 6);                 // the sweep's learning rates: six per decade, 0.001 to 3.2
+const mupId = (mup, n) => (mup ? 'u' : 's') + n;
+const mupSnap = (v) => MUP.n0 * Math.pow(2, clamp(Math.round(Math.log2(v / MUP.n0)), 0, MUP.W.length - 1));
+const mupScratch = (n) => ({ P: new Float64Array(n * MUP.m), F: new Float64Array(MUP.m), r: new Float64Array(MUP.m), Rr: new Float64Array(MUP.m) });
+function mupData(R) {         // the data and the stream the initializations come from; a new seed starts every computation afresh
+  const m = MUP.m, ph = R.range(0, TAU), DX = new Float64Array(m), DY = new Float64Array(m);
+  for (let i = 0; i < m; i++) { DX[i] = -1 + 2 * (i + 0.5) / m + R.range(-0.3, 0.3) / m; DY[i] = 0.8 * Math.sin(2.5 * DX[i] + ph); }
+  const base = (R() * 4294967296) >>> 0;
+  if (base === MUP.base) return;
+  MUP.base = base; MUP.DX = DX; MUP.DY = DY;
+  const jobs = []; for (const n of MUP.W) for (const mup of [false, true]) jobs.push({ mup, n, ph: 0 });
+  MUP.C = { nets: {}, lam0: {}, lamT: {}, sw: {}, best: {}, jobs, j: 0 };
+}
+function mupNet(mup, n) {     // SP and μP share the same Gaussian draws, so at n = 16 they are the same network
+  const C = MUP.C, id = mupId(mup, n); if (C.nets[id]) return C.nets[id];
+  const r = n / MUP.n0, al = mup ? Math.sqrt(r) : 1, be = mup ? 1 / Math.sqrt(r) : 1, R = Frame.rng((MUP.base ^ Math.imul(n, 0x9e3779b1)) >>> 0), th = new Float64Array(3 * n);
+  for (let j = 0; j < n; j++) { th[j] = R.normal() * Math.SQRT1_2 / al; th[n + j] = R.normal() * Math.SQRT1_2 / al; th[2 * n + j] = R.normal() / Math.sqrt(n); }
+  return (C.nets[id] = { id, mup, n, al, be, th });
+}
+// the loss (1/2m) Σ (f(xᵢ) − yᵢ)² at th, and its gradient into g if given; keeps tanh and the residuals in S for mupHvp
+function mupLoss(net, S, th, g) {
+  const { n, al, be } = net, m = MUP.m, DX = MUP.DX, DY = MUP.DY, P = S.P, F = S.F, r = S.r;
+  F.fill(0);
+  for (let j = 0; j < n; j++) {
+    const a0 = al * th[j], a1 = al * th[n + j], vj = th[2 * n + j], o = j * m;
+    for (let i = 0; i < m; i++) { const p = Math.tanh(a0 * DX[i] + a1); P[o + i] = p; F[i] += vj * p; }
+  }
+  let L = 0;
+  for (let i = 0; i < m; i++) { const e = be * F[i] - DY[i]; L += e * e; r[i] = e / m; }
+  if (g) {
+    for (let j = 0; j < n; j++) {
+      const o = j * m; let gv = 0, g0 = 0, g1 = 0;
+      for (let i = 0; i < m; i++) { const p = P[o + i], ri = r[i], d = ri * (1 - p * p); gv += ri * p; g0 += d * DX[i]; g1 += d; }
+      const c = be * al * th[2 * n + j];
+      g[j] = c * g0; g[n + j] = c * g1; g[2 * n + j] = be * gv;
+    }
+  }
+  return L / (2 * m);
+}
+// the exact Hessian-vector product H·d at the point of the last mupLoss call with this S
+function mupHvp(net, S, th, d, out) {
+  const { n, al, be } = net, m = MUP.m, DX = MUP.DX, P = S.P, r = S.r, Rr = S.Rr;
+  Rr.fill(0);
+  for (let j = 0; j < n; j++) {
+    const o = j * m, d0 = al * d[j], d1 = al * d[n + j], dv = d[2 * n + j], vj = th[2 * n + j];
+    for (let i = 0; i < m; i++) { const p = P[o + i]; Rr[i] += dv * p + vj * (1 - p * p) * (d0 * DX[i] + d1); }
+  }
+  for (let i = 0; i < m; i++) Rr[i] *= be / m;
+  for (let j = 0; j < n; j++) {
+    const o = j * m, d0 = al * d[j], d1 = al * d[n + j], dv = d[2 * n + j], vj = th[2 * n + j];
+    let hv = 0, h0 = 0, h1 = 0;
+    for (let i = 0; i < m; i++) {
+      const p = P[o + i], q = 1 - p * p, rh = d0 * DX[i] + d1, ri = r[i], t = (dv * ri + vj * Rr[i] - 2 * vj * ri * p * rh) * q;
+      hv += Rr[i] * p + ri * q * rh; h0 += t * DX[i]; h1 += t;
+    }
+    out[j] = be * al * h0; out[n + j] = be * al * h1; out[2 * n + j] = be * hv;
+  }
+  return out;
+}
+// λ_max by Lanczos with full reorthogonalization, one iteration per call so that it can be spread over frames
+function mupLzInit(net, S, th) {
+  mupLoss(net, S, th, null);
+  const R = Frame.rng((MUP.base ^ Math.imul(net.n, 0x85ebca6b) ^ (net.mup ? 0x27d4eb2f : 0)) >>> 0), q = gaussN(R, th.length), l = normN(q);
+  for (let k = 0; k < q.length; k++) q[k] /= l;
+  return { net, S, th, V: [q], al: [], bt: [], w: new Float64Array(th.length) };
+}
+function mupLzStep(z) {       // true once done
+  const q = z.V[z.V.length - 1], w = z.w, p = w.length;
+  mupHvp(z.net, z.S, z.th, q, w);
+  z.al.push(dotN(w, q));
+  for (let pass = 0; pass < 2; pass++) for (const u of z.V) { const c = dotN(w, u); for (let k = 0; k < p; k++) w[k] -= c * u[k]; }
+  const b = normN(w);
+  if (z.al.length >= MUP.LZ || b < 1e-10) return true;
+  z.bt.push(b); z.V.push(Float64Array.from(w, (v) => v / b));
+  return false;
+}
+function mupLzTop(z, vec) {   // the largest Ritz value, and its unit Ritz vector if asked
+  const m = z.al.length, T = new Float64Array(m * m);
+  for (let i = 0; i < m; i++) { T[i * m + i] = z.al[i]; if (i + 1 < m) T[i * m + i + 1] = T[(i + 1) * m + i] = z.bt[i]; }
+  const E = symEig(T, m), out = { lam: E.vals[m - 1] };
+  if (vec) {
+    const u = new Float64Array(z.th.length);
+    for (let c = 0; c < m; c++) { const y = E.vecs[c * m + m - 1], V = z.V[c]; for (let k = 0; k < u.length; k++) u[k] += y * V[k]; }
+    const l = normN(u); for (let k = 0; k < u.length; k++) u[k] /= l;
+    out.u = u;
+  }
+  return out;
+}
+// the plane through the current initialization: θ(x, y) = θ₀ + s(x u₁ + (y − y₀) u₂). u₂ moves only the readout, so the
+// tanh units depend on x alone and the loss is exactly quadratic in y; tabulating its three coefficients and their
+// x-derivatives on 129 columns lets the sheet be evaluated at every grid point at any width
+function mupPlane() {
+  const C = MUP.C, n = mupSnap(SIM.width), mup = SIM.param === 'mup', net = mupNet(mup, n), S = mupScratch(n), p = 3 * n, m = MUP.m;
+  let u1 = null;
+  for (const q of [net, mupNet(!mup, n)]) {
+    if (q !== net && C.lam0[q.id] != null) continue;
+    const z = mupLzInit(q, S, q.th); while (!mupLzStep(z));
+    const top = mupLzTop(z, q === net); C.lam0[q.id] = top.lam; if (q === net) u1 = top.u;
+  }
+  const g = new Float64Array(p); mupLoss(net, S, net.th, g);
+  if (dotN(g, u1) > 0) for (let k = 0; k < p; k++) u1[k] = -u1[k];            // moving to +θ₁ goes downhill
+  const u2 = new Float64Array(p); let vv = 0, c = 0;
+  for (let k = 2 * n; k < p; k++) vv += u1[k] * u1[k];
+  if (vv > 1e-12) for (let k = 2 * n; k < p; k++) c -= g[k] * u1[k] / vv;
+  for (let k = 2 * n; k < p; k++) u2[k] = -g[k] - c * u1[k];                     // the readout gradient, less its part along u₁
+  let l2 = normN(u2);
+  if (!(l2 > 1e-12)) { const R = Frame.rng(MUP.base ^ 0x3c6ef372); for (let k = 2 * n; k < p; k++) u2[k] = R.normal(); c = 0; for (let k = 2 * n; k < p; k++) c += u2[k] * u1[k]; for (let k = 2 * n; k < p; k++) u2[k] -= c * u1[k] / Math.max(vv, 1e-12); l2 = normN(u2); }
+  for (let k = 0; k < p; k++) u2[k] /= l2;
+  const KX = MUP.KX, s = MUP.s, { al, be } = net, th = net.th, DX = MUP.DX, DY = MUP.DY;
+  const tab = new Float64Array(KX * 6), A = new Float64Array(m), dA = new Float64Array(m), B = new Float64Array(m), dB = new Float64Array(m);
+  for (let q = 0; q < KX; q++) {
+    const x = MUP.xa + (MUP.xb - MUP.xa) * q / (KX - 1);
+    A.fill(0); dA.fill(0); B.fill(0); dB.fill(0);
+    for (let j = 0; j < n; j++) {
+      const a0 = al * (th[j] + s * x * u1[j]), a1 = al * (th[n + j] + s * x * u1[n + j]), e0 = al * s * u1[j], e1 = al * s * u1[n + j];
+      const vj = th[2 * n + j] + s * x * u1[2 * n + j], dv = s * u1[2 * n + j], uj = s * u2[2 * n + j];
+      for (let i = 0; i < m; i++) {
+        const P = Math.tanh(a0 * DX[i] + a1), Q = (1 - P * P) * (e0 * DX[i] + e1);
+        A[i] += vj * P; dA[i] += dv * P + vj * Q; B[i] += uj * P; dB[i] += uj * Q;
+      }
+    }
+    let c0 = 0, c1 = 0, c2 = 0, d0 = 0, d1 = 0, d2 = 0;
+    for (let i = 0; i < m; i++) {
+      const a = be * A[i], da = be * dA[i], b = be * B[i], db = be * dB[i], E = a - DY[i];
+      c0 += E * E; c1 += E * b; c2 += b * b; d0 += E * da; d1 += da * b + E * db; d2 += b * db;
+    }
+    tab.set([c0 / (2 * m), c1 / m, c2 / (2 * m), d0 / m, d1 / m, d2 / m], 6 * q);
+  }
+  MUP.plane = { net, n, mup, u1, u2, tab, lam: C.lam0[net.id] };
+}
+function mupMap(x, y) {       // the loss on the plane, from the table: cubic Hermite in x, exact in y
+  const tab = MUP.plane.tab, KX = MUP.KX, h = (MUP.xb - MUP.xa) / (KX - 1), u = clamp((x - MUP.xa) / h, 0, KX - 1.000001), k = u | 0, t = u - k, o = 6 * k;
+  const t2 = t * t, t3 = t2 * t, h00 = 2 * t3 - 3 * t2 + 1, h10 = (t3 - 2 * t2 + t) * h, h01 = 3 * t2 - 2 * t3, h11 = (t3 - t2) * h;
+  const c0 = h00 * tab[o] + h10 * tab[o + 3] + h01 * tab[o + 6] + h11 * tab[o + 9];
+  const c1 = h00 * tab[o + 1] + h10 * tab[o + 4] + h01 * tab[o + 7] + h11 * tab[o + 10];
+  const c2 = h00 * tab[o + 2] + h10 * tab[o + 5] + h01 * tab[o + 8] + h11 * tab[o + 11];
+  const Y = y - MUP.y0;
+  return Math.max(1e-6, c0 + Y * (c1 + Y * c2));
+}
+function sheetMup(R) {
+  mupData(R);
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  mupPlane();
+  EXTRA = (x, y) => MUP.Z * Math.log10(mupMap(x, y));
+  sheetEnd(R, true);
+}
+// the sweep, a little each frame: per width and parametrization, λ_max at initialization, a run of T steps at each of
+// the K learning rates, then λ_max where the best run ended
+function mupWork(budget) {
+  const C = MUP.C, t0 = performance.now();
+  while (C.j < C.jobs.length && performance.now() - t0 < budget) {
+    const J = C.jobs[C.j];
+    if (J.ph === 0) {
+      if (!J.net) { J.net = mupNet(J.mup, J.n); J.S = mupScratch(J.n); C.sw[J.net.id] = new Float64Array(MUP.K).fill(NaN); }
+      if (C.lam0[J.net.id] != null) { J.ph = 1; J.k = 0; J.t = -1; continue; }
+      if (!J.z) J.z = mupLzInit(J.net, J.S, J.net.th);
+      if (mupLzStep(J.z)) { C.lam0[J.net.id] = mupLzTop(J.z).lam; J.z = null; J.ph = 1; J.k = 0; J.t = -1; }
+    } else if (J.ph === 1) {
+      const net = J.net, p = 3 * net.n;
+      if (J.t < 0) { J.th = Float64Array.from(net.th); J.g = new Float64Array(p); if (!J.best) J.best = new Float64Array(p); J.L = mupLoss(net, J.S, J.th, J.g); J.t = 0; }
+      const eta = mupEta(J.k), th = J.th, g = J.g;
+      for (let k = 0; k < p; k++) th[k] -= eta * g[k];
+      J.L = mupLoss(net, J.S, th, g); J.t++;
+      const div = !(J.L < MUP.cap);
+      if (div || J.t >= MUP.T) {
+        C.sw[net.id][J.k] = div ? Infinity : J.L;
+        const b = C.best[net.id];
+        if (!div && (b == null || J.L < C.sw[net.id][b])) { C.best[net.id] = J.k; J.best.set(th); }
+        J.t = -1;
+        if (++J.k >= MUP.K) { J.ph = 2; J.th = J.g = null; }
+      }
+    } else {
+      if (C.best[J.net.id] == null) { C.j++; continue; }
+      if (!J.z) J.z = mupLzInit(J.net, J.S, J.best);
+      if (mupLzStep(J.z)) { C.lamT[J.net.id] = mupLzTop(J.z).lam; J.z = null; J.S = J.best = null; C.j++; }
+    }
+  }
+}
+// particles: each carries its own 3n parameters, made at its first step from the point of the plane it was released
+// at, and takes full gradient-descent steps; the map shows its projection onto the plane
+function mupProj(th, out) {
+  const P = MUP.plane, th0 = P.net.th, u1 = P.u1, u2 = P.u2, n = P.n; let a = 0, b = 0;
+  for (let k = 0; k < 3 * n; k++) a += (th[k] - th0[k]) * u1[k];
+  for (let k = 2 * n; k < 3 * n; k++) b += (th[k] - th0[k]) * u2[k];
+  out[0] = a / MUP.s; out[1] = b / MUP.s + MUP.y0; return out;
+}
+function mupState(i) {
+  const st = PL.st; let P = st.P.get(i);
+  if (!P || P.ser !== SER[i]) {
+    const pl = MUP.plane, th0 = pl.net.th, p = th0.length, th = new Float64Array(p), x = Wx[i], y = Wy[i] - MUP.y0;
+    for (let k = 0; k < p; k++) th[k] = th0[k] + MUP.s * (x * pl.u1[k] + y * pl.u2[k]);
+    P = { ser: SER[i], tribe: Tr[i], cid: Tag[i], th, g: new Float64Array(p), t: 0, eta: 0, L: NaN, L0: NaN, peak: 0, end: null, div: null, off: null };
+    st.P.set(i, P); st.last[Tr[i]] = P;
+  }
+  return P;
+}
+function mupAdvance(P) {      // one step; false once the run is over (T steps done, or diverged)
+  const L = mupLoss(MUP.plane.net, PL.st.S, P.th, P.g);
+  P.L = L; if (P.t === 0) P.L0 = L; if (L > P.peak) P.peak = L;
+  if (!(L < MUP.cap)) { P.div = P.t; return false; }
+  if (P.t >= MUP.T) { P.end = L; return false; }
+  const th = P.th, g = P.g, e = P.eta; for (let k = 0; k < th.length; k++) th[k] -= e * g[k];
+  P.t++; return true;
+}
+const MUPXY = [0, 0];
+const mupFn = (i, x, y, eta) => {
+  const st = PL.st, t0 = performance.now(), P = mupState(i); P.eta = eta;
+  let d = [0, 0];
+  if (mupAdvance(P)) { mupProj(P.th, MUPXY); d = [MUPXY[0] - x, MUPXY[1] - y]; }
+  else if (P.div != null) d = [x >= 0 ? 4 : -4, 0];                          // off the sheet at once
+  st.ms += performance.now() - t0;
+  return d;
+};
+const MUP_TRIBES = [
+  { k: 'gd', name: 'Gradient descent at η/2', color: '#167a5b', kind: K_FN, etaMul: 0.5, sigMul: 0, rest: 'never', maxAge: MUP.T + 5, rule: 'θ ← θ − (η/2)∇L, in all 3n parameters', fn: mupFn },
+  { k: 'gd', name: 'at η', color: '#4b3fa0', kind: K_FN, etaMul: 1, sigMul: 0, rest: 'never', maxAge: MUP.T + 5, rule: 'θ ← θ − η∇L', fn: mupFn },
+  { k: 'gd', name: 'at 2η', color: '#cf6d0c', kind: K_FN, etaMul: 2, sigMul: 0, rest: 'never', maxAge: MUP.T + 5, rule: 'θ ← θ − 2η∇L', fn: mupFn },
+];
+function mupRelease(x, y) {
+  const st = PL.st; st.cid++; st.ghosts.length = 0; st.last = [null, null, null];
+  stamp(x, y, 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  for (let t = PHONE ? 1 : 0; t < TRIBES.length; t++) spawn(x, y, t, { tag: st.cid });
+  STAT.released++;
+  nextRelease = STAT.steps + MUP.T + 60;
+}
+const mupF = (v) => (v == null || !Number.isFinite(v) ? '—' : v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v >= 0.1 ? v.toFixed(2) : v.toPrecision(2));
+const mupLossF = (v) => (v >= 0.01 ? v.toFixed(3) : v.toExponential(1).replace('e-', '×10⁻').replace(/×10⁻(\d)$/, (_, d) => '×10⁻' + '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]));
+plate({
+  id: 'mup', ch: 8, seed: 3905,
+  run: [
+    (T) => { T.set('param', 'sp'); T.set('width', 16); T.set('lr', 0.3); T.clear(); T.release('Initialization'); },
+    (T) => { T.set('param', 'sp'); T.set('width', 1024); T.set('lr', 0.3); T.clear(); T.release('Initialization'); },
+    (T) => { T.set('param', 'mup'); T.set('width', 1024); T.set('lr', 0.3); T.clear(); T.release('Initialization'); },
+    (T) => { T.set('param', 'sp'); T.set('width', 1024); T.set('lr', 0.01); T.clear(); T.release('Initialization'); },
+    null,
+  ],
+  status: 'established',
+  tribes: MUP_TRIBES,
+  sim: { lr: 0.01, noise: 0, width: 1024, param: 'sp' },
+  ctl: [
+    { key: 'width', label: 'Width n', min: 16, max: 1024, scale: 'log', f: (v) => String(mupSnap(v)) },
+    { type: 'select', key: 'param', label: 'Parametrization', options: { sp: 'standard (SP)', mup: 'μP, base width 16' } },
+    { key: 'lr', label: 'Learning rate η', min: 0.001, max: 3.2, scale: 'log', f: (v) => (v < 0.01 ? v.toFixed(4) : v < 1 ? v.toFixed(3) : v.toFixed(2)) },
+  ],
+  view: { yaw: -8, pitch: 48 }, speed: 0.4, figH: 360, jump: true, liveNames: true,
+  sheet: sheetMup,
+  features: () => { PL.st = { S: mupScratch(MUP.plane.n), P: new Map(), ghosts: [], last: [null, null, null], cid: 0, ms: 0 }; },
+  names: (S) => {
+    const pl = MUP.plane, lam = pl.lam;
+    S.marks.push({ p: { x: 0, y: MUP.y0 }, name: 'Initialization', sub: `${pl.mup ? 'μP' : 'SP'}, n = ${pl.n} · λ_max ${mupF(lam)} · ηλ_max ${mupF(SIM.lr * lam)}`, sym: 'x', pri: 9 });
+    S.paths.push({ text: 'θ₁: top eigenvector of the Hessian', pts: [-1.5, MUP.y0 - 0.1, -0.25, MUP.y0 - 0.1], size: 11, offset: 0.04 });
+    S.paths.push({ text: 'θ₂: the readout’s gradient', pts: [-0.07, MUP.y0 + 0.2, -0.07, 0.95], size: 11, offset: 0.04 });
+  },
+  print: () => {
+    const c = sc; c.save(); c.strokeStyle = 'rgba(36,38,43,0.5)'; c.lineWidth = 0.8; c.setLineDash([2, 3]);
+    c.beginPath(); c.moveTo(ox(X0), oy(MUP.y0)); c.lineTo(ox(X1), oy(MUP.y0)); c.moveTo(ox(0), oy(Y0)); c.lineTo(ox(0), oy(Y1)); c.stroke(); c.restore();
+  },
+  release: () => {
+    const st = PL.st;
+    if (!F.params.auto || STAT.alive > 0 || st.ghosts.length) { nextRelease = STAT.steps + 30; return; }
+    mupRelease(0, MUP.y0);
+  },
+  click: (x, y) => mupRelease(x, y),
+  onSim: (k, v) => {
+    if (k === 'width') { const n = mupSnap(v); SIM.width = n; if (!MUP.plane || n !== MUP.plane.n) reshape(); }
+    else if (k === 'param') { if (!MUP.plane || (v === 'mup') !== MUP.plane.mup) reshape(); }
+    else if (k === 'lr') { for (let i = 0; i < hiW; i++) if (Alive[i]) retire(i, false); PL.st.ghosts.length = 0; nextRelease = STAT.steps + 15; }
+  },
+  frame: () => {
+    const st = PL.st, t0 = performance.now(), budget = clamp(3 - st.ms, 0.4, 2.4);
+    while (st.ghosts.length && performance.now() - t0 < budget) { const P = st.ghosts[0]; if (!mupAdvance(P)) st.ghosts.shift(); }
+    mupWork(budget - (performance.now() - t0));
+    if (STAT.alive === 0 && !st.ghosts.length && nextRelease - STAT.steps > 60) nextRelease = STAT.steps + 60;
+    st.ms = 0;
+  },
+  step: (i) => {
+    const P = PL.st.P.get(i);
+    if (P && P.end != null) { Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); return false; }
+  },
+  retire: (i, ring) => {
+    const st = PL.st, P = st.P.get(i); if (!P) return;
+    st.P.delete(i);
+    if (!ring && P.end == null && P.div == null && P.cid === st.cid && (Wx[i] < X0 || Wx[i] > X1 || Wy[i] < Y0 || Wy[i] > Y1)) { P.off = P.t; st.ghosts.push(P); }
+  },
+  readouts: () => {
+    const C = MUP.C, n = MUP.plane.n, a = C.lam0[mupId(false, n)], b = C.lam0[mupId(true, n)], ba = C.best[mupId(false, n)], bb = C.best[mupId(true, n)];
+    const done = (mup) => { const J = C.jobs.find((q) => q.mup === mup && q.n === n); return J && J.ph >= 2; };
+    const be = (mup, k) => (done(mup) && k != null ? mupF(mupEta(k)) : '…');
+    const la = (mup) => (C.lamT[mupId(mup, n)] != null ? mupF(C.lamT[mupId(mup, n)]) : '…');
+    const ro = [[`λ_max at initialization, n = ${n}`, `SP ${mupF(a)} · μP ${mupF(b)}`], ['2/λ_max', `SP ${mupF(2 / a)} · μP ${mupF(2 / b)}`], ['best η over 100 steps', `SP ${be(false, ba)} · μP ${be(true, bb)}`],
+      ['λ_max where the best run ended', `SP ${la(false)} · μP ${la(true)}`]];
+    TRIBES.forEach((T, t) => {
+      const P = PL.st.last[t]; if (!P) return;
+      const off = (P.off != null ? ` · left the map at step ${P.off}` : '') + (P.div == null && P.peak > 10 * P.L0 ? ` · peak ${mupF(P.peak)}` : '');
+      ro.push([`${MUP.fan[t] === 1 ? 'η' : MUP.fan[t] === 2 ? '2η' : 'η/2'} = ${mupF(P.eta)}`, P.div != null ? `diverged at step ${P.div}${off}` : P.end != null ? `loss ${mupLossF(P.end)} after ${MUP.T} steps${off}` : `step ${P.t} · loss ${mupLossF(P.L)}${off}`]);
+    });
+    return ro;
+  },
+  debug: () => {
+    const C = MUP.C, f = (v) => (v == null ? null : Number.isFinite(v) ? +v.toPrecision(4) : String(v)), o = {};
+    for (const n of MUP.W) for (const mup of [false, true]) {
+      const id = mupId(mup, n), b = C.best[id];
+      o[id] = { lam0: f(C.lam0[id]), lamT: f(C.lamT[id]), best: b == null ? null : f(mupEta(b)), bestL: b == null ? null : f(C.sw[id][b]), sw: C.sw[id] ? Array.from(C.sw[id], (v) => (Number.isFinite(v) ? +Math.log10(v).toFixed(3) : String(v))) : null };
+    }
+    const last = PL.st.last.map((P) => (P ? { t: P.t, eta: f(P.eta), L: f(P.L), end: f(P.end), div: P.div, off: P.off, peak: f(P.peak) } : null));
+    return { job: C.j, jobs: C.jobs.length, plane: { n: MUP.plane.n, mup: MUP.plane.mup, lam: f(MUP.plane.lam) }, nets: o, last, ghosts: PL.st.ghosts.length };
+  },
+  fig: (c, w, h) => {
+    const C = MUP.C, x0 = 30, x1 = w - 8, n = MUP.plane.n, W = MUP.W, nw = W.length;
+    const lx = (e) => x0 + (x1 - x0) * (Math.log10(e) + 3) / 3.5;
+    const hues = [['#f2b8c1', '#8e1f35'], ['#acd5e3', '#123f52']];
+    const panel = (mup, y0, y1) => {
+      FIG.axes(c, x0, y0, x1, y1, mup ? 'learning rate η' : '', `${mup ? 'μP' : 'SP'}: log₁₀ loss after ${MUP.T} steps`);
+      const ty = (v) => y1 - (y1 - y0) * (clamp(v, -3.6, -0.4) + 3.6) / 3.2;
+      for (let q = 0; q < nw; q++) {
+        const id = mupId(mup, W[q]), sw = C.sw[id]; if (!sw) continue;
+        const col = rgbHex(ramp(hues[+mup][0], hues[+mup][1], q / (nw - 1))), cur = W[q] === n;
+        c.strokeStyle = col; c.lineWidth = cur ? 2.1 : 1; c.beginPath(); let on = false;
+        for (let k = 0; k < MUP.K; k++) { const v = sw[k]; if (!Number.isFinite(v)) { on = false; continue; } const X = lx(mupEta(k)), Y = ty(Math.log10(v)); if (on) c.lineTo(X, Y); else c.moveTo(X, Y); on = true; }
+        c.stroke();
+        const b = C.best[id], J = C.jobs.find((J) => J.mup === mup && J.n === W[q]);
+        if (b != null && J && J.ph >= 2) { c.fillStyle = col; c.beginPath(); c.arc(lx(mupEta(b)), ty(Math.log10(sw[b])), cur ? 3 : 2, 0, TAU); c.fill(); }
+      }
+      c.setLineDash([3, 2]); c.strokeStyle = 'rgba(36,38,43,0.55)'; c.lineWidth = 0.9;
+      c.beginPath(); c.moveTo(lx(SIM.lr), y0 + 10); c.lineTo(lx(SIM.lr), y1); c.stroke(); c.setLineDash([]);
+      for (const v of [-3, -2, -1]) FIG.tick(c, x0 - 3, ty(v), String(v), 'right', 'middle');
+      for (let q = 0; q < nw; q++) { c.fillStyle = rgbHex(ramp(hues[+mup][0], hues[+mup][1], q / (nw - 1))); c.fillRect(x1 - 70 + q * 7, y0 + 3, 6, 5); }
+      FIG.tick(c, x1 - 73, y0 + 5.5, 'n = 16', 'right', 'middle'); FIG.tick(c, x1 - 70 + nw * 7 + 2, y0 + 5.5, '1024', 'left', 'middle');
+      if (mup) for (const [v, t] of [[0.001, '0.001'], [0.01, '0.01'], [0.1, '0.1'], [1, '1']]) FIG.tick(c, lx(v), y1 + 4, t);
+    };
+    panel(false, 10, 104); panel(true, 120, 214);
+    FIG.note(c, lx(SIM.lr) + 4, 18, 'η', 'rgba(36,38,43,0.75)');
+    // below: λ_max at initialization (solid) and where the best run ended (dashed), and the best η, against width
+    const y0 = 262, y1 = h - 26, xm = (x0 + x1) / 2, gx = (a, b) => (q) => a + (b - a) * q / (nw - 1);
+    const sub = (a, b, lab, get, lo, hi, dash, ticks, xl) => {
+      FIG.axes(c, a, y0, b, y1, xl, lab);
+      const tx = gx(a + 4, b - 4), ty = (v) => y1 - (y1 - y0) * (clamp(v, lo, hi) - lo) / (hi - lo);
+      for (const mup of [false, true]) for (const [key, ds] of dash) {
+        const col = hues[+mup][1]; c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 1.3; c.setLineDash(ds); c.beginPath(); let on = false;
+        for (let q = 0; q < nw; q++) { const v = get(key, mupId(mup, W[q]), mup, W[q]); if (v == null || !(v > 0)) { on = false; continue; } const X = tx(q), Y = ty(Math.log10(v)); if (on) c.lineTo(X, Y); else c.moveTo(X, Y); on = true; }
+        c.stroke(); c.setLineDash([]);
+        for (let q = 0; q < nw; q++) { const v = get(key, mupId(mup, W[q]), mup, W[q]); if (v == null || !(v > 0) || ds.length) continue; c.beginPath(); c.arc(tx(q), ty(Math.log10(v)), W[q] === n ? 2.6 : 1.7, 0, TAU); c.fill(); }
+      }
+      for (const [v, t] of ticks) FIG.tick(c, a - 3, ty(v), t, 'right', 'middle');
+      for (const q of [0, 2, 4, 6]) FIG.tick(c, tx(q), y1 + 4, String(W[q]));
+    };
+    const doneJ = (mup, w) => { const J = C.jobs.find((J) => J.mup === mup && J.n === w); return J && J.ph >= 2; };
+    sub(x0, xm - 14, 'λ_max', (key, id) => (key === 0 ? C.lam0[id] : C.lamT[id]), 0, 2.6, [[0, []], [1, [3, 2]]], [[0, '1'], [1, '10'], [2, '100']], '');
+    sub(xm + 22, x1, 'best η', (key, id, mup, w) => (doneJ(mup, w) && C.best[id] != null ? mupEta(C.best[id]) : null), -2.2, 0.3, [[0, []]], [[-2, '0.01'], [-1, '0.1'], [0, '1']], 'width n');
+  },
+});
 //
 // ch9>>
 // reading order: the plate blocks above are grouped by the code they share; the atlas is read in this order
