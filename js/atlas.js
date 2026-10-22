@@ -4399,6 +4399,366 @@ function symEig(A, n) {
 // plate: pca (trajectories in PCA)
 //
 // plate: ddescent (double descent)
+// --- double descent: least squares on p random ReLU features of a 10-dimensional input, fitted to n = 40 examples whose labels
+// carry noise of scale σ. A particle holds θ in the eigenbasis of the Hessian H = XᵀX/n, where gradient descent decouples, so it
+// takes exact gradient-descent iterations, as many as the ill-conditioning near p = n needs, on a schedule that grows 1.5% a
+// step. The map is the plane through the minimum-norm solution θ̂ spanned by the softest direction of H (p ≤ n) or a direction
+// of its null space (p > n), and by the direction from the origin to θ̂. Its heights are L/(L + L(0)), monotone in the loss,
+// so the steep walls near p = n stay in scale
+const DDX = { n: 40, d: 10, P: 200, H: 1.8, grow: 1.015, sub: 0.25, tmin: 1e4, tmax: 1e10, len: 1500, lams: Array.from({ length: 29 }, (_, k) => Math.pow(10, -7 + k / 4)) };
+const DD = { data: null, seed: null, recs: null, job: null, cur: null, dots: [], dkey: '', c: null, c0: null, q: null, a1: null, n2: null, k0: null };
+const DDM = [0, 0, 0];
+function ddData(R) {          // the features of 40 inputs, the targets, the label noise, a random init, and the population moments
+  const { n, d, P } = DDX, W = new Float64Array(P * d), nw = new Float64Array(P), Z = new Float64Array(n * d);
+  for (let j = 0; j < P; j++) { let s = 0; for (let k = 0; k < d; k++) { const v = R.normal() / Math.sqrt(d); W[j * d + k] = v; s += v * v; } nw[j] = Math.sqrt(s); }
+  const beta = unitN(R, d); gaussN(R, n * d, Z);
+  const eps = gaussN(R, n), th0 = gaussN(R, P), F = new Float64Array(n * P), f = new Float64Array(n), m0 = 1 / Math.sqrt(TAU);
+  const dot = (A, a, B, b) => { let s = 0; for (let k = 0; k < d; k++) s += A[a + k] * B[b + k]; return s; };
+  for (let i = 0; i < n; i++) { f[i] = dot(beta, 0, Z, i * d); for (let j = 0; j < P; j++) F[i * P + j] = Math.max(0, dot(W, j * d, Z, i * d)) - nw[j] * m0; }
+  // over z ~ N(0, I): two centred ReLU features have the arc-cosine kernel, less the product of their means, as covariance, and
+  // E[φⱼ f] = ⟨wⱼ, β⟩/2 by Stein's lemma. E[f²] = |β|² = 1
+  const S = new Float64Array(P * P), g = new Float64Array(P);
+  for (let j = 0; j < P; j++) {
+    g[j] = dot(W, j * d, beta, 0) / 2;
+    for (let l = 0; l <= j; l++) {
+      const ct = l === j ? 1 : clamp(dot(W, j * d, W, l * d) / (nw[j] * nw[l]), -1, 1), th = Math.acos(ct);
+      S[j * P + l] = S[l * P + j] = nw[j] * nw[l] / TAU * (Math.sin(th) + (Math.PI - th) * ct - 1);
+    }
+  }
+  return { F, f, eps, th0, S, g };
+}
+// everything that depends on p: the spectrum of H, the eigenbasis V of the row space of X, the solution for the targets (cf) and
+// for the noise (ce), and the test error as a quadratic form in the eigen-coordinates. Yields between chunks of about 0.5 ms
+function* ddAnalyse(D, p, keep) {
+  const { n, P, lams } = DDX, r = Math.min(n, p), F = D.F, sc = 1 / Math.sqrt(p), M = new Float64Array(r * r);
+  // X = F/√p is n × p. H = XᵀX/n when p ≤ n, else the Gram matrix XXᵀ/n, which has the same nonzero eigenvalues
+  if (p <= n) for (let j = 0; j < p; j++) for (let k = 0; k <= j; k++) { let s = 0; for (let i = 0; i < n; i++) s += F[i * P + j] * F[i * P + k]; M[j * r + k] = M[k * r + j] = s / (n * p); }
+  else for (let i = 0; i < n; i++) for (let l = 0; l <= i; l++) { let s = 0; for (let j = 0, a = i * P, b = l * P; j < p; j++) s += F[a + j] * F[b + j]; M[i * r + l] = M[l * r + i] = s / (n * p); }
+  yield;
+  const E = symEig(M, r), lam = E.vals, U = E.vecs, lmax = lam[r - 1];
+  for (let k = 0; k < r; k++) lam[k] = Math.max(lam[k], 1e-15 * lmax);      // random features give full rank r; this only guards rounding
+  yield;
+  const V = new Float64Array(p * r), cf = new Float64Array(r), ce = new Float64Array(r);      // V: p × r, eigenvector k in column k
+  if (p <= n) {
+    V.set(U);
+    for (let k = 0; k < r; k++) {
+      let a = 0, b = 0;
+      for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < p; j++) s += F[i * P + j] * U[j * r + k]; s *= sc; a += s * D.f[i]; b += s * D.eps[i]; }
+      cf[k] = a / (n * lam[k]); ce[k] = b / (n * lam[k]);
+    }
+  } else {
+    for (let k = 0; k < r; k++) {      // vₖ = Xᵀuₖ/√(nλₖ), and θ̂ = X⁺y has coordinate uₖᵀy/√(nλₖ)
+      const s = 1 / Math.sqrt(n * lam[k]); let a = 0, b = 0;
+      for (let i = 0; i < n; i++) { a += U[i * r + k] * D.f[i]; b += U[i * r + k] * D.eps[i]; }
+      cf[k] = a * s; ce[k] = b * s;
+      for (let j = 0; j < p; j++) { let t = 0; for (let i = 0; i < n; i++) t += F[i * P + j] * U[i * r + k]; V[j * r + k] = t * s * sc; }
+    }
+  }
+  yield;
+  // with Σ = S/p and γ = g/√p, θ = Vc + ν (ν in the null space) has test error cᵀQc + 2cᵀ(SVᵀν − Vᵀγ) + νᵀΣν − 2νᵀγ + 1
+  const SV = new Float64Array(p * r);
+  for (let j = 0; j < p; j++) {
+    const o = j * r;
+    for (let l = 0; l < p; l++) { const s = D.S[j * P + l] / p, q = l * r; for (let k = 0; k < r; k++) SV[o + k] += s * V[q + k]; }
+    if ((j & 15) === 15) yield;
+  }
+  const Q = new Float64Array(r * r), gv = new Float64Array(r);
+  for (let j = 0; j < p; j++) { const o = j * r, gj = D.g[j] * sc; for (let a = 0; a < r; a++) { const v = V[o + a]; gv[a] += v * gj; for (let b = 0; b < r; b++) Q[a * r + b] += v * SV[o + b]; } }
+  yield;
+  let trS = 0, trQ = 0; for (let j = 0; j < p; j++) trS += D.S[j * P + j] / p; for (let a = 0; a < r; a++) trQ += Q[a * r + a];
+  // the fit is linear in the labels y = f + σε, so the test error of θ = u + σw is A + 2σB + σ²C
+  const u = new Float64Array(r), w = new Float64Array(r), Qu = new Float64Array(r), Qw = new Float64Array(r);
+  const abc = (o, at) => {
+    for (let a = 0; a < r; a++) { let s = 0, t = 0; for (let b = 0; b < r; b++) { s += Q[a * r + b] * u[b]; t += Q[a * r + b] * w[b]; } Qu[a] = s; Qw[a] = t; }
+    o[at] = dotN(u, Qu) - 2 * dotN(u, gv) + 1; o[at + 1] = dotN(u, Qw) - dotN(w, gv); o[at + 2] = dotN(w, Qw);
+  };
+  const mn = new Float64Array(3), rid = new Float64Array(3 * lams.length);
+  u.set(cf); w.set(ce); abc(mn, 0);
+  lams.forEach((lm, m) => { for (let k = 0; k < r; k++) { const sh = lam[k] / (lam[k] + lm); u[k] = cf[k] * sh; w[k] = ce[k] * sh; } abc(rid, 3 * m); });
+  // Dn: the test error a random init N(0, I) adds on average, tr(Σ) − tr(Q), the variance of the features in the null space
+  const rec = { p, r, lmin: lam[0], lmax, A: mn[0], B: mn[1], C: mn[2], Dn: Math.max(0, trS - trQ), nf2: dotN(cf, cf), nfe: dotN(cf, ce), ne2: dotN(ce, ce), rid };
+  if (keep) Object.assign(rec, { lam, V, SV, Q, gv, cf, ce });
+  return rec;
+}
+function ddRun(g) { let s = g.next(); while (!s.done) s = g.next(); return s.value; }
+const ddP = () => clamp(Math.round(SIM.p), 2, DDX.P);
+const ddErr = (q, sg) => q.A + 2 * sg * q.B + sg * sg * q.C;
+function ddRidge(q, sg) { let best = Infinity, m = 0; for (let k = 0; k < DDX.lams.length; k++) { const v = q.rid[3 * k] + 2 * sg * q.rid[3 * k + 1] + sg * sg * q.rid[3 * k + 2]; if (v < best) { best = v; m = k; } } return [best, m]; }
+// a start θ (length p, or null for zero): its eigen-coordinates, its null-space part ν (coordinate along the plane's axis e1,
+// |ν|²), and the terms ν adds to the test error
+function ddPrep(C, th) {
+  const r = C.r, p = C.p, o = { c0: new Float64Array(r), q: new Float64Array(r), a1: 0, n2: 0, k0: 0 };
+  if (!th) return o;
+  for (let k = 0; k < r; k++) { let t = 0; for (let j = 0; j < p; j++) t += C.V[j * r + k] * th[j]; o.c0[k] = t; }
+  if (p <= DDX.n) return o;
+  const nu = new Float64Array(p), S = DD.data.S, P = DDX.P;
+  for (let j = 0; j < p; j++) { let t = th[j]; for (let k = 0; k < r; k++) t -= C.V[j * r + k] * o.c0[k]; nu[j] = t; }
+  o.a1 = dotN(nu, C.e1); o.n2 = dotN(nu, nu);
+  for (let k = 0; k < r; k++) { let t = 0; for (let j = 0; j < p; j++) t += C.SV[j * r + k] * nu[j]; o.q[k] = t; }
+  let qq = 0, lin = 0; for (let j = 0; j < p; j++) { let t = 0; for (let l = 0; l < p; l++) t += S[j * P + l] * nu[l]; qq += nu[j] * t; lin += nu[j] * DD.data.g[j]; }
+  o.k0 = qq / p - 2 * lin / Math.sqrt(p);
+  return o;
+}
+// plane coordinates, relative to θ̂, of the point with eigen-coordinates c and null-space coordinate a1
+function ddAB(C, c, a1) { let a = a1, b = 0; for (let k = 0; k < C.r; k++) { const v = c[k] - C.cs[k]; a += v * C.E1[k]; b += v * C.E2[k]; } return [a, b]; }
+function ddEnd(C, o, c) {      // [training loss, test error, ‖θ‖] of the point c (eigen-coordinates) with null part o
+  const r = C.r; let tr = 0, cq = 0, lin = 0, nn = 0;
+  for (let a = 0; a < r; a++) { const ca = c[a], d = ca - C.cs[a]; tr += C.lam[a] * d * d; nn += ca * ca; let s = 0; for (let b = 0; b < r; b++) s += C.Q[a * r + b] * c[b]; cq += ca * s; lin += ca * (o.q[a] - C.gv[a]); }
+  return [C.Lmin + tr / 2, cq + 2 * lin + o.k0 + 1, Math.sqrt(nn + o.n2)];
+}
+function ddPlane(q) {
+  const { n, lams } = DDX, p = q.p, r = q.r, sg = SIM.sig, lam = q.lam, D = DD.data;
+  const C = { p, r, lam, V: q.V, SV: q.SV, Q: q.Q, gv: q.gv, rec: q, cs: new Float64Array(r), E1: new Float64Array(r), E2: new Float64Array(r), e1: null };
+  for (let k = 0; k < r; k++) C.cs[k] = q.cf[k] + sg * q.ce[k];
+  C.wd = lams[ddRidge(q, sg)[1]];
+  C.cw = C.cs.map((v, k) => v * lam[k] / (lam[k] + C.wd));
+  C.eta = 1 / q.lmax; C.etaW = 1 / (q.lmax + C.wd);
+  C.fz = lam.map((l) => 1 - C.eta * l); C.fw = lam.map((l) => 1 - C.etaW * (l + C.wd));
+  // the plane's axes: e1 along the softest eigenvector (p ≤ n) or along the null-space part of the random init (p > n), so that
+  // the init's end lies on the plane; e2 from the origin towards θ̂. E1, E2 hold their eigen-coordinates
+  const th = D.th0.subarray(0, p), nc = normN(C.cs);
+  if (p > n) {
+    const c0 = new Float64Array(r);
+    for (let k = 0; k < r; k++) { let t = 0; for (let j = 0; j < p; j++) t += q.V[j * r + k] * th[j]; c0[k] = t; }
+    const e1 = new Float64Array(p); for (let j = 0; j < p; j++) { let t = th[j]; for (let k = 0; k < r; k++) t -= q.V[j * r + k] * c0[k]; e1[j] = t; }
+    const l = normN(e1); for (let j = 0; j < p; j++) e1[j] /= l;
+    C.e1 = e1; for (let k = 0; k < r; k++) C.E2[k] = C.cs[k] / nc;
+  } else {
+    C.E1[0] = C.cs[0] < 0 ? -1 : 1;
+    let l = 0; for (let k = 1; k < r; k++) l += C.cs[k] * C.cs[k]; l = Math.sqrt(l);
+    if (l > 1e-12 * nc) for (let k = 1; k < r; k++) C.E2[k] = C.cs[k] / l; else C.E2[1] = 1;
+  }
+  C.l1 = p > n ? 0 : lam[0]; C.mu = 0; for (let k = 0; k < r; k++) C.mu += lam[k] * C.E2[k] * C.E2[k];
+  let yy = 0; for (let i = 0; i < n; i++) yy += (D.f[i] + sg * D.eps[i]) ** 2; yy /= 2 * n;
+  let fit = 0; for (let k = 0; k < r; k++) fit += lam[k] * C.cs[k] * C.cs[k]; fit /= 2;
+  C.Lmin = p >= n ? 0 : Math.max(0, yy - fit); C.L0 = C.Lmin + fit;            // the training loss at θ̂ and at the origin
+  const ths = new Float64Array(p); for (let j = 0; j < p; j++) ths[j] = SIM.init * th[j];
+  C.zero = ddPrep(C, null); C.ref = ddPrep(C, ths);
+  C.O = ddAB(C, C.zero.c0, 0); C.Rs = ddAB(C, C.ref.c0, C.ref.a1); C.Re = [C.ref.a1, 0]; C.Wd = ddAB(C, C.cw, 0);
+  C.endZ = ddEnd(C, C.zero, C.cs); C.endR = ddEnd(C, C.ref, C.cs); C.endW = ddEnd(C, C.zero, C.cw);
+  // the e1 and e2 axes as vectors of length p, for moving a start within the plane
+  C.e1f = C.e1 || Float64Array.from({ length: p }, (_, j) => q.V[j * r] * C.E1[0]);
+  C.e2f = Float64Array.from({ length: p }, (_, j) => { let t = 0; for (let k = 0; k < r; k++) t += q.V[j * r + k] * C.E2[k]; return t; });
+  // fit the origin, θ̂, the init and the three ends into the sheet at one scale k (sheet units per unit of θ)
+  let a0 = 0, a1 = 0, b0 = 0, b1 = 0;
+  for (const [a, b] of [C.O, C.Rs, C.Re, C.Wd]) for (const f of [1, -0.3]) { a0 = Math.min(a0, f * a); a1 = Math.max(a1, f * a); b0 = Math.min(b0, f * b); b1 = Math.max(b1, f * b); }   // with a margin beyond θ̂
+  const k = Math.min(2.5 / Math.max(a1 - a0, 1e-9), 1.36 / Math.max(b1 - b0, 1e-9));
+  C.k = Number.isFinite(k) ? k : 1; C.x0 = -C.k * (a0 + a1) / 2; C.y0 = -C.k * (b0 + b1) / 2 - 0.04;
+  // gradient-descent iterations against the particle's steps: a quarter iteration a step at first, then 1.5% more a step,
+  // in whole iterations from t = 34, until the slowest direction has shrunk by e⁻⁹
+  const T = clamp(9.2 * q.lmax / q.lmin, DDX.tmin, DDX.tmax), TT = [0];
+  while (TT[TT.length - 1] < T && TT.length < DDX.len) { const t = TT[TT.length - 1]; TT.push(Math.max(t + DDX.sub, Math.round(t * DDX.grow))); }
+  C.TT = Float64Array.from(TT); C.steps = TT.length - 1;
+  return C;
+}
+const ddMap = (C, ab) => ({ x: C.x0 + C.k * ab[0], y: C.y0 + C.k * ab[1] });
+function sheetDD(R) {
+  sheetBase(R, { bk: 0, bk4: 0, na: 0 });
+  if (!DD.c) { const m = CAP * DDX.n; DD.c = new Float64Array(m); DD.c0 = new Float64Array(m); DD.q = new Float64Array(m); DD.a1 = new Float64Array(CAP); DD.n2 = new Float64Array(CAP); DD.k0 = new Float64Array(CAP); }
+  const D = ddData(R);
+  if (DD.seed !== F.seed || !DD.recs) { DD.seed = F.seed; DD.recs = new Array(DDX.P + 1).fill(null); DD.job = null; }
+  DD.data = D;
+  const p = ddP(), q = ddRun(ddAnalyse(D, p, true));
+  DD.recs[p] = q;
+  const C = DD.cur = ddPlane(q), H = DDX.H;
+  EXTRA = (x, y) => { const a = (x - C.x0) / C.k, b = (y - C.y0) / C.k, l = C.Lmin + 0.5 * (C.l1 * a * a + C.mu * b * b); return H * l / (l + C.L0); };
+  sheetEnd(R, true);
+}
+function* ddCurveJob() {         // the rest of the curve, coarse to fine, a few values of p a frame
+  const D = DD.data, recs = DD.recs, order = [2, 40, 200, 10, 20, 30, 39, 41, 60, 100];
+  for (const st of [16, 8, 4, 2, 1]) for (let p = 2; p <= DDX.P; p += st) if (order.indexOf(p) < 0) order.push(p);
+  for (const p of order) if (!recs[p]) recs[p] = yield* ddAnalyse(D, p, false);
+}
+const ddStep = (wd) => (i, x, y) => {
+  const C = DD.cur, o = i * DDX.n, t = C.TT[Math.min(Age[i] + 1, C.steps)], t0 = Math.floor(t), u = t - t0, fk = wd ? C.fw : C.fz, tg = wd ? C.cw : C.cs;
+  let a = DD.a1[i], b = 0;
+  for (let k = 0; k < C.r; k++) {     // t iterations of θ ← θ − η∇L in closed form, and a straight line between iterates
+    const f = fk[k], v = tg[k] + Math.pow(f, t0) * (1 - u + u * f) * (DD.c0[o + k] - tg[k]);
+    DD.c[o + k] = v; const dv = v - C.cs[k]; a += dv * C.E1[k]; b += dv * C.E2[k];
+  }
+  return [C.x0 + C.k * a - x, C.y0 + C.k * b - y];
+};
+function ddMeasure(i, out) {       // [training loss, test error, ‖θ‖] of particle i
+  const C = DD.cur, r = C.r, o = i * DDX.n; let tr = 0, cq = 0, lin = 0, nn = 0;
+  for (let a = 0; a < r; a++) {
+    const ca = DD.c[o + a], d = ca - C.cs[a]; tr += C.lam[a] * d * d; nn += ca * ca;
+    let s = 0; for (let b = 0; b < r; b++) s += C.Q[a * r + b] * DD.c[o + b]; cq += ca * s; lin += ca * (DD.q[o + a] - C.gv[a]);
+  }
+  out[0] = C.Lmin + tr / 2; out[1] = cq + 2 * lin + DD.k0[i] + 1; out[2] = Math.sqrt(nn + DD.n2[i]);
+  return out;
+}
+const DD_TRIBES = [
+  { k: 'sgd', name: 'GD from zero', color: '#c22a40', kind: K_FN, sigMul: 0, rest: 'never', maxAge: 1e9, rule: 'θ ← θ − η∇L from θ = 0, η = 1/λ_max', fn: ddStep(false) },
+  { k: 'sgd', name: 'GD from a random init', color: '#23708f', kind: K_FN, sigMul: 0, rest: 'never', maxAge: 1e9, rule: 'θ ← θ − η∇L from θ ~ N(0, s²I)', fn: ddStep(false) },
+  { k: 'sgd', name: 'GD with weight decay', color: '#cf6d0c', kind: K_FN, sigMul: 0, rest: 'never', maxAge: 1e9, rule: 'θ ← θ − η(∇L + λθ) from θ = 0, λ tuned on the test error', fn: ddStep(true) },
+];
+function ddSpawn(C, t, o, tag) {
+  const m = ddMap(C, ddAB(C, o.c0, o.a1)), i = spawn(m.x, m.y, t, { tag }); if (i < 0) return;
+  const k = i * DDX.n; DD.c0.set(o.c0, k); DD.c.set(o.c0, k); DD.q.set(o.q, k); DD.a1[i] = o.a1; DD.n2[i] = o.n2; DD.k0[i] = o.k0;
+}
+function ddRace() {
+  const st = PL.st, C = DD.cur; if (!C) return;
+  curveReset(st.Ct); curveReset(st.Cl); st.cid = st.Ct.cid; st.cur = [null, null, null]; st.best = [Infinity, 0];
+  const per = PHONE ? 2 : 3, p = C.p, th = new Float64Array(p), O = ddMap(C, C.O);
+  // a click moves the random init within the plane (its other p − 2 coordinates stay as drawn)
+  const da = st.click ? (st.click[0] - C.x0) / C.k - C.Rs[0] : 0, db = st.click ? (st.click[1] - C.y0) / C.k - C.Rs[1] : 0;
+  stamp(O.x, O.y, 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  if (st.click) stamp(st.click[0], st.click[1], 0.0115, 1, 0.12, 0.125, 0.14, 0.85, 0.0023);
+  for (let k = 0; k < per; k++) {
+    for (let j = 0; j < p; j++) th[j] = SIM.init * (DD.data.th0[j] + 0.01 * RREL.normal()) + da * C.e1f[j] + db * C.e2f[j];
+    ddSpawn(C, 0, C.zero, st.cid); ddSpawn(C, 1, ddPrep(C, th), st.cid); ddSpawn(C, 2, C.zero, st.cid);
+  }
+  STAT.released++;
+  nextRelease = STAT.steps + C.steps + 120;
+}
+function ddDot(p, t, v) {        // measured ends at each p, kept while the seed, σ and s stay the same
+  const key = `${F.seed}|${SIM.sig}|${SIM.init}`;
+  if (DD.dkey !== key) { DD.dkey = key; DD.dots = []; }
+  const d = DD.dots.find((e) => e[0] === p && e[1] === t); if (d) d[2] = v; else DD.dots.push([p, t, v]);
+}
+const ddSup = (e) => String(e).replace(/-/g, '⁻').replace(/\d/g, (c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[c]);
+const ddSci = (v, dg = 1) => { if (!(v > 0)) return '0'; const e = Math.floor(Math.log10(v)); return `${(v / 10 ** e).toFixed(dg)}×10${ddSup(e)}`; };
+const ddNum = (v) => (v >= 1e4 ? ddSci(v) : v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v >= 0.01 ? v.toFixed(3) : ddSci(v));
+const ddIt = (t) => (t >= 1e4 ? ddSci(t) : Math.floor(t).toLocaleString('en-GB'));
+// a Try step: set the three instruments (defaults unless given) and start a race once the sheet is rebuilt; click(C) gives a
+// point of the sheet to start the random init from
+function ddGo(T, set, click) {
+  for (const [k, v] of Object.entries(Object.assign({ p: 120, sig: 0.3, init: 1 }, set))) T.set(k, v);
+  const go = () => { T.clear(); PL.st.click = null; if (click) { const q = click(DD.cur); T.release(q[0], q[1]); } else ddRace(); };
+  if (reshapeWait) reshapeWait.push(go); else go();
+}
+plate({
+  id: 'ddescent', ch: 8, seed: 4051,
+  run: [
+    (T) => ddGo(T, { p: 10 }),
+    (T) => ddGo(T, { p: 40 }),
+    (T) => ddGo(T, { p: 40 }),
+    (T) => ddGo(T, {}),
+    (T) => ddGo(T, {}, (C) => [C.x0 - 0.7, C.y0 + 0.4]),
+    (T) => ddGo(T, { p: 40, sig: 0 }),
+  ],
+  status: 'established',
+  tribes: DD_TRIBES,
+  sim: { lr: 1, noise: 0, p: 120, sig: 0.3, init: 1 },
+  ctl: [{ key: 'p', label: 'Parameters p', min: 2, max: DDX.P, scale: 'log', f: (v) => `p = ${Math.round(v)}` },
+    { key: 'sig', label: 'Label noise σ', min: 0, max: 1, step: 0.01 },
+    { key: 'init', label: 'Random init scale s', min: 0, max: 3, step: 0.05 }],
+  view: { yaw: -6, pitch: 52 }, speed: 4, figH: 270,
+  sheet: sheetDD,
+  features: () => {
+    PL.st = { Ct: curveInit(3, DDX.len), Cl: curveInit(3, DDX.len), cid: 1, cur: [null, null, null], best: [Infinity, 0], click: null };
+    if (!DD.job && DD.recs.some((q, p) => p >= 2 && !q)) DD.job = ddCurveJob();
+  },
+  names: (S) => {
+    const C = DD.cur, n = DDX.n, ez = C.endZ, er = C.endR;
+    S.marks.push({ p: ddMap(C, C.O), name: 'Origin', sub: `θ = 0 · L ${C.L0.toFixed(3)}`, sym: 'x', pri: 8 });
+    S.marks.push({ p: ddMap(C, [0, 0]), name: C.p > n ? 'Minimum-norm solution' : C.p === n ? 'Interpolating solution' : 'Least-squares solution', sub: `‖θ‖ ${ddNum(ez[2])} · test error ${ddNum(ez[1])}`, sym: 'min', pri: 9 });
+    if (C.p > n && SIM.init > 0) S.marks.push({ p: ddMap(C, C.Re), name: 'Random init’s solution', sub: `‖θ‖ ${ddNum(er[2])} · test error ${ddNum(er[1])}`, sym: 'min', pri: 7 });
+    if (SIM.init > 0) S.marks.push({ p: ddMap(C, C.Rs), name: '', sub: '', sym: 'x', pin: false });          // labelled in print
+    S.marks.push({ p: ddMap(C, C.Wd), name: '', sub: '', sym: 'min', pin: false });
+    // the name of the valley floor goes on the longest stretch of it clear of the marks on it
+    const xs = [X0 + 0.1, C.x0, ...(C.p > n && SIM.init > 0 ? [ddMap(C, C.Re).x] : []), X1 - 0.1].sort((a, b) => a - b);
+    let seg = null; for (let k = 0; k + 1 < xs.length; k++) { const a = xs[k] + (k ? 0.22 : 0), b = xs[k + 1] - (k + 2 < xs.length ? 0.22 : 0); if (b - a > 0.75 && (!seg || b - a > seg[1] - seg[0])) seg = [a, b]; }
+    if (seg) S.paths.push({ text: C.p > n ? 'interpolating solutions, Xθ = y' : `softest direction, λ ${ddSci(C.rec.lmin)}`, pts: [seg[0], C.y0, seg[1], C.y0], size: 11, offset: 0.045 });
+  },
+  print: () => {
+    const C = DD.cur, c = sc;
+    const O = ddMap(C, C.O), T = ddMap(C, [0, 0]);
+    const label = (P, txt) => {          // a one-line printed label beside a point, where there is room and it is not crowding the named ones
+      if (Math.hypot(P.x - O.x, P.y - O.y) < 0.3 || Math.hypot(P.x - T.x, P.y - T.y) < 0.3) return;
+      const x = ox(P.x), y = oy(P.y), h = 9 * FS; c.font = `400 ${6.9 * FS}px ${MONO}`; const w = c.measureText(txt).width;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]]) {
+        const cx = x + dx * (w / 2 + 12), cy = y + dy * (h / 2 + 11), b = textBox(cx, cy, w, h, 2);
+        if (!inMap(b, 10) || boxHit(b)) continue;
+        BOXES.push(b); c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+        c.strokeStyle = 'rgba(233,236,230,0.82)'; c.lineWidth = 2.4; c.strokeText(txt, cx, cy); c.fillStyle = 'rgba(36,38,43,0.85)'; c.fillText(txt, cx, cy);
+        return;
+      }
+    };
+    c.save();
+    if (C.p > DDX.n) {         // the minimum-norm solution is the foot of the perpendicular from the origin to the valley
+      const s = 7;
+      c.strokeStyle = 'rgba(36,38,43,0.6)'; c.lineWidth = 0.8; c.setLineDash([3, 3]);
+      c.beginPath(); c.moveTo(ox(O.x), oy(O.y)); c.lineTo(ox(T.x), oy(T.y)); c.moveTo(ox(X0), oy(T.y)); c.lineTo(ox(X1), oy(T.y)); c.stroke();
+      c.setLineDash([]); c.lineWidth = 0.9; c.beginPath(); c.moveTo(ox(T.x) + s, oy(T.y)); c.lineTo(ox(T.x) + s, oy(T.y) + s); c.lineTo(ox(T.x), oy(T.y) + s); c.stroke();
+    }
+    if (SIM.init > 0) label(ddMap(C, C.Rs), `random init · ‖θ‖ ${ddNum(Math.sqrt(dotN(C.ref.c0, C.ref.c0) + C.ref.n2))}`);
+    label(ddMap(C, C.Wd), `weight decay · test error ${ddNum(C.endW[1])}`);
+    c.restore();
+  },
+  release: () => {
+    if (!F.params.auto || STAT.alive > maxAlive - 40) { nextRelease = STAT.steps + 45; return; }
+    ddRace();
+  },
+  click: (x, y) => { PL.st.click = [x, y]; ddRace(); },
+  frame: () => {
+    if (STAT.alive === 0 && nextRelease - STAT.steps > 120) nextRelease = STAT.steps + 120;
+    if (!DD.job) return;
+    const t0 = performance.now();
+    while (performance.now() - t0 < 3) if (DD.job.next().done) { DD.job = null; break; }
+  },
+  step: (i) => {
+    const st = PL.st, C = DD.cur; if (Tag[i] !== st.cid) return;
+    const t = Tr[i], m = ddMeasure(i, DDM), tt = C.TT[Math.min(Age[i], C.steps)];
+    curveAdd(st.Ct, t, Age[i], Math.log10(m[1])); curveAdd(st.Cl, t, Age[i], Math.log10(Math.max(m[0], 1e-12)));
+    st.cur[t] = [m[0], m[1], m[2], tt];
+    if (t === 0 && m[1] < st.best[0]) st.best = [m[1], tt];
+    if (Age[i] >= C.steps) { ddDot(C.p, t, m[1]); Ex[i] = Wx[i]; Ey[i] = Wy[i]; retire(i, true); return false; }
+  },
+  onSim: (k) => { if (k === 'p' || k === 'sig' || k === 'init') reshape(160); },
+  readouts: () => {
+    const C = DD.cur, st = PL.st; if (!C) return [];
+    const done = DD.recs.reduce((s, q, p) => s + (p >= 2 && q ? 1 : 0), 0);
+    return [['parameters and examples', `p = ${C.p} · n = ${DDX.n}`], ['Hessian XᵀX/n', `smallest nonzero eigenvalue ${ddSci(C.rec.lmin)} · largest ${C.rec.lmax.toFixed(3)}`]]
+      .concat(TRIBES.map((T, t) => { const c = st.cur[t]; return [T.name, c ? `training loss ${ddNum(c[0])} · test error ${ddNum(c[1])} · ‖θ‖ ${ddNum(c[2])} · step ${ddIt(c[3])}${t === 2 ? ` · λ ${ddSci(C.wd)}` : ''}` : '…']; }))
+      .concat([['early stopping', st.best[0] < Infinity ? `GD from zero’s lowest test error so far ${ddNum(st.best[0])}, at step ${ddIt(st.best[1])}` : '…']])
+      .concat(done < DDX.P - 1 ? [['curve', `${done} of ${DDX.P - 1} values of p`]] : []);
+  },
+  debug: () => {
+    const C = DD.cur, st = PL.st, f = (v) => +v.toPrecision(4);
+    return { p: C.p, lmin: f(C.rec.lmin), lmax: f(C.rec.lmax), k: f(C.k), steps: C.steps, wd: f(C.wd), endZ: C.endZ.map(f), endR: C.endR.map(f), endW: C.endW.map(f),
+      cur: st.cur.map((c) => (c ? c.map(f) : null)), best: st.best.map(f), curve: DD.recs.reduce((s, q, p) => s + (p >= 2 && q ? 1 : 0), 0) };
+  },
+  fig: (c, w, h) => {
+    const C = DD.cur; if (!C) return;
+    const st = PL.st, sg = SIM.sig, s2 = SIM.init * SIM.init, x0 = 30, x1 = w - 8, hh = Math.round(h * 0.6), n = DDX.n;
+    let y0 = 8, y1 = hh - 24;
+    FIG.axes(c, x0, y0, x1, y1, 'parameters p', 'test error');
+    const lp0 = Math.log10(2), lp1 = Math.log10(DDX.P), lo = -2, hi = 2.5;
+    const tx = (p) => x0 + (x1 - x0) * (Math.log10(p) - lp0) / (lp1 - lp0), ty = (v) => clamp(y1 - (y1 - y0) * (Math.log10(Math.max(v, 1e-9)) - lo) / (hi - lo), y0, y1);
+    const vline = (x, dash, a) => { c.strokeStyle = `rgba(36,38,43,${a})`; c.lineWidth = 1; c.setLineDash(dash); c.beginPath(); c.moveTo(x, y0); c.lineTo(x, y1); c.stroke(); c.setLineDash([]); };
+    vline(tx(n), [3, 2], 0.45); FIG.note(c, tx(n) + 3, y0 + 6, 'p = n');
+    vline(tx(C.p), [], 0.6);
+    c.strokeStyle = 'rgba(36,38,43,0.3)'; c.setLineDash([1, 2]); c.beginPath(); c.moveTo(x0, ty(1)); c.lineTo(x1, ty(1)); c.stroke(); c.setLineDash([]);
+    FIG.note(c, x1 - 2, ty(1) - 6, 'predicting zero', 'rgba(36,38,43,0.55)', 'right');
+    const fns = [(q) => ddErr(q, sg), (q) => ddErr(q, sg) + s2 * q.Dn, (q) => ddRidge(q, sg)[0]];
+    [2, 1, 0].forEach((t) => {
+      const fn = fns[t]; c.strokeStyle = TRIBES[t].color; c.lineWidth = t === 0 ? 1.6 : 1.2; c.beginPath(); let on = false;
+      for (let p = 2; p <= DDX.P; p++) { const q = DD.recs[p]; if (!q) continue; const X = tx(p), Y = ty(fn(q)); if (on) c.lineTo(X, Y); else c.moveTo(X, Y); on = true; }
+      c.stroke();
+    });
+    if (DD.dkey === `${F.seed}|${SIM.sig}|${SIM.init}`) for (const [p, t, v] of DD.dots) { c.fillStyle = TRIBES[t].color; c.strokeStyle = '#eef0ea'; c.lineWidth = 1; c.beginPath(); c.arc(tx(p), ty(v), 2.6, 0, TAU); c.fill(); c.stroke(); }
+    for (const p of [2, 10, 40, 100, 200]) FIG.tick(c, tx(p), y1 + 4, String(p));
+    for (const v of [-2, -1, 0, 1, 2]) FIG.tick(c, x0 - 3, ty(10 ** v), String(10 ** v), 'right', 'middle');
+    // the latest race against gradient-descent iterations
+    y0 = hh + 6; y1 = h - 24;
+    FIG.axes(c, x0, y0, x1, y1, 'gradient-descent iterations, latest race', 'test error, training loss (dashed)');
+    const T1 = Math.log10(C.TT[C.steps]), lo2 = -3, hi2 = 2.5;
+    const sx = (t) => x0 + (x1 - x0) * Math.log10(Math.max(t, 1)) / T1, sy = (v) => clamp(y1 - (y1 - y0) * (v - lo2) / (hi2 - lo2), y0, y1);
+    c.strokeStyle = 'rgba(36,38,43,0.3)'; c.setLineDash([1, 2]); c.beginPath(); c.moveTo(x0, sy(0)); c.lineTo(x1, sy(0)); c.stroke(); c.setLineDash([]);
+    [2, 1, 0].forEach((t) => {
+      const T = TRIBES[t];
+      for (const [Cv, dash] of [[st.Ct, []], [st.Cl, [3, 2]]]) {
+        const m = curveMean(Cv, t); c.strokeStyle = T.color; c.lineWidth = dash.length ? 1 : 1.4; c.setLineDash(dash); c.beginPath(); let on = false;
+        for (let a = 0; a <= C.steps; a++) { if (C.TT[a] < 1 || !Number.isFinite(m[a])) { on = false; continue; } const X = sx(C.TT[a]), Y = sy(m[a]); if (on) c.lineTo(X, Y); else c.moveTo(X, Y); on = true; }
+        c.stroke(); c.setLineDash([]);
+      }
+    });
+    if (st.best[0] < Infinity && st.best[1] >= 1) { c.strokeStyle = TRIBES[0].color; c.lineWidth = 1.2; c.beginPath(); c.arc(sx(st.best[1]), sy(Math.log10(st.best[0])), 3.2, 0, TAU); c.stroke(); }
+    for (let e = 0; e <= T1; e += T1 > 6 ? 2 : 1) FIG.tick(c, sx(10 ** e), y1 + 4, e === 0 ? '1' : `10${ddSup(e)}`);
+    for (const v of [-3, -2, -1, 0, 1, 2]) FIG.tick(c, x0 - 3, sy(v), v === 0 ? '1' : `10${ddSup(v)}`, 'right', 'middle');
+  },
+});
 //
 // plate: mup (learning rates across widths)
 //
