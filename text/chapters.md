@@ -24,3 +24,6 @@
 8. After pretraining
    What happens to a pretrained model when it is fine-tuned on preferences or with reinforcement learning.
    Probabilities can move the wrong way, entropy can collapse, the policy can drift from its base, and safety training can be undone.
+9. Beyond two dimensions
+   Every plate before this one has two parameters, and real networks have millions.
+   These plates compute in many dimensions and use the map only for a slice or a projection, to show where minima sit when there are many directions, what a slice hides, and what a projected path does and does not mean.

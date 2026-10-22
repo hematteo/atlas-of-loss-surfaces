@@ -944,7 +944,7 @@ function makeTribe(spec) {
 // lines; step(i) observes particles; frame() runs once per frame; fig(c, w, h) draws the card figure.
 // ---------------------------------------------------------------------------------------------
 const CHAPTERS = TEXT.chapters;
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
 const PLATES = [];
 // a plate's card text (title, deck, lead, …, refs, cap) lives in text/, under its id
 const plateText = (p) => { const t = TEXT.plates[p.id]; if (!t) throw new Error(`no text for plate ${p.id}`); for (const k in t) if (!(k in p)) p[k] = t[k]; return p; };
@@ -4357,9 +4357,51 @@ plate({
   },
 });
 // ch8>>
+// <<ch9
+// ---------------------------------------------------------------------------------------------
+// many dimensions: helpers shared by the plates of chapter IX. Their particles live in d dimensions; the
+// map shows a plane through that space (a slice, or a projection), and the plate draws each particle at
+// its projection onto the plane while its loss is the full d-dimensional one.
+// ---------------------------------------------------------------------------------------------
+const dotN = (a, b, n = a.length) => { let s = 0; for (let k = 0; k < n; k++) s += a[k] * b[k]; return s; };
+const normN = (a, n = a.length) => Math.sqrt(dotN(a, a, n));
+function gaussN(R, n, out = new Float64Array(n)) { for (let k = 0; k < n; k++) out[k] = R.normal(); return out; }
+function unitN(R, n) { const v = gaussN(R, n), l = normN(v); for (let k = 0; k < n; k++) v[k] /= l; return v; }
+// Gram–Schmidt: make b orthonormal to the unit vector a (in place); returns b
+function orthoN(a, b, n = a.length) { const c = dotN(a, b, n); for (let k = 0; k < n; k++) b[k] -= c * a[k]; const l = normN(b, n); for (let k = 0; k < n; k++) b[k] /= l; return b; }
+// eigen-decomposition of a symmetric n×n matrix A (row-major Float64Array, left intact) by cyclic Jacobi rotations.
+// Returns { vals, vecs } with vals ascending and eigenvector k in column k of vecs (vecs[i * n + k]). Fine to n ≈ 60.
+function symEig(A, n) {
+  const a = Float64Array.from(A), v = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) v[i * n + i] = 1;
+  for (let sweep = 0; sweep < 60; sweep++) {
+    let off = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) off += a[i * n + j] * a[i * n + j];
+    if (off < 1e-22) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      const apq = a[p * n + q]; if (Math.abs(apq) < 1e-300) continue;
+      const th = (a[q * n + q] - a[p * n + p]) / (2 * apq), t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1));
+      const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let k = 0; k < n; k++) { const akp = a[k * n + p], akq = a[k * n + q]; a[k * n + p] = c * akp - s * akq; a[k * n + q] = s * akp + c * akq; }
+      for (let k = 0; k < n; k++) { const apk = a[p * n + k], aqk = a[q * n + k]; a[p * n + k] = c * apk - s * aqk; a[q * n + k] = s * apk + c * aqk; }
+      for (let k = 0; k < n; k++) { const vkp = v[k * n + p], vkq = v[k * n + q]; v[k * n + p] = c * vkp - s * vkq; v[k * n + q] = s * vkp + c * vkq; }
+    }
+  }
+  const idx = Array.from({ length: n }, (_, k) => k).sort((x, y) => a[x * n + x] - a[y * n + y]);
+  const vals = new Float64Array(n), vecs = new Float64Array(n * n);
+  idx.forEach((k, c) => { vals[c] = a[k * n + k]; for (let i = 0; i < n; i++) vecs[i * n + c] = v[i * n + k]; });
+  return { vals, vecs };
+}
+// plate: sinking (minima in many dimensions)
+//
+// plate: slices (what a slice hides)
+//
+// plate: pca (trajectories in PCA)
+//
+// ch9>>
 // reading order: the plate blocks above are grouped by the code they share; the atlas is read in this order
 {
-  const ORDER = ['survey', 'catchments', 'saddles', 'plateaus', 'ravines', 'cliffs', 'sharpflat', 'stability', 'eos', 'igr', 'temperature', 'anisotropic', 'heavytail', 'labelnoise', 'momentum', 'adam', 'wd', 'newton', 'sam', 'averaging', 'staircase', 'warmup', 'river', 'connect', 'forks', 'symmetry', 'singular', 'rosenbrock', 'himmelblau', 'rastrigin', 'ackley', 'camel', 'sculpt', 'games', 'softmax', 'margin', 'displace', 'entropy', 'razor', 'safety'];
+  const ORDER = ['survey', 'catchments', 'saddles', 'plateaus', 'ravines', 'cliffs', 'sharpflat', 'stability', 'eos', 'eoss', 'igr', 'temperature', 'anisotropic', 'heavytail', 'labelnoise', 'momentum', 'adam', 'wd', 'newton', 'sam', 'averaging', 'staircase', 'warmup', 'river', 'grokking', 'connect', 'forks', 'symmetry', 'singular', 'rosenbrock', 'himmelblau', 'rastrigin', 'ackley', 'camel', 'sculpt', 'games', 'softmax', 'margin', 'displace', 'entropy', 'razor', 'safety', 'sinking', 'slices', 'pca'];
   PLATES.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
   PLATES.forEach((p, i) => { p.index = i; });
 }

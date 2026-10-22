@@ -8,7 +8,8 @@ const TEXT = {
     "Solutions",
     "Proving grounds",
     "Where there is no bottom",
-    "After pretraining"
+    "After pretraining",
+    "Beyond two dimensions"
   ],
   "chapterIntros": [
     "The features that studies of real networks keep finding in their loss surfaces, one plate each. Basins and the divides between them, saddles, plateaus, ravines, cliffs, and minima of different sharpness each change how gradient descent and its relatives move.",
@@ -18,7 +19,8 @@ const TEXT = {
     "Training rarely has a single answer. These plates ask how the minima it finds relate to one another: joined by low-loss paths, split by early randomness, copies of one another under symmetry, or not isolated points at all.",
     "The standard test functions of optimization, each built to defeat a particular kind of method. Particles race from shared starts so the optimizers can be compared directly, and the last plate is a blank sheet to sculpt.",
     "Problems in which gradient descent has no minimum to settle in. Two players pull one sheet in opposite directions, a softmax policy needs infinite logits to reach its best action, and a separable classifier's weights grow without bound.",
-    "What happens to a pretrained model when it is fine-tuned on preferences or with reinforcement learning. Probabilities can move the wrong way, entropy can collapse, the policy can drift from its base, and safety training can be undone."
+    "What happens to a pretrained model when it is fine-tuned on preferences or with reinforcement learning. Probabilities can move the wrong way, entropy can collapse, the policy can drift from its base, and safety training can be undone.",
+    "Every plate before this one has two parameters, and real networks have millions. These plates compute in many dimensions and use the map only for a slice or a projection, to show where minima sit when there are many directions, what a slice hides, and what a projected path does and does not mean."
   ],
   "chapterOf": {
     "catchments": 0,
