@@ -4398,10 +4398,14 @@ function symEig(A, n) {
 //
 // plate: pca (trajectories in PCA)
 //
+// plate: ddescent (double descent)
+//
+// plate: mup (learning rates across widths)
+//
 // ch9>>
 // reading order: the plate blocks above are grouped by the code they share; the atlas is read in this order
 {
-  const ORDER = ['survey', 'catchments', 'saddles', 'plateaus', 'ravines', 'cliffs', 'sharpflat', 'stability', 'eos', 'eoss', 'igr', 'temperature', 'anisotropic', 'heavytail', 'labelnoise', 'momentum', 'adam', 'wd', 'newton', 'sam', 'averaging', 'staircase', 'warmup', 'river', 'grokking', 'connect', 'forks', 'symmetry', 'singular', 'rosenbrock', 'himmelblau', 'rastrigin', 'ackley', 'camel', 'sculpt', 'games', 'softmax', 'margin', 'displace', 'entropy', 'razor', 'safety', 'sinking', 'slices', 'pca'];
+  const ORDER = ['survey', 'catchments', 'saddles', 'plateaus', 'ravines', 'cliffs', 'sharpflat', 'stability', 'eos', 'eoss', 'igr', 'temperature', 'anisotropic', 'heavytail', 'labelnoise', 'momentum', 'adam', 'wd', 'newton', 'sam', 'averaging', 'staircase', 'warmup', 'river', 'grokking', 'plasticity', 'connect', 'forks', 'symmetry', 'singular', 'common', 'rosenbrock', 'himmelblau', 'rastrigin', 'ackley', 'camel', 'sculpt', 'games', 'softmax', 'margin', 'displace', 'entropy', 'razor', 'safety', 'lora', 'merging', 'sinking', 'slices', 'pca', 'ddescent', 'mup'];
   PLATES.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
   PLATES.forEach((p, i) => { p.index = i; });
 }
