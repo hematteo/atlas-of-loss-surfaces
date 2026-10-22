@@ -136,6 +136,8 @@ Its plates compute in many dimensions and use the map only for a slice or a proj
 1. <i>Minima in many dimensions</i>: where the minima sit when there are many directions.
 2. <i>What a slice hides</i>: what a random two-dimensional slice leaves out.
 3. <i>Trajectories in PCA</i>: what a projected training path does and does not mean.
+4. <i>Double descent</i>: why test error can peak and fall again as the number of parameters passes the number of examples.
+5. <i>Learning rates across widths</i>: how sharpness, and with it the best learning rate, changes as a network widens.
 
 Real gradient noise differs too.
 It is anisotropic and concentrated in the sharp directions.

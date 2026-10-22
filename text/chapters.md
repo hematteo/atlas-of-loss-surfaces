@@ -26,4 +26,5 @@
    Probabilities can move the wrong way, entropy can collapse, the policy can drift from its base, and safety training can be undone.
 9. Beyond two dimensions
    Every plate before this one has two parameters, and real networks have millions.
-   These plates compute in many dimensions and use the map only for a slice or a projection, to show where minima sit when there are many directions, what a slice hides, and what a projected path does and does not mean.
+   These plates compute in many dimensions and use the map only for a slice or a projection.
+   They show where minima sit when there are many directions, what a slice hides, what a projected path does and does not mean, why test error can peak and fall again as a model grows, and how a learning rate can carry over from a narrow network to a wide one.

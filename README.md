@@ -18,22 +18,25 @@ should. So when a plate states a result, we can watch it happen there. Every pla
 
 ![The atlas in a browser: a printed loss surface rises into relief while cohorts of SGD, heavy-ball and Adam particles set off across it, with the plate card on the right and the tools along the bottom](img/hero.gif)
 
-The plates are grouped in eight chapters:
+The plates are grouped in nine chapters:
 
 ![One plate from each chapter: Ravines, Stability and catapults, Adam, sign descent and the axes, The river valley, Mode connectivity, Rastrigin's egg crate, Two players on one sheet, The safety basin](img/chapters.jpg)
 
 
 1. **Landforms**: a survey of a loss surface, basins of attraction, saddles, plateaus, ravines, cliffs, sharp and flat minima
-2. **Step size and noise**: stability and catapults, the edge of stability, implicit gradient regularization, noise as
-   temperature, the shape and the tails of the noise, label noise
+2. **Step size and noise**: stability and catapults, the edge of stability, the edge of stochastic stability, implicit
+   gradient regularization, noise as temperature, the shape and the tails of the noise, label noise
 3. **Optimizers**: momentum, Adam and sign descent, weight decay and scale invariance, Newton's method, sharpness-aware
    minimization, weight averaging
-4. **Trajectories**: saddle to saddle, warmup, the river valley
+4. **Trajectories**: saddle to saddle, warmup, the river valley, grokking, loss of plasticity
 5. **Solutions**: mode connectivity, forks in the road, symmetry and re-basin, singular minima and the learning
-   coefficient
+   coefficient, same loss with different minima
 6. **Proving grounds**: Rosenbrock, Himmelblau, Rastrigin, Ackley, the six-hump camel, and a sheet you sculpt yourself
 7. **Where there is no bottom**: two players on one sheet, the pull of softmax, the road to infinity
-8. **After pretraining**: likelihood displacement, entropy collapse, RL's razor, the safety basin
+8. **After pretraining**: likelihood displacement, entropy collapse, RL's razor, the safety basin, LoRA's saddle, task
+   arithmetic and merging
+9. **Beyond two dimensions**: minima in many dimensions, what a slice hides, trajectories in PCA, double descent,
+   learning rates across widths
 
 The optimizers are gradient descent and SGD, heavy ball, Nesterov, Adam, RMSprop, sign descent, Lion, SAM, Newton,
 saddle-free Newton and schedule-free SGD, plus plate-specific update rules for games and policy gradients.
@@ -84,7 +87,7 @@ editing, run `npm run text` (it needs only Node 20 or later). It rebuilds `js/te
 - `js/atlas.js`: the atlas, one script. Sections open with a `// ----` banner, in this order:
   - the surfaces: seeded noise, the loss `L(θ₁, θ₂)`, the height grid, critical points (grid scan, Newton
     refinement, Hessian classification), cross-sections and the disconnectivity scaffold;
-  - the optimizers and the forty plates. Each plate is one object, `plate({ … })`, holding its sheet builder, names,
+  - the optimizers and the fifty-one plates. Each plate is one object, `plate({ … })`, holding its sheet builder, names,
     experiments, figure and `run`, the functions behind its Try steps' **Set up** buttons (one entry per step, `null`
     for none); `plate()` adds its text from `TEXT.plates[id]`. Plates sit in blocks marked
     `// <<chN … // chN>>`, which group them roughly in the order they were written, not by chapter; a plate's chapter
@@ -104,7 +107,7 @@ stick men, and the project was first called Pilgrims.
 ## Testing
 
 `npm test` checks that `js/text.js` is up to date with `text/`, then serves the folder, opens the atlas in headless
-Chromium with software WebGL2, and visits all forty plates. It fails on any page or console error, any non-finite
+Chromium with software WebGL2, and visits all fifty-one plates. It fails on any page or console error, any non-finite
 particle, the error screen, or text that belongs to no plate, and checks the phone layout. It runs on every push
 ([workflow](.github/workflows/test.yml)). The site itself needs no install; `package.json` exists only for the text
 build and the test.
